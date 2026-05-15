@@ -135,7 +135,7 @@ export default function EntrancePage({
             transition: "all .3s",
           }}
         >
-          📋 成员档案
+          🏠 入住档案
         </button>
         <button
           onClick={() => setShowMyProfile(true)}

@@ -240,7 +240,7 @@ export default function App() {
   // ═══ 角色管理 ═══
 
   const createChar = () => {
-    const newChar = { ...JSON.parse(JSON.stringify(DEFAULT_CHAR)), id: genId(), name: "新成员" };
+    const newChar = { ...JSON.parse(JSON.stringify(DEFAULT_CHAR)), id: genId(), name: "新入住者" };
     setCharacters((prev) => [...prev, newChar]);
     setEditingChar(newChar);
     setEditSection("basic");
@@ -283,6 +283,11 @@ export default function App() {
     setEditingChar((prev) => ({ ...prev, personality: { ...prev.personality, [key]: val } }));
   const updateEditWorldview = (key, val) =>
     setEditingChar((prev) => ({ ...prev, worldview: { ...prev.worldview, [key]: val } }));
+  const updateEditMigration = (key, val) =>
+    setEditingChar((prev) => ({
+      ...prev,
+      migration: { ...(prev.migration || {}), [key]: val },
+    }));
 
   // 头像上传
   const handleAvatarUpload = (e) => {
@@ -996,6 +1001,7 @@ export default function App() {
           updateEditOcean={updateEditOcean}
           updateEditPersonality={updateEditPersonality}
           updateEditWorldview={updateEditWorldview}
+          updateEditMigration={updateEditMigration}
         />
       )}
 

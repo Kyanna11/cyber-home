@@ -18,16 +18,16 @@ export default function ProfilesPage({
           onClick={() => navigateTo(prevPage === "bedroom" ? "bedroom" : "entrance")}
           label={prevPage === "bedroom" ? "回房间" : "首页"}
         />
-        <div className="profiles-header-title">成员档案</div>
+        <div className="profiles-header-title">入住档案</div>
         <div className="profiles-header-spacer" />
       </div>
 
       <div className="profiles-scroll">
         {characters.length === 0 && (
           <div className="empty-hint">
-            没有添加任何成员
+            还没有入住者
             <br />
-            点下方按钮迎接第一位成员吧
+            点下方按钮迎接 ta 回家吧
           </div>
         )}
 
@@ -49,7 +49,7 @@ export default function ProfilesPage({
         ))}
 
         <button className="add-char-btn" onClick={createChar}>
-          <span style={{ fontSize: 18 }}>+</span> 添加新成员
+          <span style={{ fontSize: 18 }}>🏠</span> 迎接新的入住者
         </button>
       </div>
     </div>

@@ -77,6 +77,19 @@ export const DEFAULT_CHAR = {
   avatarImg: "",
   relation: "恋人",
   modelOverride: "",
+  // ── 入住相关字段（第二阶段新增，向后兼容）──
+  migration: {
+    sourcePlatform: "",       // 来源平台（如 Claude.ai / Character.AI 等）
+    originalPrompt: "",       // 原始 prompt 或角色卡
+    coreVibe: "",             // 核心气质：ta 给你的整体感觉
+    speechStyleAnchor: "",    // 说话方式锚点
+    intimacyStyle: "",        // 亲密方式：ta 怎么表达亲近
+    doNotLoseFeeling: "",     // 不能丢的感觉
+    doNotChangeRules: "",     // 绝对不要变化的规则
+    relationshipSummary: "",  // 我和ta的关系摘要
+    notes: "",                // 备注
+    importedAt: null,         // 迁入时间戳
+  },
   profile: {
     age: "",
     height: "",
