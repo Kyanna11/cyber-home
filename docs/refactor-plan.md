@@ -43,13 +43,14 @@ src/
 - [x] `pages/EntrancePage.jsx`
 - [x] `pages/BedroomPage.jsx`
 
-### ⬜ 待完成
-- [ ] `pages/ProfilesPage.jsx`
-- [ ] `pages/ProfileEditPage.jsx`
-- [ ] `pages/MemoryPalacePage.jsx`
-- [ ] `pages/ChatPage.jsx`
-- [ ] `pages/DiaryPage.jsx`
-- [ ] `App.jsx` 最终整合（引入所有页面，移除已迁移代码）
+### ✅ 已完成（续）
+- [x] `pages/ProfilesPage.jsx`
+- [x] `pages/ProfileEditPage.jsx`
+- [x] `pages/MemoryPalacePage.jsx`
+- [x] `pages/ChatPage.jsx`
+- [x] `pages/DiaryPage.jsx`
+- [x] `pages/MyProfilePage.jsx`（我的档案覆层）
+- [x] `App.jsx` 最终整合 ✅ 构建通过，所有页面跳转验证正常
 
 ## 拆分原则
 
