@@ -23,22 +23,29 @@
 
 ---
 
-## 🗺️ 当前阶段：第一阶段
+## 🗺️ 当前阶段：第一阶段 ✅ 已完成
 
-**正在做：** 旧版单文件重构 + 基础功能稳定
+**✅ 第一阶段完成：** 旧版 5195 行单文件重构为模块化结构，功能零损失
 
 - [x] 项目初始化（Vite + React）
 - [x] 迁移到 GitHub
 - [x] 拆分常量、工具函数、基础组件
-- [x] 入口页、卧室页提取
-- [ ] 成员档案列表页
-- [ ] 档案编辑页（简化为入住档案）
-- [ ] 记忆宫殿页
-- [ ] 聊天页
-- [ ] 日记页
-- [ ] App.jsx 最终整合
+- [x] 入口页、卧室页
+- [x] 成员档案列表页
+- [x] 档案编辑页（5个 tab：基本信息 / 人格数值 / 性格认知 / 三观体系 / 补充设定）
+- [x] 记忆宫殿页（热度系统 / AI 反思 / 人格成长）
+- [x] 聊天页（多话题 / 内心独白 / 打字机 / 消息编辑 / 记忆控制台）
+- [x] 日记页（写日记 / 分享给角色）
+- [x] 我的档案页（核心信息 / 共享档案库）
+- [x] App.jsx 最终整合，构建通过 ✅
 
-**第二阶段预计：** 向量搜索、记忆热度情绪系统、主动陪伴、TTS 语音  
+**➡️ 下一步：第二阶段**
+- [ ] Python + FastAPI 后端启动
+- [ ] 向量搜索记忆（pgvector / Chroma）
+- [ ] 记忆热度情绪系统升级
+- [ ] 主动陪伴（定时触发）
+- [ ] TTS 语音
+
 **第三阶段预计：** MCP 外部大脑、多端同步、Live2D 形象
 
 ---
@@ -53,22 +60,28 @@ cyber-home/
 │   ├── memory-architecture.md   # 六层记忆宫殿设计
 │   └── refactor-plan.md         # 重构计划与进度
 │
-├── frontend/                    # 前端（Vite + React）
-│   └── src/
-│       ├── constants/           # 常量定义
-│       ├── utils/               # 工具函数
-│       │   ├── storage.js       # 本地存储
-│       │   ├── memory.js        # 记忆热度系统
-│       │   ├── prompt.js        # System Prompt 构建
-│       │   └── helpers.js       # 小工具
-│       ├── components/          # 通用组件
-│       │   ├── Avatar.jsx
-│       │   └── BackButton.jsx
-│       ├── pages/               # 各页面
-│       │   ├── EntrancePage.jsx
-│       │   ├── BedroomPage.jsx
-│       │   └── ...
-│       └── App.jsx              # 状态管理 + 页面调度
+├── src/                         # 前端（Vite + React）
+│   ├── constants/
+│   │   └── index.js             # 所有常量（模型列表、默认值等）
+│   ├── utils/
+│   │   ├── storage.js           # localStorage 读写
+│   │   ├── helpers.js           # genId、estimateTokens
+│   │   ├── memory.js            # 记忆热度系统
+│   │   └── prompt.js            # System Prompt 构建
+│   ├── components/
+│   │   ├── Avatar.jsx           # 头像（图片/emoji）
+│   │   └── BackButton.jsx       # 返回按钮
+│   ├── pages/
+│   │   ├── EntrancePage.jsx     # 入口页
+│   │   ├── BedroomPage.jsx      # 卧室页
+│   │   ├── ProfilesPage.jsx     # 成员列表
+│   │   ├── ProfileEditPage.jsx  # 档案编辑（5个tab）
+│   │   ├── MemoryPalacePage.jsx # 记忆宫殿
+│   │   ├── ChatPage.jsx         # 聊天页
+│   │   ├── DiaryPage.jsx        # 日记页
+│   │   └── MyProfilePage.jsx    # 我的档案
+│   ├── index.css                # 全局样式
+│   └── App.jsx                  # 状态管理 + 页面路由
 │
 └── backend/                     # 后端（Python + FastAPI，第二阶段启动）
 ```
