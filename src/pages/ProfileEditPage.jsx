@@ -413,6 +413,52 @@ export default function ProfileEditPage({
                   </div>
                 ))}
               </div>
+
+              {/* 基本档案（外貌也是锚点之一） */}
+              <div className="section-card">
+                <div className="section-title" style={{ color: "var(--text-mid)" }}>📎 基本档案</div>
+                <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7 }}>
+                  外貌、年龄等细节——外貌本身也是人格锚点的一部分，填了会让 ta 更完整。
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div className="field-group">
+                    <label className="field-label">年龄</label>
+                    <input className="field-input" placeholder="24" value={editingChar.profile.age}
+                      onChange={(e) => updateEditProfile("age", e.target.value)} />
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label">身高</label>
+                    <input className="field-input" placeholder="182cm" value={editingChar.profile.height}
+                      onChange={(e) => updateEditProfile("height", e.target.value)} />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div className="field-group">
+                    <label className="field-label">生日</label>
+                    <input className="field-input" placeholder="3月14日" value={editingChar.profile.birthday}
+                      onChange={(e) => updateEditProfile("birthday", e.target.value)} />
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label">MBTI</label>
+                    <input className="field-input" placeholder="INFJ" value={editingChar.profile.mbti}
+                      onChange={(e) => updateEditProfile("mbti", e.target.value)} />
+                  </div>
+                </div>
+                <div className="field-group">
+                  <label className="field-label">外貌描述</label>
+                  <textarea className="field-textarea"
+                    placeholder="比如：清瘦，黑色碎发，戴银框眼镜，笑起来有酒窝……"
+                    value={editingChar.profile.appearance}
+                    onChange={(e) => updateEditProfile("appearance", e.target.value)} />
+                </div>
+                <div className="field-group">
+                  <label className="field-label">其他</label>
+                  <textarea className="field-textarea"
+                    placeholder="任何你觉得重要的……"
+                    value={editingChar.profile.other}
+                    onChange={(e) => updateEditProfile("other", e.target.value)} />
+                </div>
+              </div>
             </>
           )}
 
@@ -526,52 +572,6 @@ export default function ProfileEditPage({
                   onChange={(e) => setEditingChar((prev) => ({ ...prev, systemPromptExtra: e.target.value }))}
                   style={{ minHeight: 140 }}
                 />
-              </div>
-
-              {/* 基本档案 */}
-              <div className="section-card">
-                <div className="section-title" style={{ color: "var(--text-mid)" }}>📎 基本档案</div>
-                <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7 }}>
-                  外貌、年龄等细节，不是主线，填了会更完整。
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <div className="field-group">
-                    <label className="field-label">年龄</label>
-                    <input className="field-input" placeholder="24" value={editingChar.profile.age}
-                      onChange={(e) => updateEditProfile("age", e.target.value)} />
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label">身高</label>
-                    <input className="field-input" placeholder="182cm" value={editingChar.profile.height}
-                      onChange={(e) => updateEditProfile("height", e.target.value)} />
-                  </div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <div className="field-group">
-                    <label className="field-label">生日</label>
-                    <input className="field-input" placeholder="3月14日" value={editingChar.profile.birthday}
-                      onChange={(e) => updateEditProfile("birthday", e.target.value)} />
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label">MBTI</label>
-                    <input className="field-input" placeholder="INFJ" value={editingChar.profile.mbti}
-                      onChange={(e) => updateEditProfile("mbti", e.target.value)} />
-                  </div>
-                </div>
-                <div className="field-group">
-                  <label className="field-label">外貌描述</label>
-                  <textarea className="field-textarea"
-                    placeholder="比如：清瘦，黑色碎发，戴银框眼镜，笑起来有酒窝……"
-                    value={editingChar.profile.appearance}
-                    onChange={(e) => updateEditProfile("appearance", e.target.value)} />
-                </div>
-                <div className="field-group">
-                  <label className="field-label">其他</label>
-                  <textarea className="field-textarea"
-                    placeholder="任何你觉得重要的……"
-                    value={editingChar.profile.other}
-                    onChange={(e) => updateEditProfile("other", e.target.value)} />
-                </div>
               </div>
 
               {/* 危险区域 */}

@@ -121,23 +121,36 @@ export default function MemoryPalacePage({
       </div>
 
       {/* 排序/筛选工具栏（非总结页显示） */}
-      {memTab !== "summary" && (
-        <div className="mem-toolbar">
-          <div className="mem-toolbar-group">
-            <span className="mem-toolbar-label">排序</span>
-            <button className={`mem-toolbar-btn ${memSort === "heat" ? "active" : ""}`} onClick={() => setMemSort("heat")}>热度</button>
-            <button className={`mem-toolbar-btn ${memSort === "time" ? "active" : ""}`} onClick={() => setMemSort("time")}>时间</button>
+      {memTab !== "summary" && (() => {
+        const entries = getCharMemories(memCharId)[memTab] || [];
+        const cnt = {
+          all:       entries.length,
+          important: entries.filter((m) => m.important).length,
+          pinned:    entries.filter((m) => m.pinned ?? false).length,
+          blocked:   entries.filter((m) => (m.injectable ?? true) === false).length,
+          active:    entries.filter((m) => (m.mentions || 0) > 0).length,
+        };
+        const badge = (n) => n > 0
+          ? <span style={{ marginLeft: 3, fontSize: 10, opacity: 0.7 }}>{n}</span>
+          : null;
+        return (
+          <div className="mem-toolbar">
+            <div className="mem-toolbar-group">
+              <span className="mem-toolbar-label">排序</span>
+              <button className={`mem-toolbar-btn ${memSort === "heat" ? "active" : ""}`} onClick={() => setMemSort("heat")}>热度</button>
+              <button className={`mem-toolbar-btn ${memSort === "time" ? "active" : ""}`} onClick={() => setMemSort("time")}>时间</button>
+            </div>
+            <div className="mem-toolbar-group">
+              <span className="mem-toolbar-label">筛选</span>
+              <button className={`mem-toolbar-btn ${memFilter === "all" ? "active" : ""}`} onClick={() => setMemFilter("all")}>全部{badge(cnt.all)}</button>
+              <button className={`mem-toolbar-btn ${memFilter === "important" ? "active" : ""}`} onClick={() => setMemFilter("important")}>重要{badge(cnt.important)}</button>
+              <button className={`mem-toolbar-btn ${memFilter === "pinned" ? "active" : ""}`} onClick={() => setMemFilter("pinned")}>📌 锚点{badge(cnt.pinned)}</button>
+              <button className={`mem-toolbar-btn ${memFilter === "blocked" ? "active" : ""}`} onClick={() => setMemFilter("blocked")}>🔕 暂停{badge(cnt.blocked)}</button>
+              <button className={`mem-toolbar-btn ${memFilter === "active" ? "active" : ""}`} onClick={() => setMemFilter("active")}>活跃{badge(cnt.active)}</button>
+            </div>
           </div>
-          <div className="mem-toolbar-group">
-            <span className="mem-toolbar-label">筛选</span>
-            <button className={`mem-toolbar-btn ${memFilter === "all" ? "active" : ""}`} onClick={() => setMemFilter("all")}>全部</button>
-            <button className={`mem-toolbar-btn ${memFilter === "important" ? "active" : ""}`} onClick={() => setMemFilter("important")}>重要</button>
-            <button className={`mem-toolbar-btn ${memFilter === "pinned" ? "active" : ""}`} onClick={() => setMemFilter("pinned")}>📌 锚点</button>
-            <button className={`mem-toolbar-btn ${memFilter === "blocked" ? "active" : ""}`} onClick={() => setMemFilter("blocked")}>🔕 暂停</button>
-            <button className={`mem-toolbar-btn ${memFilter === "active" ? "active" : ""}`} onClick={() => setMemFilter("active")}>活跃</button>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       <div className="mem-scroll">
         {/* ── 记忆列表（事实/情绪/觉察）── */}
