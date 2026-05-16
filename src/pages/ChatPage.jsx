@@ -1,6 +1,7 @@
 // ─── 聊天页 ───
-// 顶栏、话题侧边栏、记忆控制台、API 配置、消息列表、输入栏
+// 顶栏、话题侧边栏、记忆控制台（更多菜单）、API 配置、消息列表、输入栏
 
+import { useState } from "react";
 import { PRESET_MODELS } from "../constants";
 
 export default function ChatPage({
@@ -63,60 +64,51 @@ export default function ChatPage({
   setInputText,
   handleSend,
 }) {
+  // ── 局部 UI 状态 ──
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+
   return (
     <div className="chat-scene">
       {/* ── 顶栏 ── */}
       <div className="chat-top-bar">
+
+        {/* 对话列表入口（原汉堡菜单，改为更明确的图标+文字） */}
         <button
           className="thread-menu-btn"
           onClick={() => setShowThreadSidebar(true)}
-          title="切换话题"
+          title="话题列表"
+          style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}
         >
-          ☰
+          <span style={{ fontSize: 14, lineHeight: 1 }}>💬</span>
+          <span style={{ fontSize: 8, letterSpacing: 0.5, color: "var(--text-faint)" }}>对话</span>
         </button>
+
+        {/* 回房间 */}
         <button className="back-btn" onClick={() => navigateTo("bedroom")}>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
           回房间
         </button>
+
+        {/* 中间信息区 */}
         <div className="chat-title-area">
-          <div className="chat-companion-name">
-            {activeChar?.name || "赛博伴侣"}
-          </div>
-          <div
-            className={`chat-status ${isConfigReady() ? "online" : "offline"}`}
-          >
+          <div className="chat-companion-name">{activeChar?.name || "赛博伴侣"}</div>
+          <div className={`chat-status ${isConfigReady() ? "online" : "offline"}`}>
             {isConfigReady() ? "在线" : "未连接"}
           </div>
-          <div
-            style={{
-              fontSize: 10,
-              fontWeight: 300,
-              color: "var(--text-faint)",
-              marginTop: 1,
-              letterSpacing: 0.5,
-              opacity: 0.7,
-              maxWidth: 160,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              margin: "1px auto 0",
-            }}
-          >
-            {isConfigReady()
-              ? `🤖 ${getActiveModel(activeChar?.modelOverride)}`
-              : ""}
+          <div style={{
+            fontSize: 10, fontWeight: 300, color: "var(--text-faint)",
+            letterSpacing: 0.5, opacity: 0.7,
+            maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            margin: "1px auto 0",
+          }}>
+            {isConfigReady() ? `${getActiveModel(activeChar?.modelOverride)}` : ""}
           </div>
         </div>
-        {/* 档案按钮 */}
+
+        {/* ① 入住档案 */}
         <button
           className="gear-btn"
           onClick={() => {
@@ -126,108 +118,83 @@ export default function ChatPage({
               navigateTo("profileEdit");
             }
           }}
-          title="编辑档案"
+          title="入住档案"
           style={{ marginRight: 2 }}
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ width: 18, height: 18 }}
-          >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
             <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
             <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-            <path d="M9 12h6" />
-            <path d="M9 16h6" />
+            <path d="M9 12h6" /><path d="M9 16h6" />
           </svg>
         </button>
-        {/* 记忆宫殿快捷入口 */}
+
+        {/* ② 记忆宫殿 */}
         <button
           className="gear-btn"
-          onClick={() => {
-            if (activeChar) {
-              openMemoryPalace(activeChar.id, "chat");
-            }
-          }}
+          onClick={() => activeChar && openMemoryPalace(activeChar.id, "chat")}
           title="记忆宫殿"
           style={{ marginRight: 2 }}
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ width: 18, height: 18 }}
-          >
-            <path d="M3 21h18" />
-            <path d="M5 21V10l7-5 7 5v11" />
-            <path d="M9 21v-6h6v6" />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
+            <path d="M3 21h18" /><path d="M5 21V10l7-5 7 5v11" /><path d="M9 21v-6h6v6" />
           </svg>
         </button>
-        {/* 记忆注入控制 */}
-        <button
-          className="gear-btn"
-          onClick={() => setShowMemoryControl(true)}
-          title="记忆注入"
-          style={{ marginRight: 2 }}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ width: 18, height: 18 }}
+
+        {/* ③ 更多 ⋯ */}
+        <div style={{ position: "relative" }}>
+          <button
+            className="gear-btn"
+            onClick={() => setShowMoreMenu((v) => !v)}
+            title="更多"
+            style={{ fontSize: 18, letterSpacing: 1, paddingBottom: 2 }}
           >
-            <path d="M12 2C9 2 6.5 4 6 7c-.5 3 1 5 1 7 0 1.5-.5 2.5-1 3h12c-.5-.5-1-1.5-1-3 0-2 1.5-4 1-7-.5-3-3-5-6-5z" />
-            <path d="M9 17v1a3 3 0 0 0 6 0v-1" />
-            <path d="M12 2v1" />
-            <path d="M8 7c0-1.5 1.5-3 4-3" />
-          </svg>
-        </button>
-        {/* 唤醒预览 */}
-        <button
-          className="gear-btn"
-          onClick={() => activeChar && openWakePreview && openWakePreview(activeChar.id)}
-          title="唤醒预览"
-          style={{ marginRight: 2 }}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ width: 18, height: 18 }}
-          >
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-          </svg>
-        </button>
-        {/* API 设置 */}
-        <button
-          className="gear-btn"
-          onClick={() => setShowConfig(true)}
-          title="API 设置"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-        </button>
+            ···
+          </button>
+
+          {showMoreMenu && (
+            <>
+              {/* 点外面关闭 */}
+              <div style={{ position: "fixed", inset: 0, zIndex: 9 }} onClick={() => setShowMoreMenu(false)} />
+              {/* 下拉菜单 */}
+              <div style={{
+                position: "absolute", right: 0, top: "calc(100% + 6px)",
+                background: "rgba(255,255,255,.96)",
+                backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+                borderRadius: 14, border: "1px solid rgba(196,166,184,.25)",
+                boxShadow: "0 8px 28px rgba(74,69,96,.14)",
+                minWidth: 164, zIndex: 10, overflow: "hidden",
+              }}>
+                {[
+                  { label: "唤醒预览",  emoji: "🌙", action: () => { activeChar && openWakePreview?.(activeChar.id); setShowMoreMenu(false); } },
+                  { label: "记忆注入",  emoji: "🧠", action: () => { setShowMemoryControl(true); setShowMoreMenu(false); } },
+                  null, // divider
+                  { label: "API 设置",  emoji: "⚙️", action: () => { setShowConfig(true); setShowMoreMenu(false); } },
+                  { label: "导出聊天",  emoji: "📥", action: () => { handleExportChat(); setShowMoreMenu(false); } },
+                  { label: "清空聊天",  emoji: "🗑", action: () => { setShowClearConfirm(true); setShowMoreMenu(false); }, danger: true },
+                ].map((item, i) =>
+                  item === null ? (
+                    <div key={i} style={{ height: 1, background: "rgba(196,166,184,.18)", margin: "2px 0" }} />
+                  ) : (
+                    <button
+                      key={i}
+                      onClick={item.action}
+                      style={{
+                        width: "100%", padding: "11px 16px",
+                        display: "flex", alignItems: "center", gap: 10,
+                        background: "none", border: "none", cursor: "pointer",
+                        fontFamily: "var(--font-main)", fontSize: 13,
+                        color: item.danger ? "#9a5050" : "#5a4a6a",
+                        textAlign: "left",
+                      }}
+                    >
+                      <span>{item.emoji}</span>{item.label}
+                    </button>
+                  )
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* ── 话题侧边栏 ── */}
@@ -945,12 +912,14 @@ export default function ChatPage({
               </div>
             )}
 
-            {/* 日记分享卡片 */}
+            {/* 手札分享卡片 */}
             {msg.isDiaryShare ? (
               <div className="diary-share-card">
                 <div className="diary-share-header">
-                  <span className="diary-share-icon">📔</span>
-                  <span className="diary-share-label">晚声分享了一篇日记</span>
+                  <span className="diary-share-icon">📓</span>
+                  <span className="diary-share-label">
+                    晚声分享了一篇手札{msg.noteTitle ? `「${msg.noteTitle}」` : ""}
+                  </span>
                 </div>
                 <div className="diary-share-date">{msg.diaryDate || ""}</div>
                 <div className="diary-share-divider" />
@@ -1073,6 +1042,64 @@ export default function ChatPage({
 
       {/* ── 输入栏 ── */}
       <div className="input-bar">
+
+        {/* ＋ 工具菜单（未来功能占位） */}
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <button
+            onClick={() => setShowAttachMenu((v) => !v)}
+            title="更多工具"
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              fontSize: 22, color: "var(--text-faint)", padding: "6px 6px 6px 2px",
+              lineHeight: 1, opacity: 0.6, transition: "opacity .2s",
+            }}
+          >+</button>
+
+          {showAttachMenu && (
+            <>
+              <div style={{ position: "fixed", inset: 0, zIndex: 9 }} onClick={() => setShowAttachMenu(false)} />
+              <div style={{
+                position: "absolute", left: 0, bottom: "calc(100% + 8px)",
+                background: "rgba(255,255,255,.96)",
+                backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+                borderRadius: 14, border: "1px solid rgba(196,166,184,.25)",
+                boxShadow: "0 8px 28px rgba(74,69,96,.14)",
+                minWidth: 188, zIndex: 10, overflow: "hidden",
+              }}>
+                <div style={{ padding: "10px 16px 6px", fontSize: 10, color: "var(--text-faint)", letterSpacing: 1 }}>
+                  工具（即将上线）
+                </div>
+                {[
+                  { emoji: "📓", label: "分享手札",     desc: "把手札发给ta" },
+                  { emoji: "🪪", label: "帮我记进档案", desc: "沉淀到声声档案" },
+                  { emoji: "📅", label: "加入时间线",   desc: "记录一个时刻" },
+                  { emoji: "💌", label: "沉淀这段关系", desc: "阶段整理" },
+                ].map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={() => setShowAttachMenu(false)}
+                    style={{
+                      width: "100%", padding: "8px 16px",
+                      display: "flex", alignItems: "center", gap: 10,
+                      background: "none", border: "none", cursor: "default",
+                      fontFamily: "var(--font-main)", textAlign: "left",
+                      opacity: 0.45,
+                    }}
+                    title="即将上线"
+                  >
+                    <span style={{ fontSize: 16 }}>{item.emoji}</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: "#5a4a6a" }}>{item.label}</div>
+                      <div style={{ fontSize: 10, color: "var(--text-faint)" }}>{item.desc}</div>
+                    </div>
+                  </button>
+                ))}
+                <div style={{ height: 6 }} />
+              </div>
+            </>
+          )}
+        </div>
+
         <textarea
           className="input-field"
           placeholder={`想对${activeChar?.name || "ta"}说点什么…`}
