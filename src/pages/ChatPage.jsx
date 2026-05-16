@@ -30,6 +30,8 @@ export default function ChatPage({
   memInjection,
   handleSaveMemInjection,
   getCurrentPromptTokens,
+  // 唤醒预览
+  openWakePreview,
   // 消息编辑
   editingMsgIdx,
   setEditingMsgIdx,
@@ -187,6 +189,25 @@ export default function ChatPage({
             <path d="M9 17v1a3 3 0 0 0 6 0v-1" />
             <path d="M12 2v1" />
             <path d="M8 7c0-1.5 1.5-3 4-3" />
+          </svg>
+        </button>
+        {/* 唤醒预览 */}
+        <button
+          className="gear-btn"
+          onClick={() => activeChar && openWakePreview && openWakePreview(activeChar.id)}
+          title="唤醒预览"
+          style={{ marginRight: 2 }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ width: 18, height: 18 }}
+          >
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
           </svg>
         </button>
         {/* API 设置 */}

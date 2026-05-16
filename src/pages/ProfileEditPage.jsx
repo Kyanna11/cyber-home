@@ -25,6 +25,7 @@ export default function ProfileEditPage({
   updateEditMigration,
   openRawArchive,
   openMigrationDraft,
+  openWakePreview,
 }) {
   if (!editingChar) return null;
 
@@ -375,6 +376,31 @@ export default function ProfileEditPage({
               >
                 ✨ 迁入提炼草稿<br />
                 <span style={{ fontSize: 11, color: "#b0a0c0", letterSpacing: 1 }}>从记忆片段里整理他</span>
+              </button>
+
+              {/* 唤醒预览入口 */}
+              <button
+                onClick={() => openWakePreview && openWakePreview(editingChar.id)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  padding: "14px 20px",
+                  marginTop: 8,
+                  background: "rgba(80,80,140,.06)",
+                  border: "1px dashed rgba(100,90,160,.28)",
+                  borderRadius: 14,
+                  color: "#5a5a8e",
+                  fontSize: 13,
+                  letterSpacing: 2,
+                  cursor: "pointer",
+                  fontFamily: "var(--font-main)",
+                  textAlign: "center",
+                  lineHeight: 1.8,
+                  transition: "all .25s",
+                }}
+              >
+                🌙 唤醒预览<br />
+                <span style={{ fontSize: 11, color: "#b0a0c0", letterSpacing: 1 }}>查看他醒来时记得什么</span>
               </button>
             </>
           )}

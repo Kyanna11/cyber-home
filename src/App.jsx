@@ -40,6 +40,7 @@ import DiaryPage from "./pages/DiaryPage";
 import MyProfilePage from "./pages/MyProfilePage";
 import RawArchivePage from "./pages/RawArchivePage";
 import MigrationDraftPage from "./pages/MigrationDraftPage";
+import WakePreviewPage from "./pages/WakePreviewPage";
 
 // MSG_DELIMITER is used internally by parseResponse in utils/prompt.js
 const defaultUserProfile = {
@@ -81,6 +82,9 @@ export default function App() {
   // ─── 迁入草稿 ───
   const [migrationDrafts, setMigrationDrafts] = useState(() => loadMigrationDrafts());
   const [migrationDraftCharId, setMigrationDraftCharId] = useState(null);
+
+  // ─── 唤醒预览 ───
+  const [wakePreviewCharId, setWakePreviewCharId] = useState(null);
   const [draftGenerating, setDraftGenerating] = useState(false);
   const [draftError, setDraftError] = useState("");
 
@@ -393,6 +397,11 @@ export default function App() {
     setMigrationDraftCharId(charId);
     setDraftError("");
     navigateTo("migrationDraft");
+  };
+
+  const openWakePreview = (charId) => {
+    setWakePreviewCharId(charId);
+    navigateTo("wakePreview");
   };
 
   const handleGenerateDraft = async (charId) => {
@@ -1330,6 +1339,7 @@ ${chunksText}
           updateEditMigration={updateEditMigration}
           openRawArchive={openRawArchive}
           openMigrationDraft={openMigrationDraft}
+          openWakePreview={openWakePreview}
         />
       )}
 
@@ -1366,6 +1376,22 @@ ${chunksText}
           navigateTo={navigateTo}
         />
       )}
+
+      {/* 唤醒预览 */}
+      {page === "wakePreview" && (() => {
+        const wakeChar = characters.find((c) => c.id === wakePreviewCharId) || null;
+        return (
+          <WakePreviewPage
+            char={wakeChar}
+            charMemories={wakeChar ? getCharMemories(wakeChar.id) : {}}
+            worldView={wakeChar ? (worldViews[wakeChar.id] || "") : ""}
+            userProfile={userProfile}
+            ctxConfig={ctxConfig}
+            navigateTo={navigateTo}
+            prevPage={prevPage}
+          />
+        );
+      })()}
 
       {/* 记忆宫殿 */}
       {page === "memoryPalace" && (
@@ -1462,6 +1488,7 @@ ${chunksText}
           memInjection={memInjection}
           handleSaveMemInjection={handleSaveMemInjection}
           getCurrentPromptTokens={getCurrentPromptTokens}
+          openWakePreview={openWakePreview}
           editingMsgIdx={editingMsgIdx}
           setEditingMsgIdx={setEditingMsgIdx}
           editingMsgText={editingMsgText}
