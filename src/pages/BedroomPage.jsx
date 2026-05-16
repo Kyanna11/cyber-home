@@ -119,7 +119,7 @@ export default function BedroomPage({
               animation: "tooltipIn .25s ease-out",
             }}
           >
-            📔 我的日记本
+            📓 我的手札
           </div>
         )}
         {hoveredItem === "door" && (

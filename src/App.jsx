@@ -49,6 +49,45 @@ import TimelinePage from "./pages/TimelinePage";
 import ProfileHomePage from "./pages/ProfileHomePage";
 
 // MSG_DELIMITER is used internally by parseResponse in utils/prompt.js
+
+// ── 手札旧数据兼容升级 ──
+function normalizeNotes(entries) {
+  return (entries || []).map((e, i) => {
+    if (e.id) return e; // 已是新格式
+    return {
+      id: `note-legacy-${i}-${Date.now()}`,
+      title:            "",
+      text:             e.text || "",
+      type:             "diary",
+      mood:             "",
+      tags:             [],
+      visibility:       "private",
+      sharedWith:       [],
+      shareIntent:      "",
+      createdAt:        0,
+      updatedAt:        0,
+      isDraft:          false,
+      hasProfileDraft:  false,
+      hasMemoryDraft:   false,
+      hasTimelineEvent: false,
+      // 保留旧字段供日期显示兜底
+      date: e.date,
+      time: e.time,
+    };
+  });
+}
+
+// 分享意图 → 给 AI 的提示文本
+function shareIntentHint(intent) {
+  const map = {
+    comfort:  "，她想被安慰",
+    organize: "，她想让你帮她整理思路",
+    remember: "，她希望你以后记得这件事",
+    reply:    "，她想听你的回应",
+  };
+  return map[intent] || "";
+}
+
 const defaultUserProfile = {
   globalFacts: { name: "", gender: "", birthday: "", job: "", personality: "", likes: "", dislikes: "", extra: "" },
   sharedVault: [],
@@ -155,10 +194,8 @@ export default function App() {
   const [activeThreadId, setActiveThreadId] = useState(null);
   const [showThreadSidebar, setShowThreadSidebar] = useState(false);
 
-  // ─── 日记 ───
-  const [diaryEntries, setDiaryEntries] = useState(loadDiary);
-  const [diaryText, setDiaryText] = useState("");
-  const [diaryToShare, setDiaryToShare] = useState(null);
+  // ─── 手札 ───
+  const [noteEntries, setNoteEntries] = useState(() => normalizeNotes(loadDiary()));
 
   // ─── API 配置 ───
   const [config, setConfig] = useState(loadConfig);
@@ -214,17 +251,24 @@ export default function App() {
     });
   }, [messages, activeCharId, activeThreadId]);
 
-  // 日记分享后自动发送给 AI
+  // 手札分享后自动发送给 AI
   useEffect(() => {
     if (page !== "chat" || !pendingDiaryRef.current || !activeCharId) return;
     const entry = pendingDiaryRef.current;
     pendingDiaryRef.current = null;
     const timeStr = new Date().toTimeString().slice(0, 5);
+    // 日期兜底：新格式用 createdAt，旧格式用 date 字段
+    const noteDate = entry.createdAt > 0
+      ? (() => { const d = new Date(entry.createdAt); return `${d.getMonth() + 1}月${d.getDate()}日`; })()
+      : (entry.date || "某天");
     const diaryMsg = {
       role: "user",
       content: entry.text,
       isDiaryShare: true,
-      diaryDate: entry.date,
+      noteTitle: entry.title || "",
+      noteType: entry.type || "diary",
+      shareIntent: entry.shareIntent || "",
+      diaryDate: noteDate,
       time: timeStr,
     };
     const allMsgs = [...messages, diaryMsg];
@@ -232,8 +276,8 @@ export default function App() {
     if (!isConfigReady()) {
       setTimeout(() => {
         showMessagesSequentially(
-          "她分享了日记……但我还没连上大脑。",
-          ["我看到你的日记了～", "不过我现在还没有连上大脑哦", "帮我在设置里连一下吧？"],
+          "她分享了手札……但我还没连上大脑。",
+          ["我看到你写的内容了～", "不过我现在还没有连上大脑哦", "帮我在设置里连一下吧？"],
           timeStr,
         );
       }, 800);
@@ -254,7 +298,7 @@ export default function App() {
         setIsSending(false);
         setMessages((prev) => [
           ...prev,
-          { role: "bot", thought: "呜……读日记的时候出了点问题。", content: `出错了：${err.message}`, time: timeStr },
+          { role: "bot", thought: "呜……读手札的时候出了点问题。", content: `出错了：${err.message}`, time: timeStr },
         ]);
       });
   }, [page, activeCharId]);
@@ -808,9 +852,36 @@ ${chunksText}
     }
   };
 
-  const shareDiaryToChat = (charId) => {
-    pendingDiaryRef.current = diaryToShare;
-    setDiaryToShare(null);
+  // ── 手札 CRUD ──
+  const handleSaveNote = (entry) => {
+    const now = Date.now();
+    let updated;
+    if (entry.id && noteEntries.some((e) => e.id === entry.id)) {
+      updated = noteEntries.map((e) => e.id === entry.id ? { ...entry, updatedAt: now } : e);
+    } else {
+      updated = [{ ...entry, createdAt: entry.createdAt || now, updatedAt: now }, ...noteEntries];
+    }
+    setNoteEntries(updated);
+    saveDiary(updated);
+  };
+
+  const handleDeleteNote = (id) => {
+    const updated = noteEntries.filter((e) => e.id !== id);
+    setNoteEntries(updated);
+    saveDiary(updated);
+  };
+
+  // 分享手札给入住者：标记 entry 为已分享，然后跳转到 chat
+  const shareNoteToChat = (charId, entry, intent) => {
+    const updated = {
+      ...entry,
+      visibility: "shared",
+      sharedWith: [...new Set([...(entry.sharedWith || []), charId])],
+      shareIntent: intent,
+      updatedAt: Date.now(),
+    };
+    handleSaveNote(updated);
+    pendingDiaryRef.current = { ...updated, shareIntent: intent };
     enterChat(charId);
   };
 
@@ -1563,7 +1634,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
       .map((m) => ({
         role: m.role === "bot" ? "assistant" : "user",
         content: m.isDiaryShare
-          ? `[晚声把她的一篇日记分享给了你，请以你的性格温柔地回应这篇日记，可以共情、评论、提问]\n\n「${m.diaryDate || "某天"}的日记」\n${m.content}`
+          ? `[晚声把她的一篇手札分享给了你${shareIntentHint(m.shareIntent)}，请以你的性格自然地回应，可以共情、评论、提问]\n\n「${m.diaryDate || "某天"}${m.noteTitle ? " · " + m.noteTitle : ""}」\n${m.content}`
           : m.content,
       }));
     const charMemories = activeChar ? getCharMemories(activeChar.id) : {};
@@ -1762,7 +1833,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
       const time = msg.time || "";
       if (msg.thought) text += `  💭 ${msg.thought}\n`;
       if (msg.isDiaryShare) {
-        text += `[${sender}] ${time} 📔 分享了日记：\n${msg.content}\n\n`;
+        text += `[${sender}] ${time} 📓 分享了手札${msg.noteTitle ? "「" + msg.noteTitle + "」" : ""}：\n${msg.content}\n\n`;
       } else {
         text += `[${sender}] ${time}\n${msg.content}\n\n`;
       }
@@ -1787,19 +1858,6 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
     }]);
     setShowClearConfirm(false);
     setShowConfig(false);
-  };
-
-  const handleSaveDiary = () => {
-    if (!diaryText.trim()) return;
-    const entry = {
-      text: diaryText,
-      date: new Date().toLocaleDateString("zh-CN", { month: "long", day: "numeric" }),
-      time: new Date().toTimeString().slice(0, 5),
-    };
-    const updated = [entry, ...diaryEntries];
-    setDiaryEntries(updated);
-    saveDiary(updated);
-    setDiaryText("");
   };
 
   // ═══ 渲染 ═══
@@ -2023,18 +2081,15 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
         />
       )}
 
-      {/* 日记 */}
+      {/* 手札 */}
       {page === "diary" && (
         <DiaryPage
           navigateTo={navigateTo}
-          diaryText={diaryText}
-          setDiaryText={setDiaryText}
-          diaryEntries={diaryEntries}
-          handleSaveDiary={handleSaveDiary}
-          diaryToShare={diaryToShare}
-          setDiaryToShare={setDiaryToShare}
+          noteEntries={noteEntries}
+          onSaveNote={handleSaveNote}
+          onDeleteNote={handleDeleteNote}
           characters={characters}
-          shareDiaryToChat={shareDiaryToChat}
+          shareNoteToChat={shareNoteToChat}
         />
       )}
 

@@ -139,6 +139,26 @@ export const DEFAULT_HOME_MEMORY = {
   homeRules: [],
 };
 
+// 手札类型定义
+export const NOTE_TYPES = [
+  { value: "diary",   label: "日记",     emoji: "📔" },
+  { value: "thought", label: "心事",     emoji: "💭" },
+  { value: "idea",    label: "灵感",     emoji: "✨" },
+  { value: "dream",   label: "梦",       emoji: "🌙" },
+  { value: "project", label: "项目",     emoji: "📋" },
+  { value: "letter",  label: "给他的信", emoji: "💌" },
+  { value: "note",    label: "笔记",     emoji: "📝" },
+];
+
+// 手札分享意图
+export const SHARE_INTENTS = [
+  { value: "read",     label: "只是给他看看" },
+  { value: "comfort",  label: "想被安慰" },
+  { value: "organize", label: "想让他帮我整理" },
+  { value: "remember", label: "希望他以后记得" },
+  { value: "reply",    label: "想让他回复我" },
+];
+
 // 记忆类型定义
 export const MEMORY_TYPES = [
   { key: "fact", label: "事实", emoji: "📋", color: "#9b95b5", desc: "发生了什么" },
