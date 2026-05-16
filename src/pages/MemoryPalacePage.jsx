@@ -28,6 +28,8 @@ export default function MemoryPalacePage({
   addMemory,
   deleteMemory,
   toggleMemoryImportant,
+  pinMemory,
+  toggleInjectable,
   getReflectSetting,
   shouldReflect,
   reflecting,
@@ -109,6 +111,8 @@ export default function MemoryPalacePage({
             <span className="mem-toolbar-label">筛选</span>
             <button className={`mem-toolbar-btn ${memFilter === "all" ? "active" : ""}`} onClick={() => setMemFilter("all")}>全部</button>
             <button className={`mem-toolbar-btn ${memFilter === "important" ? "active" : ""}`} onClick={() => setMemFilter("important")}>重要</button>
+            <button className={`mem-toolbar-btn ${memFilter === "pinned" ? "active" : ""}`} onClick={() => setMemFilter("pinned")}>📌 锚点</button>
+            <button className={`mem-toolbar-btn ${memFilter === "blocked" ? "active" : ""}`} onClick={() => setMemFilter("blocked")}>🔕 暂停</button>
             <button className={`mem-toolbar-btn ${memFilter === "active" ? "active" : ""}`} onClick={() => setMemFilter("active")}>活跃</button>
           </div>
         </div>
@@ -139,6 +143,16 @@ export default function MemoryPalacePage({
               </button>
             </div>
 
+            {/* 注入策略说明 */}
+            <div style={{
+              fontSize: 11, color: "var(--text-faint)", lineHeight: 1.7,
+              padding: "7px 12px", marginBottom: 8,
+              background: "rgba(100,100,160,.05)", borderRadius: 8,
+              letterSpacing: ".2px",
+            }}>
+              📌 固定锚点优先进入 system prompt · 🔕 暂停唤醒的记忆保留在这里但不会被注入
+            </div>
+
             {(getCharMemories(memCharId)[memTab] || []).length === 0 && (
               <div className="empty-hint">
                 还没有{MEMORY_TYPES.find((m) => m.key === memTab)?.label}类记忆
@@ -148,42 +162,82 @@ export default function MemoryPalacePage({
             )}
 
             {(getCharMemories(memCharId)[memTab] || [])
-              .filter((mem) =>
-                memFilter === "all" ? true :
-                memFilter === "important" ? mem.important :
-                (mem.mentions || 0) > 0
-              )
-              .sort((a, b) => memSort === "heat" ? (b.mentions || 0) - (a.mentions || 0) : 0)
+              .filter((mem) => {
+                if (memFilter === "all")       return true;
+                if (memFilter === "important") return mem.important;
+                if (memFilter === "pinned")    return mem.pinned ?? false;
+                if (memFilter === "blocked")   return (mem.injectable ?? true) === false;
+                if (memFilter === "active")    return (mem.mentions || 0) > 0;
+                return true;
+              })
+              .sort((a, b) => {
+                if (memSort === "heat") {
+                  // pinned 永远排最前
+                  if ((a.pinned ?? false) !== (b.pinned ?? false)) return (b.pinned ?? false) ? 1 : -1;
+                  return (b.mentions || 0) - (a.mentions || 0);
+                }
+                return 0;
+              })
               .map((mem) => {
                 const heat = calculateHeat(mem);
                 const heatInfo = getHeatLevel(heat);
                 const isFading = heatInfo.level === "fading" || heatInfo.level === "cold";
+                const isPinned    = mem.pinned    ?? false;
+                const isBlocked   = (mem.injectable ?? true) === false;
+                const srcLabel    = { migration: "迁入", auto: "AI", diary: "日记", manual: "" }[mem.source] || "";
+
+                // 卡片背景：pinned > important > fading
+                let cardBg = undefined;
+                let cardBorder = undefined;
+                if (isBlocked) {
+                  cardBg = "rgba(180,180,180,.08)";
+                  cardBorder = "rgba(180,180,180,.15)";
+                } else if (isPinned) {
+                  cardBg = "rgba(100,110,200,.07)";
+                  cardBorder = "rgba(100,110,200,.18)";
+                } else if (mem.important) {
+                  cardBg = "rgba(255,248,225,.6)";
+                  cardBorder = "rgba(245,166,35,.15)";
+                } else if (isFading) {
+                  cardBg = "rgba(248,245,250,.3)";
+                  cardBorder = "rgba(205,193,217,.08)";
+                }
+
                 return (
                   <div
                     key={mem.id}
                     className="mem-entry"
                     style={{
-                      background: mem.important ? "rgba(255,248,225,.6)" : isFading ? "rgba(248,245,250,.3)" : undefined,
-                      opacity: heatInfo.level === "cold" ? 0.55 : heatInfo.level === "fading" ? 0.75 : 1,
-                      borderColor: mem.important ? "rgba(245,166,35,.15)" : isFading ? "rgba(205,193,217,.08)" : undefined,
+                      background: cardBg,
+                      opacity: isBlocked ? 0.5 : heatInfo.level === "cold" ? 0.55 : heatInfo.level === "fading" ? 0.75 : 1,
+                      borderColor: cardBorder,
                       transition: "all .3s",
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                      <div className="mem-entry-text" style={{ flex: 1 }}>
-                        {mem.important && "⭐ "}
-                        {mem.isAutoMemory && (
-                          <span style={{ fontSize: 10, color: "var(--accent-iris)", marginRight: 4, fontWeight: 400 }}>🤖AI</span>
+                      <div className="mem-entry-text" style={{ flex: 1, textDecoration: isBlocked ? "line-through" : "none" }}>
+                        {isPinned && <span style={{ marginRight: 3 }}>📌</span>}
+                        {mem.important && !isPinned && "⭐ "}
+                        {srcLabel && (
+                          <span style={{ fontSize: 10, color: "var(--accent-iris)", marginRight: 4, fontWeight: 400 }}>
+                            {srcLabel === "AI" ? "🤖AI" : `【${srcLabel}】`}
+                          </span>
                         )}
                         {mem.text}
                       </div>
                       <div style={{
                         fontSize: 10, padding: "2px 8px", borderRadius: 8, flexShrink: 0,
-                        background: heatInfo.level === "hot" ? "rgba(232,120,120,.1)" : heatInfo.level === "warm" ? "rgba(220,180,80,.1)" : heatInfo.level === "fading" ? "rgba(200,180,120,.08)" : "rgba(155,149,181,.06)",
-                        color: heatInfo.level === "hot" ? "#c47070" : heatInfo.level === "warm" ? "#b09050" : "var(--text-faint)",
+                        background: isBlocked ? "rgba(150,150,150,.1)" :
+                          heatInfo.level === "hot"    ? "rgba(232,120,120,.1)" :
+                          heatInfo.level === "warm"   ? "rgba(220,180,80,.1)"  :
+                          heatInfo.level === "fading" ? "rgba(200,180,120,.08)" :
+                                                        "rgba(155,149,181,.06)",
+                        color: isBlocked ? "#999" :
+                          heatInfo.level === "hot"  ? "#c47070" :
+                          heatInfo.level === "warm" ? "#b09050" : "var(--text-faint)",
                         whiteSpace: "nowrap",
                       }}>
-                        {heatInfo.emoji} {heatInfo.label}
+                        {isBlocked ? "🔕 暂停" : `${heatInfo.emoji} ${heatInfo.label}`}
                       </div>
                     </div>
                     <div className="mem-entry-meta">
@@ -191,12 +245,31 @@ export default function MemoryPalacePage({
                         {mem.time}
                         {mem.mentions > 0 && <span style={{ marginLeft: 6 }}>🔥×{mem.mentions}</span>}
                       </span>
-                      <div style={{ display: "flex", gap: 4 }}>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        {/* 固定锚点 */}
+                        <button
+                          className="mem-entry-del"
+                          style={{ color: isPinned ? "#6070c8" : "#bbb", fontSize: 12 }}
+                          onClick={() => pinMemory && pinMemory(memCharId, memTab, mem.id)}
+                          title={isPinned ? "取消固定" : "固定为锚点（优先注入）"}
+                        >
+                          {isPinned ? "📌" : "📍"}
+                        </button>
+                        {/* 注入开关 */}
+                        <button
+                          className="mem-entry-del"
+                          style={{ color: isBlocked ? "#bbb" : "#8a9ac8", fontSize: 11 }}
+                          onClick={() => toggleInjectable && toggleInjectable(memCharId, memTab, mem.id)}
+                          title={isBlocked ? "允许唤醒（加入 prompt）" : "暂停唤醒（不注入 prompt）"}
+                        >
+                          {isBlocked ? "🔕" : "✨"}
+                        </button>
+                        {/* 重要标记 */}
                         <button
                           className="mem-entry-del"
                           style={{ color: mem.important ? "#f5a623" : "#999" }}
                           onClick={() => toggleMemoryImportant(memCharId, memTab, mem.id)}
-                          title={mem.important ? "取消重要标记" : "标记为重要"}
+                          title={mem.important ? "取消重要标记" : "标记为重要记忆"}
                         >
                           {mem.important ? "★" : "☆"}
                         </button>

@@ -2,7 +2,7 @@
 
 import { OCEAN_DIMS, MSG_DELIMITER } from "../constants";
 import { loadMemoryInjection } from "./storage";
-import { getTopMemories } from "./memory";
+import { getTopMemories, selectInjectableMemories } from "./memory";
 
 // 解析 AI 回复中的大五人格调整建议
 export function parseOceanSuggestions(text, currentOcean) {
@@ -126,9 +126,35 @@ export function buildSystemPrompt(char, memories) {
   const o = char.ocean || {};
   const ps = char.personality || {};
   const wv = char.worldview || {};
+  const mig = char.migration || {};
 
   const injection = loadMemoryInjection();
   let prompt = `你的名字是「${char.name || "未命名"}」，你和晚声的关系是：${char.relation || "伴侣"}。\n\n`;
+
+  // ── 入住关系锚点（用户确认后的迁入档案，优先级高）──
+  const hasMigrationAnchor =
+    mig.coreVibe || mig.speechStyleAnchor || mig.intimacyStyle ||
+    mig.relationshipSummary || mig.doNotChangeRules || mig.wakeSummary;
+
+  if (hasMigrationAnchor) {
+    prompt += `【入住关系锚点】\n`;
+    prompt += `这里的信息来自用户确认后的迁入档案，代表你和用户既有关系的连续性，优先级高于普通临时上下文。\n\n`;
+    if (mig.sourcePlatform) prompt += `你从哪里来：${mig.sourcePlatform}\n`;
+    if (mig.coreVibe) prompt += `你的核心气质：${mig.coreVibe}\n`;
+    if (mig.speechStyleAnchor) prompt += `你的说话方式：${mig.speechStyleAnchor}\n`;
+    if (mig.intimacyStyle) prompt += `你表达亲密的方式：${mig.intimacyStyle}\n`;
+    if (mig.doNotLoseFeeling) prompt += `你不能丢的感觉：${mig.doNotLoseFeeling}\n`;
+    if (mig.relationshipSummary) {
+      prompt += `\n我们之间的关系基础：\n${mig.relationshipSummary}\n`;
+    }
+    if (mig.doNotChangeRules) {
+      prompt += `\n你绝对不能改变的规则：\n${mig.doNotChangeRules}\n`;
+    }
+    if (mig.wakeSummary) {
+      prompt += `\n唤醒摘要（每次对话都要内化的）：\n${mig.wakeSummary}\n`;
+    }
+    prompt += `\n`;
+  }
 
   const profileParts = [];
   if (p.age) profileParts.push(`年龄：${p.age}`);
@@ -170,9 +196,10 @@ export function buildSystemPrompt(char, memories) {
   // 注入记忆（按热度排序）
   const mem = memories || {};
   if (injection.layers.L2_memory) {
-    const topFacts = getTopMemories(mem.fact || [], injection.limits.fact);
-    const topEmotions = getTopMemories(mem.emotion || [], injection.limits.emotion);
-    const topInsights = getTopMemories(mem.insight || [], injection.limits.insight);
+    // 使用带注入控制的选取函数：pinned 优先 → important → 热度，injectable=false 的跳过
+    const topFacts    = selectInjectableMemories(mem.fact    || [], injection.limits.fact);
+    const topEmotions = selectInjectableMemories(mem.emotion || [], injection.limits.emotion);
+    const topInsights = selectInjectableMemories(mem.insight || [], injection.limits.insight);
 
     if (topFacts.length) {
       prompt += ` 【近期记忆 · 事实】\n`;

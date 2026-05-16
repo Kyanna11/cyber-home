@@ -591,6 +591,11 @@ ${chunksText}
         mentions: 0,
         createdAt: now,
         lastMentioned: null,
+        // 注入控制字段
+        pinned:     true,
+        injectable: true,
+        priority:   1,
+        source:     "migration",
       });
 
       (fields.userFacts || []).forEach((t) => {
@@ -746,10 +751,31 @@ ${chunksText}
       mentions: 0,
       createdAt: Date.now(),
       lastMentioned: null,
+      // 注入控制字段
+      pinned:     false,
+      injectable: true,
+      priority:   0,
+      source:     "manual",
     };
     mem[type] = [entry, ...(mem[type] || [])];
     setAllMemories((prev) => ({ ...prev, [charId]: mem }));
     setMemInput("");
+  };
+
+  const pinMemory = (charId, type, memId) => {
+    const mem = getCharMemories(charId);
+    mem[type] = (mem[type] || []).map((m) =>
+      m.id === memId ? { ...m, pinned: !(m.pinned ?? false) } : m
+    );
+    setAllMemories((prev) => ({ ...prev, [charId]: mem }));
+  };
+
+  const toggleInjectable = (charId, type, memId) => {
+    const mem = getCharMemories(charId);
+    mem[type] = (mem[type] || []).map((m) =>
+      m.id === memId ? { ...m, injectable: !(m.injectable ?? true) } : m
+    );
+    setAllMemories((prev) => ({ ...prev, [charId]: mem }));
   };
 
   const deleteMemory = (charId, type, memId) => {
@@ -1418,6 +1444,8 @@ ${chunksText}
           addMemory={addMemory}
           deleteMemory={deleteMemory}
           toggleMemoryImportant={toggleMemoryImportant}
+          pinMemory={pinMemory}
+          toggleInjectable={toggleInjectable}
           getReflectSetting={getReflectSetting}
           shouldReflect={shouldReflect}
           reflecting={reflecting}

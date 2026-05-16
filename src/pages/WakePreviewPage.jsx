@@ -7,7 +7,7 @@ import BackButton from "../components/BackButton";
 import { buildSystemPrompt, buildUserContext } from "../utils/prompt";
 import { estimateTokens } from "../utils/helpers";
 import { loadMemoryInjection } from "../utils/storage";
-import { getTopMemories } from "../utils/memory";
+import { selectInjectableMemories } from "../utils/memory";
 
 // ── 样式常量 ──
 const preStyle = {
@@ -187,12 +187,27 @@ export default function WakePreviewPage({
 
   const tokenCount = estimateTokens(fullPrompt);
 
-  // ── 记忆注入统计 ──
+  // ── 记忆注入统计（与 buildSystemPrompt 使用相同函数） ──
   const memInjection = loadMemoryInjection();
-  const topFacts    = getTopMemories(charMemories?.fact    || [], memInjection.limits.fact);
-  const topEmotions = getTopMemories(charMemories?.emotion || [], memInjection.limits.emotion);
-  const topInsights = getTopMemories(charMemories?.insight || [], memInjection.limits.insight);
+  const topFacts    = selectInjectableMemories(charMemories?.fact    || [], memInjection.limits.fact);
+  const topEmotions = selectInjectableMemories(charMemories?.emotion || [], memInjection.limits.emotion);
+  const topInsights = selectInjectableMemories(charMemories?.insight || [], memInjection.limits.insight);
   const memCount = topFacts.length + topEmotions.length + topInsights.length;
+
+  // pinned / blocked 统计（所有类型合并）
+  const normalize = (items) => (items || []).map((m) => ({
+    ...m,
+    pinned:     m.pinned     ?? false,
+    injectable: m.injectable ?? true,
+    source:     m.source     || (m.isAutoMemory ? "auto" : "manual"),
+  }));
+  const allItems = [
+    ...normalize(charMemories?.fact    || []),
+    ...normalize(charMemories?.emotion || []),
+    ...normalize(charMemories?.insight || []),
+  ];
+  const pinnedCount  = allItems.filter((m) => m.pinned).length;
+  const blockedCount = allItems.filter((m) => m.injectable === false).length;
 
   const charName = char?.name || "未知入住者";
 
@@ -238,20 +253,22 @@ export default function WakePreviewPage({
       <div style={{ flex: 1, overflow: "auto", padding: "14px 16px 40px" }}>
 
         {/* 统计卡片 */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
           {[
             { label: "估算 Token", value: tokenCount.toLocaleString() },
-            { label: "记忆注入",   value: `${memCount} 条` },
+            { label: "本次注入",   value: `${memCount} 条` },
+            { label: "固定锚点",   value: `${pinnedCount} 条` },
+            { label: "暂停注入",   value: blockedCount > 0 ? `${blockedCount} 条` : "—" },
             { label: "上下文上限", value: ctxConfig?.maxTokens ?? "—" },
           ].map(({ label, value }) => (
             <div key={label} style={{
-              flex: 1, padding: "10px 6px",
+              flex: "1 1 60px", padding: "10px 6px",
               background: "rgba(255,255,255,.75)",
               borderRadius: 12, border: "1px solid rgba(255,255,255,.55)",
               boxShadow: "0 2px 8px rgba(0,0,0,.04)", textAlign: "center",
             }}>
-              <div style={{ fontSize: 17, fontWeight: 700, color: "#6a5a8e" }}>{value}</div>
-              <div style={{ fontSize: 10, color: "#9a8aac", letterSpacing: 0.8, marginTop: 2 }}>{label}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#6a5a8e" }}>{value}</div>
+              <div style={{ fontSize: 10, color: "#9a8aac", letterSpacing: 0.6, marginTop: 2 }}>{label}</div>
             </div>
           ))}
         </div>
@@ -347,29 +364,47 @@ export default function WakePreviewPage({
 
         {/* 记忆注入 */}
         <Block
-          emoji="🧠" title={`记忆注入（${memCount} 条）`}
+          emoji="🧠" title={`本次注入记忆（${memCount} 条）`}
           isEmpty={memCount === 0}
           isOpen={memCount > 0}
         >
-          <div style={{ paddingTop: 8 }}>
-            {topFacts.length > 0 && (
-              <div style={{ marginBottom: 10 }}>
-                <div style={sectionLabelStyle}>📋 事实（{topFacts.length} 条）</div>
-                {topFacts.map((m, i) => <div key={i} style={memItemStyle}>· {m.text}</div>)}
+          <div style={{ paddingTop: 6 }}>
+            {/* 注入策略说明 */}
+            <div style={{
+              fontSize: 11, color: "#9a8aac", lineHeight: 1.65,
+              padding: "6px 10px", marginBottom: 10,
+              background: "rgba(100,100,160,.05)", borderRadius: 7,
+            }}>
+              📌 固定锚点优先进入 · 🔕 暂停唤醒的记忆不出现在此列表
+              {blockedCount > 0 && `（已屏蔽 ${blockedCount} 条）`}
+            </div>
+
+            {[
+              { label: "📋 事实", items: topFacts },
+              { label: "💗 情绪", items: topEmotions },
+              { label: "✨ 觉察", items: topInsights },
+            ].filter(({ items }) => items.length > 0).map(({ label, items }) => (
+              <div key={label} style={{ marginBottom: 10 }}>
+                <div style={sectionLabelStyle}>{label}（{items.length} 条）</div>
+                {items.map((m, i) => {
+                  const srcMap = { migration: "迁入", auto: "AI", diary: "日记", manual: "手动" };
+                  const src = srcMap[m.source] || "";
+                  return (
+                    <div key={i} style={{ ...memItemStyle, display: "flex", alignItems: "flex-start", gap: 4 }}>
+                      <span style={{ color: (m.pinned ?? false) ? "#6070c8" : "#c0b0d0", flexShrink: 0 }}>
+                        {(m.pinned ?? false) ? "📌" : "·"}
+                      </span>
+                      <span style={{ flex: 1 }}>
+                        {src && (
+                          <span style={{ fontSize: 10, color: "#9a8aac", marginRight: 4 }}>[{src}]</span>
+                        )}
+                        {m.text}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-            )}
-            {topEmotions.length > 0 && (
-              <div style={{ marginBottom: 10 }}>
-                <div style={sectionLabelStyle}>💗 情绪（{topEmotions.length} 条）</div>
-                {topEmotions.map((m, i) => <div key={i} style={memItemStyle}>· {m.text}</div>)}
-              </div>
-            )}
-            {topInsights.length > 0 && (
-              <div>
-                <div style={sectionLabelStyle}>✨ 觉察（{topInsights.length} 条）</div>
-                {topInsights.map((m, i) => <div key={i} style={memItemStyle}>· {m.text}</div>)}
-              </div>
-            )}
+            ))}
           </div>
         </Block>
 

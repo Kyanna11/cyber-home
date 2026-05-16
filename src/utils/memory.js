@@ -62,6 +62,41 @@ export function getTopMemories(entries, limit) {
     .slice(0, limit);
 }
 
+// 带注入控制的记忆选取：pinned 优先 → important → 热度排序
+// injectable === false 的条目完全跳过
+export function selectInjectableMemories(entries, limit) {
+  if (!entries || entries.length === 0 || limit <= 0) return [];
+  const migrated = migrateMemoryEntries(entries);
+
+  // 规范化新字段（旧数据无这些字段时取默认值）
+  const normalized = migrated.map((m) => ({
+    ...m,
+    pinned:     m.pinned     ?? false,
+    injectable: m.injectable ?? true,
+    priority:   m.priority   ?? 0,
+    source:     m.source     || (m.isAutoMemory ? "auto" : "manual"),
+    heat:       calculateHeat(m),
+  }));
+
+  // 过滤掉禁止注入的
+  const allowed = normalized.filter((m) => m.injectable !== false);
+
+  // 三层：固定 → 重要 → 热度
+  const pinned    = allowed.filter((m) => m.pinned);
+  const important = allowed.filter((m) => m.important && !m.pinned)
+                           .sort((a, b) => b.heat - a.heat);
+  const rest      = allowed.filter((m) => !m.pinned && !m.important)
+                           .sort((a, b) => b.heat - a.heat);
+
+  // 固定记忆全部保留，剩余槽位按优先级填充
+  const remaining  = Math.max(0, limit - pinned.length);
+  const impSlice   = important.slice(0, remaining);
+  const remaining2 = Math.max(0, remaining - impSlice.length);
+  const restSlice  = rest.slice(0, remaining2);
+
+  return [...pinned, ...impSlice, ...restSlice];
+}
+
 // 从 AI 回复中提取记忆标签，自动存入记忆库
 // 返回清理掉标签后的干净回复文本
 export function extractAndSaveMemories(raw, charId, allMemories, setAllMemories) {
@@ -104,6 +139,11 @@ export function extractAndSaveMemories(raw, charId, allMemories, setAllMemories)
         createdAt: Date.now(),
         lastMentioned: null,
         isAutoMemory: true,
+        // 注入控制字段
+        pinned:     false,
+        injectable: true,
+        priority:   0,
+        source:     "auto",
       };
       charMem[type] = [entry, ...(charMem[type] || [])];
     });
