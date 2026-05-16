@@ -439,7 +439,7 @@ export default function App() {
       .join("\n\n---\n\n");
 
     const userName = userProfile?.globalFacts?.name?.trim() || "晚声";
-    const charName = char.name?.trim() || "ta";
+    const charName = char.name?.trim() || "当前入住者";
 
     const prompt = `你正在帮助整理一段跨平台的亲密关系档案。
 对话中的两个人：一个叫「${userName}」，另一个叫「${charName}」。
@@ -474,7 +474,7 @@ ${chunksText}
 语气自然温暖，不要像报告。
 
 写作要求：
-- 内容中一律用「${userName}」和「${charName}」称呼两人，不要用"用户"或"他/她"。
+- 内容中一律用「${userName}」和「${charName}」称呼两人，不要用"用户""AI""他/她"等泛称。
 - 不要编造片段里没有的信息；信息不足时写"片段不足，暂无法确认"。
 - 不要使用咨询/报告语气，不要建议${userName}离开这段关系。
 - 保留亲密关系的连续性，不要把关系降级成普通用户和助手。`;
