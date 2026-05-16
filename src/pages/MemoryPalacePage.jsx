@@ -16,7 +16,6 @@ const SETTLEMENT_SECTIONS = [
 function SettlementDraftCard({ draft, onApplySection, onDismiss, onDelete }) {
   const applied = draft.appliedSections || [];
   const date = new Date(draft.createdAt).toLocaleDateString("zh-CN");
-  const content = draft.content || {};
 
   return (
     <div style={{
@@ -41,8 +40,8 @@ function SettlementDraftCard({ draft, onApplySection, onDismiss, onDelete }) {
         {applied.length > 0 && (
           <span style={{ fontSize: 10, color: "#6a9a6a", background: "rgba(100,160,100,.1)", padding: "2px 8px", borderRadius: 8 }}>
             已采纳 {applied.length} / {SETTLEMENT_SECTIONS.filter(s => {
-              const c = content[s.key];
-              return c && (Array.isArray(c) ? c.length > 0 : c.trim());
+              const c = draft[s.key];
+              return c && (Array.isArray(c) ? c.length > 0 : String(c).trim());
             }).length} 节
           </span>
         )}
@@ -51,7 +50,7 @@ function SettlementDraftCard({ draft, onApplySection, onDismiss, onDelete }) {
       {/* 各节内容 */}
       <div style={{ padding: "10px 14px 6px" }}>
         {SETTLEMENT_SECTIONS.map(({ key, label, emoji, hint }) => {
-          const raw = content[key];
+          const raw = draft[key];  // 直接从 draft 顶层读取，没有 content 包裹层
           if (!raw || (Array.isArray(raw) ? raw.length === 0 : !String(raw).trim())) return null;
           const displayText = Array.isArray(raw) ? raw.join("\n") : String(raw);
           const isApplied = applied.includes(key);
