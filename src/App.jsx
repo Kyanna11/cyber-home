@@ -1823,7 +1823,17 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           userProfile={userProfile}
           setUserProfile={setUserProfile}
           characters={characters}
-          openProfileHome={openProfileHome}
+          homeMemory={homeMemory}
+          profileDrafts={profileDrafts}
+          profileDraftGenerating={profileDraftGenerating}
+          profileDraftNotice={profileDraftNotice}
+          setProfileDraftNotice={setProfileDraftNotice}
+          generateProfileDraft={generateProfileDraft}
+          addHomeMemoryEntry={addHomeMemoryEntry}
+          deleteHomeMemoryEntry={deleteHomeMemoryEntry}
+          applyProfileDraftSection={applyProfileDraftSection}
+          dismissProfileDraft={dismissProfileDraft}
+          deleteProfileDraft={deleteProfileDraft}
         />
       )}
 
