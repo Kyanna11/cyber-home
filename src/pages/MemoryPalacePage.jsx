@@ -162,6 +162,8 @@ export default function MemoryPalacePage({
   reflecting,
   generateSettlement,
   settlementDrafts,
+  settlementNotice,
+  setSettlementNotice,
   applySettlementSection,
   dismissSettlementDraft,
   deleteSettlementDraft,
@@ -445,16 +447,29 @@ export default function MemoryPalacePage({
         {/* ── 关系沉淀 tab ── */}
         {memTab === "summary" && (
           <>
-            <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.8, letterSpacing: ".3px" }}>
-              定期沉淀这段时间的关系变化——AI 会生成草稿，你确认后再写入入住档案，不会自动覆盖任何手写内容。
+            {/* 功能说明 */}
+            <div style={{
+              fontSize: 12, lineHeight: 1.8, letterSpacing: ".3px",
+              padding: "10px 14px", borderRadius: 10, marginBottom: 14,
+              background: "rgba(106,122,174,.06)",
+              border: "1px solid rgba(106,122,174,.15)",
+              color: "var(--text-faint)",
+            }}>
+              <div style={{ marginBottom: 4, color: "var(--text-mid)", fontWeight: 500, fontSize: 12 }}>🌿 关于阶段沉淀</div>
+              阶段沉淀用于整理<strong>最近新增</strong>的关系变化，不是迁入旧记录。
+              导入旧对话请使用<span style={{ color: "var(--accent-iris)" }}>原始档案馆</span>和<span style={{ color: "var(--accent-iris)" }}>迁入草稿</span>。
+              AI 生成草稿后，你逐节确认，不会自动覆盖任何手写内容。
             </div>
 
             {/* 生成按钮 + 周期设置 */}
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: settlementNotice ? 8 : 14, flexWrap: "wrap" }}>
               <button
                 className="btn-ghost"
                 style={{ flex: 1, minWidth: 160 }}
-                onClick={() => generateSettlement && generateSettlement(memCharId)}
+                onClick={() => {
+                  setSettlementNotice && setSettlementNotice("");
+                  generateSettlement && generateSettlement(memCharId);
+                }}
                 disabled={reflecting}
               >
                 {reflecting ? "🌿 沉淀中……" : "🌿 生成阶段沉淀"}
@@ -480,6 +495,21 @@ export default function MemoryPalacePage({
                 </span>
               )}
             </div>
+
+            {/* ── 内联提示（素材不足 / 空结果 / 错误） ── */}
+            {settlementNotice && (
+              <div style={{
+                fontSize: 12, lineHeight: 1.7, padding: "10px 14px",
+                borderRadius: 10, marginBottom: 14,
+                background: "rgba(220,180,80,.08)",
+                border: "1px solid rgba(220,180,80,.2)",
+                color: "#a08040",
+                display: "flex", alignItems: "flex-start", gap: 8,
+              }}>
+                <span style={{ fontSize: 14, flexShrink: 0 }}>💡</span>
+                <span>{settlementNotice}</span>
+              </div>
+            )}
 
             {/* ── 待确认沉淀草稿 ── */}
             {(settlementDrafts || [])

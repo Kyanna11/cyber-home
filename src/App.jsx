@@ -97,6 +97,7 @@ export default function App() {
 
   // ─── 阶段沉淀草稿 ───
   const [settlementDrafts, setSettlementDrafts] = useState(() => loadSettlementDrafts());
+  const [settlementNotice, setSettlementNotice] = useState("");
 
   // ─── 记忆 ───
   const [allMemories, setAllMemories] = useState(() => loadMemories());
@@ -955,15 +956,31 @@ ${chunksText}
     const char = characters.find((c) => c.id === charId);
     if (!char) return;
 
+    // ── 前置：素材充足性检查 ──
+    const charThreadsList = chatThreads[charId] || [];
+    const chatMsgCount = charThreadsList.reduce(
+      (acc, thread) => acc + (thread.messages || []).filter((m) => m.role === "user").length,
+      0
+    );
+    const memCount =
+      (mem.fact || []).length + (mem.emotion || []).length + (mem.insight || []).length;
+    const tlCount = (timelineEvents || []).filter((e) => e.loverId === charId).length;
+    const summaryCount = (mem.summaries || []).length;
+    const totalMaterial = chatMsgCount + memCount + tlCount + summaryCount;
+
+    if (totalMaterial < 3) {
+      setSettlementNotice(
+        "最近还没有足够的新互动可以沉淀。可以先聊天、写日记、导入记录或手动添加记忆。"
+      );
+      return;
+    }
+    setSettlementNotice("");
+
     const allMems = [
       ...mem.fact.slice(0, 8).map((m) => `【事实】${m.text}`),
       ...mem.emotion.slice(0, 5).map((m) => `【情绪】${m.text}`),
       ...mem.insight.slice(0, 5).map((m) => `【觉察】${m.text}`),
     ];
-    if (allMems.length < 2) {
-      alert("记忆太少啦，至少需要 2 条记忆才能生成阶段沉淀～");
-      return;
-    }
 
     const mig = char.migration || {};
     const userName = userProfile?.globalFacts?.name?.trim() || "晚声";
@@ -972,16 +989,16 @@ ${chunksText}
     const settlePrompt = `你是「${charName}」，正在进行一次阶段性的关系沉淀。
 
 以下是这段时间与「${userName}」积累的记忆：
-${allMems.join("\n")}
+${allMems.length > 0 ? allMems.join("\n") : "（暂无记忆条目，请根据其他上下文尽力提炼）"}
 
 ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${mig.doNotChangeRules ? `\n你绝对不能改变的规则：\n${mig.doNotChangeRules}\n` : ""}
 请从「${charName}」的第一人称视角，完成阶段性沉淀，严格按以下格式输出：
 
 【关系变化记录】
-这段时间和「${userName}」之间发生了什么？关系有什么变化或发展？100字以内，第一人称，温暖自然，不要像报告。
+这段时间和「${userName}」之间发生了什么？关系有什么变化或发展？100字以内，第一人称，温暖自然，不要像报告。如果完全没有新变化，写：暂无
 
 【唤醒摘要建议】
-如果要更新唤醒摘要，你会怎么写？100字以内，代表下次对话开始时最该内化的关系基础。保留当前摘要的核心承诺，只补充新的发展。
+如果要更新唤醒摘要，你会怎么写？100字以内，代表下次对话开始时最该内化的关系基础。保留当前摘要的核心承诺，只补充新的发展。如果不需要更新，写：暂无
 
 【不可遗忘追加】
 这段经历中，有没有新的规则或边界需要加入「绝对不能改变」的清单？
@@ -1010,6 +1027,21 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
       const rawOutput = data.choices?.[0]?.message?.content;
       if (rawOutput) {
         const parsed = parseSettlementOutput(rawOutput);
+
+        // ── 后置：空结果检查 ──
+        const EMPTY_VALUES = ["无", "暂无", "没有", "无内容", "无变化"];
+        const isEmptyStr = (s) => !s || EMPTY_VALUES.includes(s.trim());
+        const isEmpty =
+          isEmptyStr(parsed.relationshipChange) &&
+          isEmptyStr(parsed.wakeSummaryUpdate) &&
+          (!parsed.newRules || parsed.newRules.length === 0) &&
+          (!parsed.suggestedMemories || parsed.suggestedMemories.length === 0);
+
+        if (isEmpty) {
+          setSettlementNotice("这次没有提炼出新的阶段沉淀。");
+          return;
+        }
+
         const now = Date.now();
         const draft = {
           id: genId(),
@@ -1028,7 +1060,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
         }));
       }
     } catch (err) {
-      alert("阶段沉淀生成失败：" + err.message);
+      setSettlementNotice("阶段沉淀生成失败：" + err.message);
     } finally {
       setReflecting(false);
     }
@@ -1662,6 +1694,8 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           reflecting={reflecting}
           generateSettlement={generateSettlement}
           settlementDrafts={settlementDrafts}
+          settlementNotice={settlementNotice}
+          setSettlementNotice={setSettlementNotice}
           applySettlementSection={applySettlementSection}
           dismissSettlementDraft={dismissSettlementDraft}
           deleteSettlementDraft={deleteSettlementDraft}
