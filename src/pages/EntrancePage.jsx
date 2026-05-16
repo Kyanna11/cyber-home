@@ -160,6 +160,26 @@ export default function EntrancePage({
             ? `${userProfile.globalFacts.name}的档案`
             : "我的档案"}
         </button>
+        <button
+          onClick={() => navigateTo("config")}
+          style={{
+            padding: "8px 28px",
+            background: "rgba(255,255,255,.3)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            border: "1px solid rgba(255,255,255,.3)",
+            borderRadius: 18,
+            color: "#9a8aac",
+            fontSize: 12,
+            fontWeight: 400,
+            letterSpacing: 2,
+            cursor: "pointer",
+            fontFamily: "var(--font-main)",
+            transition: "all .3s",
+          }}
+        >
+          🧠 大脑连接
+        </button>
       </div>
     </div>
   );

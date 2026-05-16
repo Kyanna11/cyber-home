@@ -47,6 +47,7 @@ import MigrationDraftPage from "./pages/MigrationDraftPage";
 import WakePreviewPage from "./pages/WakePreviewPage";
 import TimelinePage from "./pages/TimelinePage";
 import ProfileHomePage from "./pages/ProfileHomePage";
+import ConfigPage from "./pages/ConfigPage";
 
 // MSG_DELIMITER is used internally by parseResponse in utils/prompt.js
 
@@ -1814,7 +1815,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
   const handleSaveAll = () => {
     saveConfig(config);
     saveCtxConfig(ctxConfig);
-    setShowConfig(false);
+    // Config is now a page — no panel to close
   };
 
   const handleExportChat = () => {
@@ -2093,6 +2094,28 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
         />
       )}
 
+      {/* 大脑连接（API 设置页）*/}
+      {page === "config" && (
+        <ConfigPage
+          navigateTo={navigateTo}
+          prevPage={prevPage}
+          config={config}
+          setConfig={setConfig}
+          ctxConfig={ctxConfig}
+          setCtxConfig={setCtxConfig}
+          activeChar={activeChar}
+          setCharacters={setCharacters}
+          getActiveModel={getActiveModel}
+          handleTestConnection={handleTestConnection}
+          handleSaveAll={handleSaveAll}
+          testStatus={testStatus}
+          handleExportChat={handleExportChat}
+          showClearConfirm={showClearConfirm}
+          setShowClearConfirm={setShowClearConfirm}
+          handleClearChat={handleClearChat}
+        />
+      )}
+
       {/* 聊天 */}
       {page === "chat" && (
         <ChatPage
@@ -2123,19 +2146,12 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           editingMsgText={editingMsgText}
           setEditingMsgText={setEditingMsgText}
           handleEditAndResend={handleEditAndResend}
-          showConfig={showConfig}
-          setShowConfig={setShowConfig}
-          config={config}
-          setConfig={setConfig}
-          ctxConfig={ctxConfig}
-          setCtxConfig={setCtxConfig}
           handleExportChat={handleExportChat}
           showClearConfirm={showClearConfirm}
           setShowClearConfirm={setShowClearConfirm}
           handleClearChat={handleClearChat}
-          handleTestConnection={handleTestConnection}
-          handleSaveAll={handleSaveAll}
-          testStatus={testStatus}
+          noteEntries={noteEntries}
+          shareNoteToChat={shareNoteToChat}
           messages={messages}
           isSending={isSending}
           isTyping={isTyping}

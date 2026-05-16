@@ -1,14 +1,13 @@
 // ─── 聊天页 ───
-// 顶栏、话题侧边栏、记忆控制台（更多菜单）、API 配置、消息列表、输入栏
+// 顶栏、话题侧边栏、记忆控制台（更多菜单）、消息列表、输入栏
 
 import { useState } from "react";
-import { PRESET_MODELS } from "../constants";
+import { SHARE_INTENTS } from "../constants";
 
 export default function ChatPage({
   // 角色
   activeChar,
   activeCharId,
-  setCharacters,
   // 导航
   navigateTo,
   openMemoryPalace,
@@ -39,20 +38,14 @@ export default function ChatPage({
   editingMsgText,
   setEditingMsgText,
   handleEditAndResend,
-  // API 配置
-  showConfig,
-  setShowConfig,
-  config,
-  setConfig,
-  ctxConfig,
-  setCtxConfig,
+  // 对话管理
   handleExportChat,
   showClearConfirm,
   setShowClearConfirm,
   handleClearChat,
-  handleTestConnection,
-  handleSaveAll,
-  testStatus,
+  // 手札分享
+  noteEntries,
+  shareNoteToChat,
   // 消息区
   messages,
   isSending,
@@ -66,7 +59,8 @@ export default function ChatPage({
 }) {
   // ── 局部 UI 状态 ──
   const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [attachView, setAttachView] = useState(null); // null | "grid" | "notes" | "intent"
+  const [selectedNote, setSelectedNote] = useState(null);
 
   return (
     <div className="chat-scene">
@@ -168,7 +162,7 @@ export default function ChatPage({
                   { label: "唤醒预览",  emoji: "🌙", action: () => { activeChar && openWakePreview?.(activeChar.id); setShowMoreMenu(false); } },
                   { label: "记忆注入",  emoji: "🧠", action: () => { setShowMemoryControl(true); setShowMoreMenu(false); } },
                   null, // divider
-                  { label: "API 设置",  emoji: "⚙️", action: () => { setShowConfig(true); setShowMoreMenu(false); } },
+                  { label: "API 设置",  emoji: "⚙️", action: () => { navigateTo("config"); setShowMoreMenu(false); } },
                   { label: "导出聊天",  emoji: "📥", action: () => { handleExportChat(); setShowMoreMenu(false); } },
                   { label: "清空聊天",  emoji: "🗑", action: () => { setShowClearConfirm(true); setShowMoreMenu(false); }, danger: true },
                 ].map((item, i) =>
@@ -651,248 +645,17 @@ export default function ChatPage({
         </div>
       )}
 
-      {/* ── API 配置面板 ── */}
-      {showConfig && (
-        <div
-          className="config-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowConfig(false);
-          }}
-        >
-          <div className="config-panel">
-            <div className="config-header">
-              <div className="config-title">
-                <span>🔑</span>API 配置
-              </div>
-              <button
-                className="config-close"
-                onClick={() => setShowConfig(false)}
-              >
-                ✕
-              </button>
+      {/* ── 清空确认弹窗 ── */}
+      {showClearConfirm && (
+        <div className="config-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowClearConfirm(false); }}>
+          <div className="config-panel" style={{ maxWidth: 320 }}>
+            <div style={{ padding: "4px 0 16px", fontSize: 14, color: "#5a4a6a", textAlign: "center", lineHeight: 1.7 }}>
+              确定要清空所有对话记录吗？
             </div>
-            <div className="config-field">
-              <label className="config-label">API 主机 (URL)</label>
-              <input
-                className="config-input"
-                type="text"
-                placeholder="https://yunwu.ai/v1"
-                value={config.apiUrl}
-                onChange={(e) =>
-                  setConfig({ ...config, apiUrl: e.target.value })
-                }
-              />
-              <div className="config-hint">填到 /v1 就好</div>
+            <div className="confirm-actions">
+              <button className="confirm-cancel" onClick={() => setShowClearConfirm(false)}>再想想</button>
+              <button className="confirm-do" onClick={handleClearChat}>确认清空</button>
             </div>
-            <div className="config-field">
-              <label className="config-label">API Key</label>
-              <input
-                className="config-input"
-                type="password"
-                placeholder="sk-..."
-                value={config.apiKey}
-                onChange={(e) =>
-                  setConfig({ ...config, apiKey: e.target.value })
-                }
-              />
-            </div>
-            <div className="config-field">
-              <label className="config-label">全局默认模型</label>
-              <select
-                className="config-select"
-                value={config.model}
-                onChange={(e) =>
-                  setConfig({ ...config, model: e.target.value })
-                }
-              >
-                {PRESET_MODELS.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-              {config.model === "__custom__" && (
-                <input
-                  className="config-input config-custom-model"
-                  type="text"
-                  placeholder="如 deepseek-chat"
-                  value={config.customModel}
-                  onChange={(e) =>
-                    setConfig({ ...config, customModel: e.target.value })
-                  }
-                />
-              )}
-            </div>
-
-            {/* 角色专属模型 */}
-            {activeChar && (
-              <div className="config-field">
-                <label className="config-label">
-                  💜 {activeChar.name} 的专属模型
-                </label>
-                <input
-                  className="config-input"
-                  type="text"
-                  placeholder="留空 = 跟随全局默认模型"
-                  value={activeChar.modelOverride || ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setCharacters((prev) =>
-                      prev.map((c) =>
-                        c.id === activeChar.id
-                          ? { ...c, modelOverride: val }
-                          : c,
-                      ),
-                    );
-                  }}
-                />
-                <div className="config-hint">
-                  {activeChar.modelOverride?.trim()
-                    ? `✅ 当前使用专属模型：${activeChar.modelOverride.trim()}`
-                    : `📌 当前跟随全局：${config.model === "__custom__" ? config.customModel : config.model}`}
-                </div>
-              </div>
-            )}
-
-            <div className="config-divider" />
-            <div className="config-section-title">
-              <span>💬</span>上下文管理
-            </div>
-            <div className="config-field">
-              <label className="config-label">历史消息条数</label>
-              <div className="slider-row">
-                <div style={{ flex: 1 }}>
-                  <input
-                    className="slider-input"
-                    type="range"
-                    min="2"
-                    max="50"
-                    step="2"
-                    value={ctxConfig.maxMessages}
-                    onChange={(e) =>
-                      setCtxConfig({
-                        ...ctxConfig,
-                        maxMessages: Number(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="slider-value">{ctxConfig.maxMessages}</div>
-              </div>
-              <div className="config-hint">越多记得越久，消耗 token 也越多</div>
-            </div>
-            <div className="config-field">
-              <label className="config-label">最大回复 token 数</label>
-              <div className="token-input-row">
-                <input
-                  className="token-input"
-                  type="number"
-                  min="256"
-                  max="32768"
-                  step="256"
-                  value={ctxConfig.maxTokens}
-                  onChange={(e) =>
-                    setCtxConfig({
-                      ...ctxConfig,
-                      maxTokens: Number(e.target.value),
-                    })
-                  }
-                />
-                <div className="token-presets">
-                  {[1024, 2048, 4096, 8192].map((v) => (
-                    <button
-                      key={v}
-                      className={`token-preset-btn ${ctxConfig.maxTokens === v ? "active" : ""}`}
-                      onClick={() =>
-                        setCtxConfig({ ...ctxConfig, maxTokens: v })
-                      }
-                    >
-                      {v >= 1024 ? `${v / 1024}k` : v}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="config-field">
-              <button
-                className="clear-btn"
-                style={{
-                  borderColor: "rgba(155,149,181,.2)",
-                  background: "rgba(155,149,181,.06)",
-                  color: "var(--accent-dusk)",
-                  marginBottom: 8,
-                }}
-                onClick={handleExportChat}
-              >
-                📥 导出当前对话
-              </button>
-              <button
-                className="clear-btn"
-                onClick={() => setShowClearConfirm(true)}
-              >
-                清空当前对话
-              </button>
-              {showClearConfirm && (
-                <div className="confirm-box">
-                  <div className="confirm-text">确定要清空所有对话记录吗？</div>
-                  <div className="confirm-actions">
-                    <button
-                      className="confirm-cancel"
-                      onClick={() => setShowClearConfirm(false)}
-                    >
-                      再想想
-                    </button>
-                    <button className="confirm-do" onClick={handleClearChat}>
-                      确认清空
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="config-actions">
-              <button
-                className="config-btn config-btn-test"
-                onClick={handleTestConnection}
-                disabled={
-                  !config.apiUrl.trim() ||
-                  !config.apiKey.trim() ||
-                  !getActiveModel().trim()
-                }
-              >
-                测试连接
-              </button>
-              <button
-                className="config-btn config-btn-save"
-                onClick={handleSaveAll}
-              >
-                保存配置
-              </button>
-            </div>
-            {testStatus && (
-              <div
-                className={`test-result ${testStatus === "success" ? "success" : testStatus === "testing" ? "testing" : "fail"}`}
-              >
-                {testStatus === "testing" && "正在连接中…"}
-                {testStatus === "success" && "✓ 连接成功！"}
-                {testStatus.startsWith?.("fail") && (
-                  <>
-                    ✗ 连接失败
-                    {testStatus.length > 4 && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          marginTop: 4,
-                          opacity: 0.8,
-                          wordBreak: "break-all",
-                        }}
-                      >
-                        {testStatus.slice(5)}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -1040,65 +803,148 @@ export default function ChatPage({
         ↓
       </button>
 
+      {/* ── 加号面板（WeChat 风格）── */}
+      {attachView === "grid" && (
+        <div style={{
+          background: "rgba(248,244,252,.97)",
+          borderTop: "1px solid rgba(196,166,184,.18)",
+          padding: "20px 24px 24px",
+          flexShrink: 0,
+        }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px 0" }}>
+            {[
+              { emoji: "📓", label: "分享手札",    active: true,  action: () => setAttachView("notes") },
+              { emoji: "🖼",  label: "添加图片",    active: false },
+              { emoji: "📎",  label: "添加文件",    active: false },
+              { emoji: "💗",  label: "帮我记住",    active: false },
+              { emoji: "🌙",  label: "记下这一刻",  active: false },
+              { emoji: "✨",  label: "整理一下我们", active: false },
+            ].map((item) => (
+              <button
+                key={item.label}
+                onClick={item.active ? item.action : undefined}
+                style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                  background: "none", border: "none",
+                  cursor: item.active ? "pointer" : "default",
+                  fontFamily: "var(--font-main)",
+                  opacity: item.active ? 1 : 0.32,
+                }}
+              >
+                <div style={{
+                  width: 52, height: 52, borderRadius: 14,
+                  background: "rgba(255,255,255,.9)",
+                  border: "1px solid rgba(196,166,184,.2)",
+                  boxShadow: item.active ? "0 2px 8px rgba(74,69,96,.08)" : "none",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 24,
+                }}>
+                  {item.emoji}
+                </div>
+                <div style={{
+                  fontSize: 11, color: item.active ? "#5a4a6a" : "#9a8aac",
+                  letterSpacing: 0.5, lineHeight: 1.2, textAlign: "center",
+                }}>
+                  {item.label}
+                  {!item.active && <div style={{ fontSize: 9, opacity: 0.7 }}>稍后开放</div>}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── 手札选择 ── */}
+      {attachView === "notes" && (
+        <div className="config-overlay" onClick={(e) => { if (e.target === e.currentTarget) setAttachView("grid"); }}>
+          <div className="config-panel" style={{ maxHeight: "72vh", display: "flex", flexDirection: "column" }}>
+            <div className="config-header">
+              <div className="config-title"><span>📓</span>选一篇手札</div>
+              <button className="config-close" onClick={() => setAttachView(null)}>✕</button>
+            </div>
+            <div style={{ flex: 1, overflow: "auto" }}>
+              {(noteEntries || []).filter((e) => !e.isDraft).length === 0 ? (
+                <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--text-faint)", fontSize: 13, lineHeight: 2 }}>
+                  还没有手札<br/>先去写一篇吧
+                </div>
+              ) : (
+                (noteEntries || []).filter((e) => !e.isDraft).map((note) => (
+                  <div
+                    key={note.id}
+                    onClick={() => { setSelectedNote(note); setAttachView("intent"); }}
+                    style={{
+                      padding: "12px 16px", cursor: "pointer",
+                      borderBottom: "1px solid rgba(196,166,184,.1)",
+                      transition: "background .15s",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "rgba(196,166,184,.08)"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = ""}
+                  >
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "#5a4a6a", marginBottom: 3 }}>
+                      {note.title || note.text.slice(0, 24) || "无标题"}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.5 }}>
+                      {note.text.slice(0, 60)}{note.text.length > 60 ? "…" : ""}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 分享意图选择 ── */}
+      {attachView === "intent" && selectedNote && (
+        <div className="config-overlay" onClick={(e) => { if (e.target === e.currentTarget) setAttachView("notes"); }}>
+          <div className="config-panel">
+            <div className="config-header">
+              <div className="config-title"><span>💌</span>怎么分享给 ta？</div>
+              <button className="config-close" onClick={() => { setAttachView(null); setSelectedNote(null); }}>✕</button>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, padding: "0 2px" }}>
+              「{selectedNote.title || selectedNote.text.slice(0, 20) || "手札"}」
+            </div>
+            {SHARE_INTENTS.map((intent) => (
+              <button
+                key={intent.value}
+                onClick={() => {
+                  shareNoteToChat(activeChar?.id, selectedNote, intent.value);
+                  setAttachView(null);
+                  setSelectedNote(null);
+                }}
+                style={{
+                  width: "100%", padding: "12px 14px", marginBottom: 8,
+                  background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.2)",
+                  borderRadius: 12, cursor: "pointer",
+                  fontFamily: "var(--font-main)", fontSize: 13, color: "#5a4a6a",
+                  textAlign: "left", transition: "all .15s",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "rgba(232,196,196,.12)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,.7)"}
+              >
+                {intent.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── 输入栏 ── */}
       <div className="input-bar">
 
-        {/* ＋ 工具菜单（未来功能占位） */}
-        <div style={{ position: "relative", flexShrink: 0 }}>
-          <button
-            onClick={() => setShowAttachMenu((v) => !v)}
-            title="更多工具"
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              fontSize: 22, color: "var(--text-faint)", padding: "6px 6px 6px 2px",
-              lineHeight: 1, opacity: 0.6, transition: "opacity .2s",
-            }}
-          >+</button>
-
-          {showAttachMenu && (
-            <>
-              <div style={{ position: "fixed", inset: 0, zIndex: 9 }} onClick={() => setShowAttachMenu(false)} />
-              <div style={{
-                position: "absolute", left: 0, bottom: "calc(100% + 8px)",
-                background: "rgba(255,255,255,.96)",
-                backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
-                borderRadius: 14, border: "1px solid rgba(196,166,184,.25)",
-                boxShadow: "0 8px 28px rgba(74,69,96,.14)",
-                minWidth: 188, zIndex: 10, overflow: "hidden",
-              }}>
-                <div style={{ padding: "10px 16px 6px", fontSize: 10, color: "var(--text-faint)", letterSpacing: 1 }}>
-                  工具（即将上线）
-                </div>
-                {[
-                  { emoji: "📓", label: "分享手札",     desc: "把手札发给ta" },
-                  { emoji: "🪪", label: "帮我记进档案", desc: "沉淀到声声档案" },
-                  { emoji: "📅", label: "加入时间线",   desc: "记录一个时刻" },
-                  { emoji: "💌", label: "沉淀这段关系", desc: "阶段整理" },
-                ].map((item) => (
-                  <button
-                    key={item.label}
-                    onClick={() => setShowAttachMenu(false)}
-                    style={{
-                      width: "100%", padding: "8px 16px",
-                      display: "flex", alignItems: "center", gap: 10,
-                      background: "none", border: "none", cursor: "default",
-                      fontFamily: "var(--font-main)", textAlign: "left",
-                      opacity: 0.45,
-                    }}
-                    title="即将上线"
-                  >
-                    <span style={{ fontSize: 16 }}>{item.emoji}</span>
-                    <div>
-                      <div style={{ fontSize: 13, color: "#5a4a6a" }}>{item.label}</div>
-                      <div style={{ fontSize: 10, color: "var(--text-faint)" }}>{item.desc}</div>
-                    </div>
-                  </button>
-                ))}
-                <div style={{ height: 6 }} />
-              </div>
-            </>
-          )}
-        </div>
+        <button
+          onClick={() => setAttachView((v) => v ? null : "grid")}
+          title="更多工具"
+          style={{
+            background: "none", border: "none", cursor: "pointer",
+            fontSize: 22, color: attachView ? "var(--accent-dusk)" : "var(--text-faint)",
+            padding: "6px 6px 6px 2px",
+            lineHeight: 1, transition: "color .2s, transform .2s",
+            transform: attachView === "grid" ? "rotate(45deg)" : "none",
+            flexShrink: 0,
+          }}
+        >+</button>
 
         <textarea
           className="input-field"
