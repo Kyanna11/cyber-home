@@ -5,7 +5,6 @@ import Avatar from "../components/Avatar";
 import BackButton from "../components/BackButton";
 
 export default function BedroomPage({
-  setPage,
   navigateTo,
   hoveredItem,
   setHoveredItem,
@@ -65,7 +64,7 @@ export default function BedroomPage({
 
         {/* 日记本热区 */}
         <div
-          onClick={() => setPage("diary")}
+          onClick={() => navigateTo("diary")}
           onMouseEnter={() => setHoveredItem("diary")}
           onMouseLeave={() => setHoveredItem(null)}
           style={{
