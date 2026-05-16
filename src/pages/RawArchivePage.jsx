@@ -1,10 +1,20 @@
 // ─── 原始档案馆页 ───
 // 导入、查看、管理每个入住者的原始对话记录
-// 本阶段：手动粘贴文本，不做自动摘要，不注入 prompt
+// 支持手动粘贴 + 本地 txt/md 文件导入，不做自动摘要，不注入 prompt
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import BackButton from "../components/BackButton";
 import { genId } from "../utils/helpers";
+
+// ── 文件格式推断 ──
+function guessFormat(filename) {
+  const ext = (filename || "").split(".").pop().toLowerCase();
+  if (ext === "md" || ext === "markdown") return "markdown";
+  if (ext === "txt") return "text";
+  return "unknown";
+}
+
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 
 // ── 工具函数 ──
 function countChars(text) {
@@ -111,6 +121,43 @@ export default function RawArchivePage({
   const [form, setForm] = useState(emptyForm);
   const [showForm, setShowForm] = useState(false);
   const [formError, setFormError] = useState("");
+  const [fileLoading, setFileLoading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // ── 文件导入 ──
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // 重置 input，允许重复选同一文件
+    e.target.value = "";
+
+    if (file.size > MAX_FILE_SIZE) {
+      setFormError(`文件太大啦（${(file.size / 1024 / 1024).toFixed(1)} MB），暂时只支持 2MB 以内的文件`);
+      return;
+    }
+
+    setFileLoading(true);
+    setFormError("");
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target.result || "";
+      const fmt = guessFormat(file.name);
+      // 去掉扩展名作为默认标题
+      const baseName = file.name.replace(/\.[^.]+$/, "");
+      setForm((prev) => ({
+        ...prev,
+        rawText: text,
+        format: fmt,
+        title: prev.title.trim() ? prev.title : baseName,
+      }));
+      setFileLoading(false);
+    };
+    reader.onerror = () => {
+      setFormError("文件读取失败，请检查文件是否损坏，或改用复制粘贴方式导入");
+      setFileLoading(false);
+    };
+    reader.readAsText(file, "utf-8");
+  };
 
   // 详情查看
   const [detailId, setDetailId] = useState(null);
@@ -318,6 +365,60 @@ export default function RawArchivePage({
               导入对话档案
             </div>
 
+            {/* 文件导入区 */}
+            <div style={{ marginBottom: 18 }}>
+              <label style={labelStyle}>从本地文件导入（可选）</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.md,.markdown,text/plain,text/markdown"
+                style={{ display: "none" }}
+                onChange={handleFileSelect}
+              />
+              <button
+                type="button"
+                disabled={fileLoading}
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  width: "100%",
+                  padding: "12px 16px",
+                  background: "rgba(255,255,255,.5)",
+                  border: "1px dashed rgba(160,130,180,.45)",
+                  borderRadius: 10,
+                  color: fileLoading ? "#b0a0c0" : "#7a6a8e",
+                  fontSize: 13,
+                  letterSpacing: 1,
+                  cursor: fileLoading ? "default" : "pointer",
+                  fontFamily: "var(--font-main)",
+                  textAlign: "left",
+                  transition: "all .2s",
+                }}
+              >
+                <span style={{ fontSize: 18 }}>{fileLoading ? "⏳" : "📄"}</span>
+                <span>
+                  {fileLoading
+                    ? "正在读取文件……"
+                    : "选择 txt / md 文件，自动填入内容"}
+                </span>
+              </button>
+              <div style={{ fontSize: 11, color: "#c0b0d0", marginTop: 5, letterSpacing: 0.5 }}>
+                支持 .txt · .md · .markdown，最大 2 MB
+              </div>
+            </div>
+
+            {/* 分隔线 */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 10,
+              marginBottom: 18, color: "#c0b0d0", fontSize: 11,
+            }}>
+              <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
+              或手动粘贴对话内容
+              <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
+            </div>
+
             {/* 来源平台 */}
             <div style={{ marginBottom: 14 }}>
               <label style={labelStyle}>来源平台</label>
@@ -374,11 +475,19 @@ export default function RawArchivePage({
             )}
 
             <div style={{ display: "flex", gap: 10 }}>
-              <button style={btnPrimary} onClick={handleSave}>存入档案馆</button>
+              <button
+                style={{ ...btnPrimary, opacity: fileLoading ? 0.5 : 1 }}
+                disabled={fileLoading}
+                onClick={handleSave}
+              >
+                存入档案馆
+              </button>
               <button
                 style={btnGhost}
-                onClick={() => { setShowForm(false); setForm(emptyForm); setFormError(""); }}
-              >取消</button>
+                onClick={() => { setShowForm(false); setForm(emptyForm); setFormError(""); setFileLoading(false); }}
+              >
+                取消
+              </button>
             </div>
           </div>
         )}
