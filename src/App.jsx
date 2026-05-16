@@ -403,6 +403,12 @@ export default function App() {
     const char = characters.find((c) => c.id === charId);
     if (!char) return;
 
+    const model = getActiveModel(char.modelOverride);
+    if (!model) {
+      setDraftError("请先在聊天页配置要使用的模型");
+      return;
+    }
+
     const charChunks = memoryChunks
       .filter((c) => c.loverId === charId)
       .sort((a, b) =>
@@ -481,7 +487,6 @@ ${chunksText}
     setDraftGenerating(true);
     setDraftError("");
     try {
-      const model = getActiveModel(char.modelOverride);
       const resp = await fetch(config.apiUrl.replace(/\/+$/, "") + "/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
