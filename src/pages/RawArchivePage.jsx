@@ -114,6 +114,7 @@ export default function RawArchivePage({
   memoryChunks,
   generateChunks,
   deleteChunk,
+  openMigrationDraft,
   navigateTo,
 }) {
   const char = characters.find((c) => c.id === charId) || {};
@@ -180,6 +181,9 @@ export default function RawArchivePage({
   // 获取某档案已有的片段数
   const getChunkCount = (archiveId) =>
     (memoryChunks || []).filter((c) => c.archiveId === archiveId).length;
+
+  // 该角色的片段总数（用于迁入草稿按钮）
+  const totalChunkCount = (memoryChunks || []).filter((c) => c.loverId === charId).length;
 
   // ── 表单提交 ──
   const handleSave = () => {
@@ -513,7 +517,8 @@ export default function RawArchivePage({
   // ────────────────────────────────────────────────
   return (
     <div className="page-fade" style={{
-      minHeight: "100vh",
+      height: "100vh",
+      overflow: "hidden",
       background: "linear-gradient(160deg, #f5eef8 0%, #ede6f3 40%, #e8e0f0 100%)",
       display: "flex", flexDirection: "column",
     }}>
@@ -536,15 +541,42 @@ export default function RawArchivePage({
       {/* 主体 */}
       <div style={{ flex: 1, overflow: "auto", padding: "16px 16px 40px" }}>
 
-        {/* 导入按钮 / 表单 */}
-        {!showForm ? (
-          <button
-            style={{ ...btnPrimary, display: "block", width: "100%", marginBottom: 20, letterSpacing: 3 }}
-            onClick={() => setShowForm(true)}
-          >
-            📥 把你们的过去带回家
-          </button>
-        ) : (
+        {/* 操作按钮区 */}
+        {!showForm && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+            <button
+              style={{ ...btnPrimary, display: "block", width: "100%", letterSpacing: 3 }}
+              onClick={() => setShowForm(true)}
+            >
+              📥 把你们的过去带回家
+            </button>
+            <button
+              style={{
+                display: "block", width: "100%", padding: "11px 20px",
+                background: totalChunkCount > 0
+                  ? "rgba(120,90,170,.15)"
+                  : "rgba(196,166,184,.1)",
+                border: `1px solid ${totalChunkCount > 0 ? "rgba(120,90,170,.35)" : "rgba(196,166,184,.25)"}`,
+                borderRadius: 20, letterSpacing: 2,
+                color: totalChunkCount > 0 ? "#5a3a8e" : "#c0b0d0",
+                fontSize: 13, fontWeight: 500,
+                cursor: totalChunkCount > 0 ? "pointer" : "default",
+                fontFamily: "var(--font-main)", transition: "all .25s",
+              }}
+              onClick={() => totalChunkCount > 0 && openMigrationDraft && openMigrationDraft(charId)}
+            >
+              ✨ 从记忆片段生成迁入草稿
+              {totalChunkCount > 0 && (
+                <span style={{ fontSize: 11, color: "#9a7abe", marginLeft: 6 }}>
+                  ({totalChunkCount} 段可用)
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* 导入表单 */}
+        {showForm && (
           <div style={{ ...cardStyle, marginBottom: 20 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: "#5a4a6a", marginBottom: 16, letterSpacing: 1 }}>
               导入对话档案

@@ -11,6 +11,7 @@ import {
   MEMORY_INJECTION_KEY,
   RAW_ARCHIVES_STORAGE_KEY,
   MEMORY_CHUNKS_STORAGE_KEY,
+  MIGRATION_DRAFTS_STORAGE_KEY,
 } from "../constants";
 
 // 通用读写
@@ -90,6 +91,14 @@ export function loadMemoryChunks() {
 }
 export function saveMemoryChunks(chunks) {
   saveJSON(MEMORY_CHUNKS_STORAGE_KEY, chunks);
+}
+
+// 迁入提炼草稿
+export function loadMigrationDrafts() {
+  return loadJSON(MIGRATION_DRAFTS_STORAGE_KEY, []);
+}
+export function saveMigrationDrafts(drafts) {
+  saveJSON(MIGRATION_DRAFTS_STORAGE_KEY, drafts);
 }
 
 // 记忆注入配置

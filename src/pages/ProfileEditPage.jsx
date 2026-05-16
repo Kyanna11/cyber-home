@@ -24,6 +24,7 @@ export default function ProfileEditPage({
   updateEditWorldview,
   updateEditMigration,
   openRawArchive,
+  openMigrationDraft,
 }) {
   if (!editingChar) return null;
 
@@ -349,6 +350,31 @@ export default function ProfileEditPage({
               >
                 📁 原始档案馆<br />
                 <span style={{ fontSize: 11, color: "#b0a0c0", letterSpacing: 1 }}>把你们的过去带回家</span>
+              </button>
+
+              {/* 迁入草稿入口 */}
+              <button
+                onClick={() => openMigrationDraft && openMigrationDraft(editingChar.id)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  padding: "14px 20px",
+                  marginTop: 8,
+                  background: "rgba(120,90,170,.08)",
+                  border: "1px dashed rgba(120,90,170,.35)",
+                  borderRadius: 14,
+                  color: "#6a4a8e",
+                  fontSize: 13,
+                  letterSpacing: 2,
+                  cursor: "pointer",
+                  fontFamily: "var(--font-main)",
+                  textAlign: "center",
+                  lineHeight: 1.8,
+                  transition: "all .25s",
+                }}
+              >
+                ✨ 迁入提炼草稿<br />
+                <span style={{ fontSize: 11, color: "#b0a0c0", letterSpacing: 1 }}>从记忆片段里整理他</span>
               </button>
             </>
           )}
