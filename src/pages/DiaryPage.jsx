@@ -88,7 +88,7 @@ function NoteEditor({ initial, onSave, onDraft, onCancel, onDelete }) {
       {/* ── 顶栏 ── */}
       <div style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "18px 16px 10px",
+        padding: "calc(env(safe-area-inset-top, 0px) + 14px) 16px 10px",
         borderBottom: "1px solid rgba(196,166,184,.2)",
         background: "rgba(255,255,255,.5)",
         backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
@@ -158,7 +158,7 @@ function NoteEditor({ initial, onSave, onDraft, onCancel, onDelete }) {
         {/* 标题 */}
         <input
           type="text"
-          placeholder="给这篇手札起个名字（可选）"
+          placeholder="起个名字…"
           value={form.title}
           onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
           style={{
@@ -190,7 +190,7 @@ function NoteEditor({ initial, onSave, onDraft, onCancel, onDelete }) {
         <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
           <input
             type="text"
-            placeholder="心情（可选）"
+            placeholder="心情…"
             value={form.mood}
             onChange={(e) => setForm((f) => ({ ...f, mood: e.target.value }))}
             style={{
