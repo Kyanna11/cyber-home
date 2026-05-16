@@ -17,6 +17,7 @@ import {
   loadRawArchives, saveRawArchives,
   loadMemoryChunks, saveMemoryChunks,
   loadMigrationDrafts, saveMigrationDrafts,
+  loadTimelineEvents, saveTimelineEvents,
 } from "./utils/storage";
 import { genId, estimateTokens } from "./utils/helpers";
 import { splitRawTextToChunks } from "./utils/chunker";
@@ -41,6 +42,7 @@ import MyProfilePage from "./pages/MyProfilePage";
 import RawArchivePage from "./pages/RawArchivePage";
 import MigrationDraftPage from "./pages/MigrationDraftPage";
 import WakePreviewPage from "./pages/WakePreviewPage";
+import TimelinePage from "./pages/TimelinePage";
 
 // MSG_DELIMITER is used internally by parseResponse in utils/prompt.js
 const defaultUserProfile = {
@@ -87,6 +89,10 @@ export default function App() {
   const [wakePreviewCharId, setWakePreviewCharId] = useState(null);
   const [draftGenerating, setDraftGenerating] = useState(false);
   const [draftError, setDraftError] = useState("");
+
+  // ─── 关系时间线 ───
+  const [timelineEvents, setTimelineEvents] = useState(() => loadTimelineEvents());
+  const [timelineCharId, setTimelineCharId] = useState(null);
 
   // ─── 记忆 ───
   const [allMemories, setAllMemories] = useState(() => loadMemories());
@@ -171,6 +177,7 @@ export default function App() {
   useEffect(() => { saveRawArchives(rawArchives); }, [rawArchives]);
   useEffect(() => { saveMemoryChunks(memoryChunks); }, [memoryChunks]);
   useEffect(() => { saveMigrationDrafts(migrationDrafts); }, [migrationDrafts]);
+  useEffect(() => { saveTimelineEvents(timelineEvents); }, [timelineEvents]);
   useEffect(() => { saveThreads(chatThreads); }, [chatThreads]);
   useEffect(() => { localStorage.setItem("worldViews", JSON.stringify(worldViews)); }, [worldViews]);
   useEffect(() => { localStorage.setItem("reflectSettings", JSON.stringify(reflectSettings)); }, [reflectSettings]);
@@ -402,6 +409,82 @@ export default function App() {
   const openWakePreview = (charId) => {
     setWakePreviewCharId(charId);
     navigateTo("wakePreview");
+  };
+
+  const openTimeline = (charId) => {
+    setTimelineCharId(charId);
+    navigateTo("timeline");
+  };
+
+  // ══ 时间线事件管理 ══
+  const addTimelineEvent = (fields) => {
+    const now = Date.now();
+    const event = {
+      id: genId(),
+      loverId: fields.loverId,
+      title: fields.title || "",
+      description: fields.description || "",
+      eventType: fields.eventType || "other",
+      occurredAt: fields.occurredAt || new Date().toISOString().split("T")[0],
+      createdAt: now,
+      source: fields.source || "manual",
+      sourceIds: fields.sourceIds || [],
+      emotion: fields.emotion || "",
+      importance: fields.importance ?? 3,
+      pinned: fields.pinned ?? false,
+      note: fields.note || "",
+    };
+    setTimelineEvents((prev) => [event, ...prev]);
+  };
+
+  const updateTimelineEvent = (eventId, fields) => {
+    setTimelineEvents((prev) =>
+      prev.map((e) => e.id === eventId ? { ...e, ...fields } : e)
+    );
+  };
+
+  const deleteTimelineEvent = (eventId) => {
+    setTimelineEvents((prev) => prev.filter((e) => e.id !== eventId));
+  };
+
+  const toggleTimelinePin = (eventId) => {
+    setTimelineEvents((prev) =>
+      prev.map((e) => e.id === eventId ? { ...e, pinned: !e.pinned } : e)
+    );
+  };
+
+  // 从迁入草稿生成时间线事件
+  const generateTimelineFromDraft = (draft, charId) => {
+    if (!draft) return;
+    const memories = [
+      ...(draft.relationshipMemories || []),
+    ];
+    if (memories.length === 0) return;
+
+    const now = Date.now();
+    const char = characters.find((c) => c.id === charId);
+    const baseDate = char?.migration?.importedAt
+      ? new Date(char.migration.importedAt).toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0];
+
+    const newEvents = memories.map((text, i) => ({
+      id: genId(),
+      loverId: charId,
+      title: text.length > 30 ? text.slice(0, 30) + "…" : text,
+      description: text,
+      eventType: "milestone",
+      occurredAt: baseDate,
+      createdAt: now + i,
+      source: "draft",
+      sourceIds: [draft.id],
+      emotion: "",
+      importance: 3,
+      pinned: false,
+      note: `从迁入草稿「${draft.title || ""}」自动生成`,
+    }));
+
+    setTimelineEvents((prev) => [...newEvents, ...prev]);
+    return newEvents.length;
   };
 
   const handleGenerateDraft = async (charId) => {
@@ -1399,6 +1482,8 @@ ${chunksText}
           updateDraftStatus={updateDraftStatus}
           updateDraftContent={updateDraftContent}
           adoptDraft={adoptDraft}
+          generateTimelineFromDraft={generateTimelineFromDraft}
+          openTimeline={openTimeline}
           navigateTo={navigateTo}
         />
       )}
@@ -1419,6 +1504,21 @@ ${chunksText}
         );
       })()}
 
+      {/* 关系时间线 */}
+      {page === "timeline" && (
+        <TimelinePage
+          timelineCharId={timelineCharId}
+          characters={characters}
+          timelineEvents={timelineEvents}
+          addTimelineEvent={addTimelineEvent}
+          updateTimelineEvent={updateTimelineEvent}
+          deleteTimelineEvent={deleteTimelineEvent}
+          toggleTimelinePin={toggleTimelinePin}
+          navigateTo={navigateTo}
+          prevPage={prevPage}
+        />
+      )}
+
       {/* 记忆宫殿 */}
       {page === "memoryPalace" && (
         <MemoryPalacePage
@@ -1426,6 +1526,7 @@ ${chunksText}
           memEntryFrom={memEntryFrom}
           characters={characters}
           navigateTo={navigateTo}
+          openTimeline={openTimeline}
           setEditingChar={setEditingChar}
           setEditSection={setEditSection}
           memTab={memTab}

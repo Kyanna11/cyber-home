@@ -26,6 +26,7 @@ export const MEMORY_INJECTION_KEY = "cyberHome_memoryInjection";
 export const RAW_ARCHIVES_STORAGE_KEY = "cyber-home-raw-archives";
 export const MEMORY_CHUNKS_STORAGE_KEY = "cyber-home-memory-chunks";
 export const MIGRATION_DRAFTS_STORAGE_KEY = "cyber-home-migration-drafts";
+export const TIMELINE_EVENTS_STORAGE_KEY = "cyber-home-timeline-events";
 
 // 消息分隔符（AI 回复中用来拆成多条消息）
 export const MSG_DELIMITER = "|||";
@@ -90,6 +91,7 @@ export const DEFAULT_CHAR = {
     doNotLoseFeeling: "",     // 不能丢的感觉
     doNotChangeRules: "",     // 绝对不要变化的规则
     relationshipSummary: "",  // 我和ta的关系摘要
+    wakeSummary: "",          // 唤醒摘要（每次对话前给模型看的）
     notes: "",                // 备注
     importedAt: null,         // 迁入时间戳
   },

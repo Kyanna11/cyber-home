@@ -10,6 +10,7 @@ export default function MemoryPalacePage({
   memEntryFrom,
   characters,
   navigateTo,
+  openTimeline,
   setEditingChar,
   setEditSection,
   memTab,
@@ -68,7 +69,27 @@ export default function MemoryPalacePage({
           label={memEntryFrom === "chat" ? "回对话" : "档案"}
         />
         <div className="memory-header-title">🏛️ {charName}的记忆宫殿</div>
-        <div className="memory-header-spacer" />
+        {openTimeline ? (
+          <button
+            onClick={() => openTimeline(memCharId)}
+            style={{
+              padding: "6px 13px",
+              background: "rgba(106,122,174,.12)",
+              border: "1px solid rgba(106,122,174,.3)",
+              borderRadius: 12,
+              color: "#6a7aae",
+              fontSize: 11,
+              cursor: "pointer",
+              fontFamily: "var(--font-main)",
+              letterSpacing: 0.5,
+              whiteSpace: "nowrap",
+            }}
+          >
+            📅 年表
+          </button>
+        ) : (
+          <div className="memory-header-spacer" />
+        )}
       </div>
 
       {/* Tab 栏 */}

@@ -392,6 +392,8 @@ export default function MigrationDraftPage({
   updateDraftStatus,
   updateDraftContent,
   adoptDraft,
+  generateTimelineFromDraft,
+  openTimeline,
   navigateTo,
 }) {
   const char = characters.find((c) => c.id === charId) || {};
@@ -426,7 +428,16 @@ export default function MigrationDraftPage({
         <div style={{ flex: 1, textAlign: "center", fontSize: 15, fontWeight: 600, color: "#5a4a6a", letterSpacing: 2 }}>
           ✨ {charName}的迁入草稿
         </div>
-        <div style={{ width: 48 }} />
+        <button
+          style={{
+            ...btnGhost,
+            fontSize: 12, padding: "7px 14px",
+            color: "#6a7aae", borderColor: "rgba(106,122,174,.35)",
+          }}
+          onClick={() => openTimeline && openTimeline(charId)}
+        >
+          📅 年表
+        </button>
       </div>
 
       {/* 主体 */}
@@ -555,6 +566,18 @@ export default function MigrationDraftPage({
                   )}
                   {draft.status === "approved" && (
                     <span style={{ fontSize: 11, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已写入档案</span>
+                  )}
+                  {/* 生成时间线 */}
+                  {generateTimelineFromDraft && (draft.relationshipMemories || []).length > 0 && (
+                    <button
+                      style={{ ...btnGhost, fontSize: 11, color: "#6a7aae", borderColor: "rgba(106,122,174,.35)" }}
+                      onClick={() => {
+                        const count = generateTimelineFromDraft(draft, charId);
+                        if (count) openTimeline && openTimeline(charId);
+                      }}
+                    >
+                      📅 生成年表节点
+                    </button>
                   )}
                 </div>
               </div>

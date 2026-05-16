@@ -12,6 +12,7 @@ import {
   RAW_ARCHIVES_STORAGE_KEY,
   MEMORY_CHUNKS_STORAGE_KEY,
   MIGRATION_DRAFTS_STORAGE_KEY,
+  TIMELINE_EVENTS_STORAGE_KEY,
 } from "../constants";
 
 // 通用读写
@@ -99,6 +100,14 @@ export function loadMigrationDrafts() {
 }
 export function saveMigrationDrafts(drafts) {
   saveJSON(MIGRATION_DRAFTS_STORAGE_KEY, drafts);
+}
+
+// 关系时间线事件
+export function loadTimelineEvents() {
+  return loadJSON(TIMELINE_EVENTS_STORAGE_KEY, []);
+}
+export function saveTimelineEvents(events) {
+  saveJSON(TIMELINE_EVENTS_STORAGE_KEY, events);
 }
 
 // 记忆注入配置
