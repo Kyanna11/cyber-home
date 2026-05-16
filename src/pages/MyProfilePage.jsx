@@ -10,6 +10,7 @@ export default function MyProfilePage({
   userProfile,
   setUserProfile,
   characters,
+  openProfileHome,
 }) {
   return (
     <div
@@ -55,6 +56,31 @@ export default function MyProfilePage({
       </div>
 
       <div style={{ padding: "20px 16px", paddingBottom: 120 }}>
+
+        {/* ── 声声档案入口 ── */}
+        <div
+          onClick={() => openProfileHome && openProfileHome()}
+          style={{
+            display: "flex", alignItems: "center", gap: 14,
+            padding: "14px 18px", borderRadius: 16, marginBottom: 16,
+            background: "linear-gradient(120deg,rgba(106,122,174,.1),rgba(160,120,180,.08))",
+            border: "1px solid rgba(106,122,174,.22)",
+            cursor: "pointer", transition: "all .2s",
+          }}
+        >
+          <div style={{ fontSize: 28 }}>🏠</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#5a4a6a", letterSpacing: 1 }}>
+              声声档案
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 3, lineHeight: 1.5 }}>
+              关于你自己的核心档案，全家入住者共享的地基
+              <br />手动添加 · AI 提炼草稿 · 逐节审批写入
+            </div>
+          </div>
+          <div style={{ fontSize: 18, color: "var(--text-faint)" }}>›</div>
+        </div>
+
         {/* ── 第1层：核心信息 ── */}
         <div className="section-card">
           <div className="section-title">

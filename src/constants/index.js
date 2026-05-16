@@ -116,6 +116,29 @@ export const DEFAULT_CHAR = {
   systemPromptExtra: "",
 };
 
+// 声声档案存储键
+export const PROFILE_DRAFTS_STORAGE_KEY = "cyber-home-profile-drafts";
+export const HOME_MEMORY_KEY = "cyber-home-home-memory";
+
+// 声声档案六个分区定义
+export const HOME_SECTIONS = [
+  { key: "identityFacts",            label: "我是谁",        emoji: "👤", hint: "稳定的身份事实",          isCurrentState: false },
+  { key: "pastStories",              label: "我的过去",       emoji: "📖", hint: "重要经历与背景",          isCurrentState: false },
+  { key: "interactionGuide",         label: "我的相处说明书", emoji: "💬", hint: "如何被理解和安抚",        isCurrentState: false },
+  { key: "preferencesAndBoundaries", label: "长期偏好与雷点", emoji: "🎯", hint: "喜好与禁止事项",          isCurrentState: false },
+  { key: "currentState",             label: "近期状态",       emoji: "🌱", hint: "⚠️ 短期状态，不永久化", isCurrentState: true  },
+  { key: "homeRules",                label: "全家共同规则",   emoji: "🏠", hint: "所有入住者都要遵守",      isCurrentState: false },
+];
+
+export const DEFAULT_HOME_MEMORY = {
+  identityFacts: [],
+  pastStories: [],
+  interactionGuide: [],
+  preferencesAndBoundaries: [],
+  currentState: [],
+  homeRules: [],
+};
+
 // 记忆类型定义
 export const MEMORY_TYPES = [
   { key: "fact", label: "事实", emoji: "📋", color: "#9b95b5", desc: "发生了什么" },

@@ -14,6 +14,9 @@ import {
   MIGRATION_DRAFTS_STORAGE_KEY,
   TIMELINE_EVENTS_STORAGE_KEY,
   SETTLEMENT_DRAFTS_STORAGE_KEY,
+  PROFILE_DRAFTS_STORAGE_KEY,
+  HOME_MEMORY_KEY,
+  DEFAULT_HOME_MEMORY,
 } from "../constants";
 
 // 通用读写
@@ -117,6 +120,22 @@ export function loadSettlementDrafts() {
 }
 export function saveSettlementDrafts(drafts) {
   saveJSON(SETTLEMENT_DRAFTS_STORAGE_KEY, drafts);
+}
+
+// 声声档案草稿
+export function loadProfileDrafts() {
+  return loadJSON(PROFILE_DRAFTS_STORAGE_KEY, []);
+}
+export function saveProfileDrafts(drafts) {
+  saveJSON(PROFILE_DRAFTS_STORAGE_KEY, drafts);
+}
+
+// 声声档案 homeMemory
+export function loadHomeMemory() {
+  return loadJSON(HOME_MEMORY_KEY, { ...DEFAULT_HOME_MEMORY });
+}
+export function saveHomeMemory(m) {
+  saveJSON(HOME_MEMORY_KEY, m);
 }
 
 // 记忆注入配置

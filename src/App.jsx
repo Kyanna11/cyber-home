@@ -19,6 +19,8 @@ import {
   loadMigrationDrafts, saveMigrationDrafts,
   loadTimelineEvents, saveTimelineEvents,
   loadSettlementDrafts, saveSettlementDrafts,
+  loadProfileDrafts, saveProfileDrafts,
+  loadHomeMemory, saveHomeMemory,
 } from "./utils/storage";
 import { genId, estimateTokens } from "./utils/helpers";
 import { splitRawTextToChunks } from "./utils/chunker";
@@ -44,6 +46,7 @@ import RawArchivePage from "./pages/RawArchivePage";
 import MigrationDraftPage from "./pages/MigrationDraftPage";
 import WakePreviewPage from "./pages/WakePreviewPage";
 import TimelinePage from "./pages/TimelinePage";
+import ProfileHomePage from "./pages/ProfileHomePage";
 
 // MSG_DELIMITER is used internally by parseResponse in utils/prompt.js
 const defaultUserProfile = {
@@ -98,6 +101,12 @@ export default function App() {
   // ─── 阶段沉淀草稿 ───
   const [settlementDrafts, setSettlementDrafts] = useState(() => loadSettlementDrafts());
   const [settlementNotice, setSettlementNotice] = useState("");
+
+  // ─── 声声档案 ───
+  const [homeMemory, setHomeMemory] = useState(() => loadHomeMemory());
+  const [profileDrafts, setProfileDrafts] = useState(() => loadProfileDrafts());
+  const [profileDraftGenerating, setProfileDraftGenerating] = useState(false);
+  const [profileDraftNotice, setProfileDraftNotice] = useState("");
 
   // ─── 记忆 ───
   const [allMemories, setAllMemories] = useState(() => loadMemories());
@@ -184,6 +193,8 @@ export default function App() {
   useEffect(() => { saveMigrationDrafts(migrationDrafts); }, [migrationDrafts]);
   useEffect(() => { saveTimelineEvents(timelineEvents); }, [timelineEvents]);
   useEffect(() => { saveSettlementDrafts(settlementDrafts); }, [settlementDrafts]);
+  useEffect(() => { saveHomeMemory(homeMemory); }, [homeMemory]);
+  useEffect(() => { saveProfileDrafts(profileDrafts); }, [profileDrafts]);
   useEffect(() => { saveThreads(chatThreads); }, [chatThreads]);
   useEffect(() => { localStorage.setItem("worldViews", JSON.stringify(worldViews)); }, [worldViews]);
   useEffect(() => { localStorage.setItem("reflectSettings", JSON.stringify(reflectSettings)); }, [reflectSettings]);
@@ -910,6 +921,265 @@ ${chunksText}
     return daysPassed >= setting.periodDays;
   };
 
+  // ═══ 声声档案（homeMemory + ProfileDraft）═══
+
+  const openProfileHome = () => {
+    setShowMyProfile(false);
+    navigateTo("profileHome");
+  };
+
+  // 手动添加条目：直接写入，不经草稿
+  const addHomeMemoryEntry = (section, text) => {
+    if (!text.trim()) return;
+    const entry = {
+      id: genId(),
+      text: text.trim(),
+      source: "manual",
+      draftId: null,
+      sourceCharId: null,
+      sourceCharName: "",
+      approvedAt: Date.now(),
+      isCurrentState: section === "currentState",
+    };
+    setHomeMemory((prev) => ({
+      ...prev,
+      [section]: [entry, ...(prev[section] || [])],
+    }));
+  };
+
+  const deleteHomeMemoryEntry = (section, id) => {
+    setHomeMemory((prev) => ({
+      ...prev,
+      [section]: (prev[section] || []).filter((e) => e.id !== id),
+    }));
+  };
+
+  // 解析 AI 输出的六节声声档案草稿
+  const parseProfileDraftOutput = (raw) => {
+    const result = {
+      identityFacts: [],
+      pastStories: [],
+      interactionGuide: [],
+      preferencesAndBoundaries: [],
+      currentState: [],
+      homeRules: [],
+    };
+    const parseList = (text) =>
+      text.split("\n")
+        .map((l) => l.replace(/^[-·•*]\s*/, "").trim())
+        .filter((l) => l && l !== "无" && l !== "暂无" && l.length > 1);
+
+    const sectionRegex = /【([^】]+)】\s*([\s\S]*?)(?=【|$)/g;
+    let m;
+    while ((m = sectionRegex.exec(raw)) !== null) {
+      const header  = m[1].trim();
+      const content = m[2].trim();
+      if (header.includes("我是谁"))                        result.identityFacts            = parseList(content);
+      else if (header.includes("我的过去") || header.includes("过去")) result.pastStories = parseList(content);
+      else if (header.includes("相处说明书") || header.includes("相处")) result.interactionGuide = parseList(content);
+      else if (header.includes("偏好") || header.includes("雷点"))  result.preferencesAndBoundaries = parseList(content);
+      else if (header.includes("近期状态") || header.includes("近期")) result.currentState = parseList(content);
+      else if (header.includes("全家") || header.includes("规则"))  result.homeRules      = parseList(content);
+    }
+    return result;
+  };
+
+  // 从粘贴文字 or 迁入草稿提炼 ProfileDraft（通用入口）
+  const generateProfileDraft = async ({
+    sourceText,
+    sourceType = "paste",
+    sourceCharId = null,
+    sourceCharName = "",
+    sourceIds = [],
+  }) => {
+    if (!config.apiUrl?.trim() || !config.apiKey?.trim()) {
+      setProfileDraftNotice("请先在聊天页配置 API 地址和密钥。");
+      return null;
+    }
+    const model = getActiveModel("");
+    if (!model) {
+      setProfileDraftNotice("请先在聊天页配置要使用的模型。");
+      return null;
+    }
+    if (!sourceText?.trim()) return null;
+
+    const userName = userProfile?.globalFacts?.name?.trim() || "晚声";
+    const srcDesc  = sourceCharName
+      ? `来自与「${sourceCharName}」相关的记录`
+      : "用户提供的一段文字";
+
+    const prompt = `你正在帮助整理「${userName}」的个人档案（声声档案）。
+以下内容${srcDesc}：
+
+---
+${sourceText.slice(0, 3000)}
+---
+
+请从中提炼关于「${userName}」本人的信息。
+只提炼原文中明确出现的内容，不猜测、不补充、不评判。
+如果某节没有相关内容，写：无
+
+【我是谁】
+稳定的身份事实：职业、身份认同、重要角色与关系。每条不超过20字，最多5条。
+
+【我的过去】
+用户提到的重要经历、人生阶段、不想反复解释的背景。每条不超过30字，最多5条。
+
+【我的相处说明书】
+在关系中如何被安抚、何时需要分析、何时只需陪伴、情绪崩溃时需要什么、被误解时怎么办。每条不超过30字，最多6条。
+
+【长期偏好与雷点】
+称呼偏好、语气偏好、绝对不能做的事、讨厌的表达方式、喜欢的亲密方式。每条不超过25字，最多6条。
+
+【近期状态】
+⚠️ 仅提炼近期、暂时性的内容，不要误写成永久事实。
+最近在做的事、当前压力点、近期情绪/身体状态、近期目标。每条不超过25字，最多4条。
+
+【全家共同规则】
+对所有入住者都应该成立的相处规则和禁止事项。每条不超过20字，最多4条。
+
+输出格式：标题一字不差，条目每行一条以「-」开头。`;
+
+    setProfileDraftGenerating(true);
+    setProfileDraftNotice("");
+    try {
+      const resp = await fetch(config.apiUrl.replace(/\/+$/, "") + "/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.6,
+          max_tokens: 1200,
+        }),
+      });
+      if (!resp.ok) {
+        const e = await resp.json().catch(() => ({}));
+        throw new Error(e.error?.message || `HTTP ${resp.status}`);
+      }
+      const data = await resp.json();
+      const rawOutput = data.choices?.[0]?.message?.content || "";
+      const parsed = parseProfileDraftOutput(rawOutput);
+
+      const hasContent = Object.values(parsed).some((arr) => arr.length > 0);
+      if (!hasContent) {
+        setProfileDraftNotice("没有从文字中提炼出有效内容，请尝试更详细或更长的描述。");
+        return null;
+      }
+
+      const now = Date.now();
+      const draft = {
+        id: genId(),
+        sourceType,
+        sourceCharId,
+        sourceCharName,
+        sourceIds,
+        status: "pending",
+        appliedSections: [],
+        createdAt: now,
+        updatedAt: now,
+        rawOutput,
+        ...parsed,
+      };
+      setProfileDrafts((prev) => [draft, ...prev]);
+      setProfileDraftNotice("✓ 草稿已生成，请查看「待审批草稿」。");
+      return draft.id;
+    } catch (e) {
+      setProfileDraftNotice("提炼失败：" + e.message);
+      return null;
+    } finally {
+      setProfileDraftGenerating(false);
+    }
+  };
+
+  // 从迁入草稿生成声声档案草稿（关于用户的部分）
+  const generateProfileDraftFromMigration = async (migrationDraftId) => {
+    const mDraft = migrationDrafts.find((d) => d.id === migrationDraftId);
+    if (!mDraft) return;
+    const char     = characters.find((c) => c.id === mDraft.loverId);
+    const charName = char?.name || "入住者";
+    const userName = userProfile?.globalFacts?.name?.trim() || "晚声";
+
+    const parts = [];
+    if (mDraft.userFacts?.length)
+      parts.push(`关于${userName}的事实：\n${mDraft.userFacts.join("\n")}`);
+    if (mDraft.relationshipMemories?.length)
+      parts.push(`两人的关系记忆：\n${mDraft.relationshipMemories.join("\n")}`);
+    if (mDraft.wakeSummary)
+      parts.push(`关系摘要（供参考）：\n${mDraft.wakeSummary}`);
+    if (mDraft.doNotForget?.length)
+      parts.push(`重要规则（来自关系层面）：\n${mDraft.doNotForget.join("\n")}`);
+
+    if (parts.length === 0) {
+      setProfileDraftNotice("这份迁入草稿没有足够内容可以提炼声声档案，请先完善草稿内容。");
+      return;
+    }
+
+    const newDraftId = await generateProfileDraft({
+      sourceText:     parts.join("\n\n"),
+      sourceType:     "migration",
+      sourceCharId:   mDraft.loverId,
+      sourceCharName: charName,
+      sourceIds:      [migrationDraftId],
+    });
+
+    if (newDraftId) {
+      setMigrationDrafts((prev) =>
+        prev.map((d) =>
+          d.id === migrationDraftId
+            ? { ...d, profileDraftGenerated: true, profileDraftId: newDraftId, updatedAt: Date.now() }
+            : d
+        )
+      );
+    }
+  };
+
+  // 采纳 ProfileDraft 某一节 → 写入 homeMemory
+  const applyProfileDraftSection = (draftId, section) => {
+    const draft = profileDrafts.find((d) => d.id === draftId);
+    if (!draft) return;
+    const items = draft[section] || [];
+    if (items.length === 0) return;
+
+    const now = Date.now();
+    const newEntries = items.map((text) => ({
+      id: genId(),
+      text,
+      source: "draft",
+      draftId,
+      sourceCharId:   draft.sourceCharId || null,
+      sourceCharName: draft.sourceCharName || "",
+      approvedAt:     now,
+      isCurrentState: section === "currentState",
+    }));
+    setHomeMemory((prev) => ({
+      ...prev,
+      [section]: [...(prev[section] || []), ...newEntries],
+    }));
+
+    // 标记该节已采纳；检查是否全部完成
+    setProfileDrafts((prev) =>
+      prev.map((d) => {
+        if (d.id !== draftId) return d;
+        const applied = [...new Set([...(d.appliedSections || []), section])];
+        const KEYS = ["identityFacts","pastStories","interactionGuide","preferencesAndBoundaries","currentState","homeRules"];
+        const needed = KEYS.filter((k) => (d[k] || []).length > 0);
+        const allDone = needed.every((k) => applied.includes(k));
+        return { ...d, appliedSections: applied, status: allDone ? "approved" : d.status };
+      })
+    );
+  };
+
+  const dismissProfileDraft = (draftId) => {
+    setProfileDrafts((prev) =>
+      prev.map((d) => d.id === draftId ? { ...d, status: "rejected", updatedAt: Date.now() } : d)
+    );
+  };
+
+  const deleteProfileDraft = (draftId) => {
+    setProfileDrafts((prev) => prev.filter((d) => d.id !== draftId));
+  };
+
   // 解析阶段沉淀 AI 输出为结构化对象
   const parseSettlementOutput = (raw) => {
     const result = {
@@ -1297,7 +1567,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           : m.content,
       }));
     const charMemories = activeChar ? getCharMemories(activeChar.id) : {};
-    const userCtx = activeChar ? buildUserContext(userProfile, activeChar.id) : "";
+    const userCtx = activeChar ? buildUserContext(userProfile, activeChar.id, homeMemory) : "";
     const now = new Date();
     const timeInfo = `【当前时间】${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${now.toLocaleString("zh-CN", { weekday: "long" })} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
     const memoryInstruction = `\n\n【记忆写入指令】
@@ -1553,6 +1823,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           userProfile={userProfile}
           setUserProfile={setUserProfile}
           characters={characters}
+          openProfileHome={openProfileHome}
         />
       )}
 
@@ -1626,6 +1897,8 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           adoptDraft={adoptDraft}
           generateTimelineFromDraft={generateTimelineFromDraft}
           openTimeline={openTimeline}
+          generateProfileDraftFromMigration={generateProfileDraftFromMigration}
+          profileDraftGenerating={profileDraftGenerating}
           navigateTo={navigateTo}
         />
       )}
@@ -1658,6 +1931,25 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           toggleTimelinePin={toggleTimelinePin}
           navigateTo={navigateTo}
           prevPage={prevPage}
+        />
+      )}
+
+      {/* 声声档案 */}
+      {page === "profileHome" && (
+        <ProfileHomePage
+          navigateTo={navigateTo}
+          prevPage={prevPage}
+          homeMemory={homeMemory}
+          profileDrafts={profileDrafts}
+          profileDraftGenerating={profileDraftGenerating}
+          profileDraftNotice={profileDraftNotice}
+          setProfileDraftNotice={setProfileDraftNotice}
+          generateProfileDraft={generateProfileDraft}
+          addHomeMemoryEntry={addHomeMemoryEntry}
+          deleteHomeMemoryEntry={deleteHomeMemoryEntry}
+          applyProfileDraftSection={applyProfileDraftSection}
+          dismissProfileDraft={dismissProfileDraft}
+          deleteProfileDraft={deleteProfileDraft}
         />
       )}
 

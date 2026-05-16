@@ -93,22 +93,70 @@ export function parseResponse(raw) {
 }
 
 // 构建"关于用户"的上下文段落
-export function buildUserContext(userProfile, charId) {
+// homeMemory 为新版声声档案数据，优先读取；为空时回退到旧版 globalFacts
+export function buildUserContext(userProfile, charId, homeMemory = null) {
   const parts = [];
-  const g = userProfile.globalFacts || {};
-  const facts = [];
-  if (g.name) facts.push(`称呼：${g.name}`);
-  if (g.gender) facts.push(`性别：${g.gender}`);
-  if (g.birthday) facts.push(`生日：${g.birthday}`);
-  if (g.job) facts.push(`职业：${g.job}`);
-  if (g.personality) facts.push(`性格：${g.personality}`);
-  if (g.likes) facts.push(`喜好：${g.likes}`);
-  if (g.dislikes) facts.push(`雷区（避免提及）：${g.dislikes}`);
-  if (g.extra) facts.push(`其他：${g.extra}`);
-  if (facts.length > 0) {
-    parts.push(`【关于用户】\n${facts.join("\n")}`);
+  const hm = homeMemory || {};
+
+  // ── 新版声声档案注入（homeMemory 有内容时优先）──
+  const hasHomeMemory = [
+    "identityFacts", "pastStories", "interactionGuide",
+    "preferencesAndBoundaries", "currentState", "homeRules",
+  ].some((k) => (hm[k] || []).length > 0);
+
+  if (hasHomeMemory) {
+    // 优先级 ① 全家规则 + 相处说明书
+    const rules = (hm.homeRules || []).map((e) => e.text).filter(Boolean);
+    const guide = (hm.interactionGuide || []).map((e) => e.text).filter(Boolean);
+    if (rules.length || guide.length) {
+      let block = "【与用户相处的规则】";
+      if (guide.length) block += "\n" + guide.map((t) => `- ${t}`).join("\n");
+      if (rules.length) block += "\n" + rules.map((t) => `- ${t}`).join("\n");
+      parts.push(block);
+    }
+
+    // 优先级 ② 长期偏好与雷点
+    const prefs = (hm.preferencesAndBoundaries || []).map((e) => e.text).filter(Boolean);
+    if (prefs.length) {
+      parts.push("【用户偏好与雷点】\n" + prefs.map((t) => `- ${t}`).join("\n"));
+    }
+
+    // 优先级 ③ 身份事实 + 过去
+    const facts   = (hm.identityFacts || []).map((e) => e.text).filter(Boolean);
+    const stories = (hm.pastStories   || []).map((e) => e.text).filter(Boolean);
+    if (facts.length || stories.length) {
+      let block = "【关于用户】";
+      if (facts.length)   block += "\n" + facts.map((t) => `- ${t}`).join("\n");
+      if (stories.length) block += "\n" + stories.map((t) => `- ${t}`).join("\n");
+      parts.push(block);
+    }
+
+    // 优先级 ④ 近期状态（加「近期」标注）
+    const current = (hm.currentState || []).map((e) => e.text).filter(Boolean);
+    if (current.length) {
+      parts.push(
+        "【用户近期状态（短期，仅供参考）】\n" +
+        current.map((t) => `- 近期：${t}`).join("\n")
+      );
+    }
+  } else {
+    // ── 旧版 globalFacts 兜底 ──
+    const g = userProfile.globalFacts || {};
+    const legacyFacts = [];
+    if (g.name)        legacyFacts.push(`称呼：${g.name}`);
+    if (g.gender)      legacyFacts.push(`性别：${g.gender}`);
+    if (g.birthday)    legacyFacts.push(`生日：${g.birthday}`);
+    if (g.job)         legacyFacts.push(`职业：${g.job}`);
+    if (g.personality) legacyFacts.push(`性格：${g.personality}`);
+    if (g.likes)       legacyFacts.push(`喜好：${g.likes}`);
+    if (g.dislikes)    legacyFacts.push(`雷区（避免提及）：${g.dislikes}`);
+    if (g.extra)       legacyFacts.push(`其他：${g.extra}`);
+    if (legacyFacts.length > 0) {
+      parts.push(`【关于用户】\n${legacyFacts.join("\n")}`);
+    }
   }
 
+  // ── sharedVault（新旧版共用）──
   const vault = (userProfile.sharedVault || []).filter(
     (v) => v.content && v.content.trim() && (v.allowedChars || []).includes(charId)
   );

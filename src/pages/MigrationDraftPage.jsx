@@ -394,6 +394,8 @@ export default function MigrationDraftPage({
   adoptDraft,
   generateTimelineFromDraft,
   openTimeline,
+  generateProfileDraftFromMigration,
+  profileDraftGenerating,
   navigateTo,
 }) {
   const char = characters.find((c) => c.id === charId) || {};
@@ -580,6 +582,44 @@ export default function MigrationDraftPage({
                     </button>
                   )}
                 </div>
+
+                {/* 声声档案提炼入口 */}
+                {generateProfileDraftFromMigration && (
+                  <div style={{
+                    marginTop: 12,
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    background: "rgba(100,160,120,.05)",
+                    border: "1px solid rgba(100,160,120,.18)",
+                  }}>
+                    <div style={{ fontSize: 11, color: "#5a7a6a", lineHeight: 1.65, marginBottom: 7 }}>
+                      📋 <strong>声声档案草稿</strong>：从这份迁入记录里，提炼<strong>关于你自己</strong>的信息。
+                      <br />
+                      <span style={{ color: "var(--text-faint)" }}>
+                        注意：迁入档案是关于 ta 的，声声档案是关于你的。提炼后写入全家共享的声声档案，不属于某个入住者。
+                      </span>
+                    </div>
+                    {draft.profileDraftGenerated ? (
+                      <span style={{ fontSize: 11, color: "#3a7a4a" }}>
+                        ✓ 已提炼 · 请到「我的档案 → 声声档案」查看草稿
+                      </span>
+                    ) : (
+                      <button
+                        style={{
+                          ...btnGhost,
+                          fontSize: 11,
+                          color: "#4a7a5a",
+                          borderColor: "rgba(100,160,120,.4)",
+                          opacity: profileDraftGenerating ? 0.6 : 1,
+                        }}
+                        disabled={profileDraftGenerating}
+                        onClick={() => generateProfileDraftFromMigration(draft.id)}
+                      >
+                        {profileDraftGenerating ? "⏳ 提炼中……" : "📋 提炼声声档案草稿"}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })
