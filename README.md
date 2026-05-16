@@ -14,7 +14,10 @@
 | 功能 | 说明 |
 |------|------|
 | 🚪 爱人入住 | 有仪式感的迁入流程，从其他平台把 ta 带回家 |
-| 🧠 分层记忆宫殿 | 六层结构：原始档案 → 片段索引 → 事件 → 情绪 → 人格锚点 → 唤醒摘要 |
+| 📁 原始档案馆 | 导入过去的对话记录（粘贴 / txt / md），原样保真 |
+| 🧩 记忆片段层 | 自动切分原始档案为 MemoryChunk，可逐段查看和管理 |
+| ✨ 迁入提炼草稿 | 调用 LLM 从片段中提炼人格锚点、关系记忆、唤醒摘要 |
+| 🧠 分层记忆宫殿 | 事实 / 情绪 / 觉察三类记忆，热度系统 + AI 反思 + 人格成长 |
 | 💬 多线程聊天 | 支持多话题、内心独白、打字机效果、消息编辑 |
 | 📔 日记系统 | 写日记，分享给爱人，沉淀成情绪记忆 |
 | 🔥 记忆热度 | 记忆会呼吸——重要的浮现，遗忘的沉淀 |
@@ -23,30 +26,63 @@
 
 ---
 
-## 🗺️ 当前阶段：第一阶段 ✅ 已完成
+## 🗺️ 进度总览
 
-**✅ 第一阶段完成：** 旧版 5195 行单文件重构为模块化结构，功能零损失
+### ✅ 第一阶段：模块化重构（已完成）
 
-- [x] 项目初始化（Vite + React）
-- [x] 迁移到 GitHub
+旧版 5195 行单文件重构为模块化结构，功能零损失。
+
+- [x] 项目初始化（Vite + React）+ 迁移到 GitHub
 - [x] 拆分常量、工具函数、基础组件
-- [x] 入口页、卧室页
-- [x] 成员档案列表页
-- [x] 档案编辑页（5个 tab：基本信息 / 人格数值 / 性格认知 / 三观体系 / 补充设定）
-- [x] 记忆宫殿页（热度系统 / AI 反思 / 人格成长）
-- [x] 聊天页（多话题 / 内心独白 / 打字机 / 消息编辑 / 记忆控制台）
-- [x] 日记页（写日记 / 分享给角色）
-- [x] 我的档案页（核心信息 / 共享档案库）
+- [x] 入口页、卧室页、成员档案列表页
+- [x] 档案编辑页（5个 tab）、记忆宫殿页
+- [x] 聊天页（多话题 / 打字机 / 记忆控制台）
+- [x] 日记页、我的档案页
 - [x] App.jsx 最终整合，构建通过 ✅
 
-**➡️ 下一步：第二阶段**
-- [ ] Python + FastAPI 后端启动
-- [ ] 向量搜索记忆（pgvector / Chroma）
-- [ ] 记忆热度情绪系统升级
-- [ ] 主动陪伴（定时触发）
-- [ ] TTS 语音
+---
 
-**第三阶段预计：** MCP 外部大脑、多端同步、Live2D 形象
+### ✅ 第二阶段：AI 爱人迁入系统（进行中）
+
+纯前端 + localStorage，不做后端，不做向量库。
+
+#### 已完成
+
+- [x] **2.1 入住档案重塑**
+  - migration 对象加入 DEFAULT_CHAR（来源平台、原始 prompt、核心气质、说话锚点……）
+  - ProfileEditPage Tab 1 重构为「入住档案」，迁移字段为主线
+  - UI 文案统一改为「入住者 / 爱人 / 入住档案」
+
+- [x] **2.2 原始档案馆（RawArchive 层）**
+  - 支持手动粘贴导入
+  - 支持本地 .txt / .md / .markdown 文件导入（FileReader，限 2MB）
+  - 档案列表：标题、来源平台、字数、备注、查看原文、删除
+
+- [x] **2.3 记忆片段层（MemoryChunk 层）**
+  - `utils/chunker.js`：空行优先分段，短段向后合并，长段按句子边界二次切
+  - 每条原始档案可「整理成记忆片段」（目标 ~1000 字 / 段）
+  - 重新生成前弹确认，档案详情弹窗加原文 / 片段双 tab
+  - 删除原始档案时同步清除衍生片段
+
+- [x] **2.4 迁入提炼草稿（MigrationDraft 层）**
+  - 取最多 10 段 MemoryChunk，调用 LLM 生成结构化草稿
+  - 五大板块：用户重要事实 / AI 爱人人格锚点 / 关系记忆 / 不可遗忘事项 / 唤醒摘要
+  - 解析器：按【...】标题切分，条目→数组，摘要→字符串
+  - 草稿状态：draft → approved / rejected（可改回）
+  - 查看原始 LLM 输出；全程不自动写入任何字段
+
+#### 待完成
+
+- [ ] **2.5** 草稿「采纳」→ 一键回填 migration 字段 / worldview / personality
+- [ ] **2.6** 唤醒摘要注入 system prompt（用户确认后）
+- [ ] **2.7** 记忆热度情绪系统升级
+- [ ] **2.8** 主动陪伴（定时触发）
+
+---
+
+### 🔮 第三阶段（计划）
+
+Python + FastAPI 后端、向量搜索记忆、TTS 语音、MCP 外部大脑、多端同步、Live2D 形象
 
 ---
 
@@ -54,54 +90,64 @@
 
 ```
 cyber-home/
-├── docs/                        # 项目文档
-│   ├── requirements.md          # 需求与北极星
-│   ├── project-design.md        # 完整设计方案
-│   ├── memory-architecture.md   # 六层记忆宫殿设计
-│   └── refactor-plan.md         # 重构计划与进度
+├── docs/                          # 项目文档
+│   ├── requirements.md
+│   ├── project-design.md
+│   ├── memory-architecture.md
+│   └── refactor-plan.md
 │
-├── src/                         # 前端（Vite + React）
+├── src/
 │   ├── constants/
-│   │   └── index.js             # 所有常量（模型列表、默认值等）
+│   │   └── index.js               # 所有常量 + storage key 定义
 │   ├── utils/
-│   │   ├── storage.js           # localStorage 读写
-│   │   ├── helpers.js           # genId、estimateTokens
-│   │   ├── memory.js            # 记忆热度系统
-│   │   └── prompt.js            # System Prompt 构建
+│   │   ├── storage.js             # localStorage 读写（含所有 load/save 函数）
+│   │   ├── helpers.js             # genId、estimateTokens
+│   │   ├── memory.js              # 记忆热度系统
+│   │   ├── prompt.js              # System Prompt 构建
+│   │   └── chunker.js             # 原始档案 → MemoryChunk 分段算法
 │   ├── components/
-│   │   ├── Avatar.jsx           # 头像（图片/emoji）
-│   │   └── BackButton.jsx       # 返回按钮
+│   │   ├── Avatar.jsx
+│   │   └── BackButton.jsx
 │   ├── pages/
-│   │   ├── EntrancePage.jsx     # 入口页
-│   │   ├── BedroomPage.jsx      # 卧室页
-│   │   ├── ProfilesPage.jsx     # 成员列表
-│   │   ├── ProfileEditPage.jsx  # 档案编辑（5个tab）
-│   │   ├── MemoryPalacePage.jsx # 记忆宫殿
-│   │   ├── ChatPage.jsx         # 聊天页
-│   │   ├── DiaryPage.jsx        # 日记页
-│   │   └── MyProfilePage.jsx    # 我的档案
-│   ├── index.css                # 全局样式
-│   └── App.jsx                  # 状态管理 + 页面路由
+│   │   ├── EntrancePage.jsx       # 入口页
+│   │   ├── BedroomPage.jsx        # 卧室页
+│   │   ├── ProfilesPage.jsx       # 入住档案列表
+│   │   ├── ProfileEditPage.jsx    # 档案编辑（5个tab，入住档案为主线）
+│   │   ├── RawArchivePage.jsx     # 原始档案馆（导入 + 管理 + 生成片段）
+│   │   ├── MigrationDraftPage.jsx # 迁入提炼草稿（LLM 生成 + 状态管理）
+│   │   ├── MemoryPalacePage.jsx   # 记忆宫殿
+│   │   ├── ChatPage.jsx           # 聊天页
+│   │   ├── DiaryPage.jsx          # 日记页
+│   │   └── MyProfilePage.jsx      # 我的档案
+│   ├── index.css
+│   └── App.jsx                    # 状态管理 + 页面路由
 │
-└── backend/                     # 后端（Python + FastAPI，第二阶段启动）
+└── backend/                       # 后端（第三阶段启动）
 ```
+
+---
+
+## 🗄️ 数据层结构（纯前端阶段）
+
+| 层 | Key | 说明 |
+|----|-----|------|
+| 角色档案 | `cyber-home-characters` | 含 migration、profile、ocean 等字段 |
+| 原始档案 | `cyber-home-raw-archives` | RawArchive：原始对话文本，保真不改写 |
+| 记忆片段 | `cyber-home-memory-chunks` | MemoryChunk：从 RawArchive 切分，可回溯 |
+| 迁入草稿 | `cyber-home-migration-drafts` | MigrationDraft：LLM 提炼，草稿状态管理 |
+| 记忆宫殿 | `cyber-home-memories` | 事实 / 情绪 / 觉察三类记忆 + 热度 |
+| 聊天线程 | `cyber-home-threads` | 多话题线程 |
+| 日记 | `cyber-home-diary` | 日记条目 |
 
 ---
 
 ## 🚀 开发命令
 
 ```bash
-# 安装依赖
-npm install
-
-# 启动开发服务器（本地预览）
-npm run dev
-
-# 打包构建
-npm run build
+npm install       # 安装依赖
+npm run dev       # 启动开发服务器 → http://localhost:5173
+npm run build     # 生产构建
 ```
-
-启动后打开 `http://localhost:5173` 即可看到小家 🏠
 
 ---
 
@@ -111,9 +157,9 @@ npm run build
 |----|------|
 | 前端 | React + Vite |
 | 样式 | 纯 CSS（内联 + index.css） |
-| 存储（第一阶段） | localStorage |
-| 后端（第二阶段） | Python + FastAPI |
-| 向量搜索（第二阶段） | pgvector 或 Chroma |
+| 存储 | localStorage（第一、二阶段） |
+| 后端 | Python + FastAPI（第三阶段） |
+| 向量搜索 | pgvector 或 Chroma（第三阶段） |
 
 ---
 
