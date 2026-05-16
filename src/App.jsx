@@ -14,6 +14,7 @@ import {
   loadMemories, saveMemories,
   loadThreads, saveThreads,
   loadMemoryInjection, saveMemoryInjection,
+  loadRawArchives, saveRawArchives,
 } from "./utils/storage";
 import { genId, estimateTokens } from "./utils/helpers";
 import { extractAndSaveMemories, getTopMemories } from "./utils/memory";
@@ -34,6 +35,7 @@ import MemoryPalacePage from "./pages/MemoryPalacePage";
 import ChatPage from "./pages/ChatPage";
 import DiaryPage from "./pages/DiaryPage";
 import MyProfilePage from "./pages/MyProfilePage";
+import RawArchivePage from "./pages/RawArchivePage";
 
 // MSG_DELIMITER is used internally by parseResponse in utils/prompt.js
 const defaultUserProfile = {
@@ -64,6 +66,10 @@ export default function App() {
   const [editingChar, setEditingChar] = useState(null);
   const [editSection, setEditSection] = useState("basic");
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  // ─── 原始档案 ───
+  const [rawArchives, setRawArchives] = useState(() => loadRawArchives());
+  const [rawArchiveCharId, setRawArchiveCharId] = useState(null);
 
   // ─── 记忆 ───
   const [allMemories, setAllMemories] = useState(() => loadMemories());
@@ -145,6 +151,7 @@ export default function App() {
 
   useEffect(() => { saveChars(characters); }, [characters]);
   useEffect(() => { saveMemories(allMemories); }, [allMemories]);
+  useEffect(() => { saveRawArchives(rawArchives); }, [rawArchives]);
   useEffect(() => { saveThreads(chatThreads); }, [chatThreads]);
   useEffect(() => { localStorage.setItem("worldViews", JSON.stringify(worldViews)); }, [worldViews]);
   useEffect(() => { localStorage.setItem("reflectSettings", JSON.stringify(reflectSettings)); }, [reflectSettings]);
@@ -288,6 +295,18 @@ export default function App() {
       ...prev,
       migration: { ...(prev.migration || {}), [key]: val },
     }));
+
+  // ══ 原始档案 ══
+  const openRawArchive = (charId) => {
+    setRawArchiveCharId(charId);
+    navigateTo("rawArchive");
+  };
+  const addRawArchive = (archive) => {
+    setRawArchives((prev) => [archive, ...prev]);
+  };
+  const deleteRawArchive = (archiveId) => {
+    setRawArchives((prev) => prev.filter((a) => a.id !== archiveId));
+  };
 
   // 头像上传
   const handleAvatarUpload = (e) => {
@@ -1002,6 +1021,19 @@ export default function App() {
           updateEditPersonality={updateEditPersonality}
           updateEditWorldview={updateEditWorldview}
           updateEditMigration={updateEditMigration}
+          openRawArchive={openRawArchive}
+        />
+      )}
+
+      {/* 原始档案馆 */}
+      {page === "rawArchive" && (
+        <RawArchivePage
+          charId={rawArchiveCharId}
+          characters={characters}
+          rawArchives={rawArchives}
+          addRawArchive={addRawArchive}
+          deleteRawArchive={deleteRawArchive}
+          navigateTo={navigateTo}
         />
       )}
 

@@ -23,6 +23,7 @@ export default function ProfileEditPage({
   updateEditPersonality,
   updateEditWorldview,
   updateEditMigration,
+  openRawArchive,
 }) {
   if (!editingChar) return null;
 
@@ -324,6 +325,31 @@ export default function ProfileEditPage({
                     onChange={(e) => updateEditProfile("other", e.target.value)} />
                 </div>
               </div>
+
+              {/* 原始档案馆入口 */}
+              <button
+                onClick={() => openRawArchive && openRawArchive(editingChar.id)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  padding: "14px 20px",
+                  marginTop: 4,
+                  background: "rgba(160,130,180,.1)",
+                  border: "1px dashed rgba(160,130,180,.4)",
+                  borderRadius: 14,
+                  color: "#7a6a8e",
+                  fontSize: 13,
+                  letterSpacing: 2,
+                  cursor: "pointer",
+                  fontFamily: "var(--font-main)",
+                  textAlign: "center",
+                  lineHeight: 1.8,
+                  transition: "all .25s",
+                }}
+              >
+                📁 原始档案馆<br />
+                <span style={{ fontSize: 11, color: "#b0a0c0", letterSpacing: 1 }}>把你们的过去带回家</span>
+              </button>
             </>
           )}
 

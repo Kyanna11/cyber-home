@@ -9,6 +9,7 @@ import {
   MEMORIES_STORAGE_KEY,
   THREADS_STORAGE_KEY,
   MEMORY_INJECTION_KEY,
+  RAW_ARCHIVES_STORAGE_KEY,
 } from "../constants";
 
 // 通用读写
@@ -72,6 +73,14 @@ export function loadThreads() {
 }
 export function saveThreads(t) {
   saveJSON(THREADS_STORAGE_KEY, t);
+}
+
+// 原始档案
+export function loadRawArchives() {
+  return loadJSON(RAW_ARCHIVES_STORAGE_KEY, []);
+}
+export function saveRawArchives(a) {
+  saveJSON(RAW_ARCHIVES_STORAGE_KEY, a);
 }
 
 // 记忆注入配置
