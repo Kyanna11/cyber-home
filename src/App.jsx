@@ -530,6 +530,103 @@ ${chunksText}
     );
   };
 
+  // 保存草稿编辑内容（不改变 status）
+  const updateDraftContent = (draftId, fields) => {
+    setMigrationDrafts((prev) =>
+      prev.map((d) =>
+        d.id === draftId ? { ...d, ...fields, updatedAt: Date.now() } : d
+      )
+    );
+  };
+
+  // 采纳草稿 → 追加写入 migration 字段 + 记忆宫殿
+  const adoptDraft = (draftId, fields, charId) => {
+    const SEP = "\n\n——（迁入补充）——\n\n";
+    const arrToLines = (arr) => (arr || []).join("\n");
+    const now = Date.now();
+
+    // 1. 追加写入 characters 中对应角色的 migration 字段
+    setCharacters((prev) =>
+      prev.map((c) => {
+        if (c.id !== charId) return c;
+        const mig = { ...(c.migration || {}) };
+        const append = (existing, newText) => {
+          if (!newText) return existing || "";
+          return existing ? existing + SEP + newText : newText;
+        };
+        // loverAnchors → coreVibe
+        if (fields.loverAnchors?.length) {
+          mig.coreVibe = append(mig.coreVibe, arrToLines(fields.loverAnchors));
+        }
+        // doNotForget → doNotChangeRules
+        if (fields.doNotForget?.length) {
+          mig.doNotChangeRules = append(mig.doNotChangeRules, arrToLines(fields.doNotForget));
+        }
+        // wakeSummary → wakeSummary
+        if (fields.wakeSummary) {
+          mig.wakeSummary = append(mig.wakeSummary, fields.wakeSummary);
+        }
+        // relationshipMemories + wakeSummary → relationshipSummary
+        const relParts = [];
+        if (fields.relationshipMemories?.length) relParts.push(arrToLines(fields.relationshipMemories));
+        if (fields.wakeSummary) relParts.push(`【唤醒摘要】\n${fields.wakeSummary}`);
+        if (relParts.length) {
+          mig.relationshipSummary = append(mig.relationshipSummary, relParts.join("\n\n"));
+        }
+        mig.importedAt = now;
+        return { ...c, migration: mig };
+      })
+    );
+
+    // 2. 同步到记忆宫殿
+    setAllMemories((prev) => {
+      const existing = prev[charId] || { fact: [], emotion: [], insight: [], summaries: [] };
+      const newFacts = [...(existing.fact || [])];
+      const newEmotions = [...(existing.emotion || [])];
+      const newInsights = [...(existing.insight || [])];
+
+      const makeEntry = (text) => ({
+        id: genId(),
+        text,
+        time: new Date(now).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+        ts: now,
+        important: true,
+        mentions: 0,
+        createdAt: now,
+        lastMentioned: null,
+      });
+
+      (fields.userFacts || []).forEach((t) => {
+        if (t.trim()) newFacts.unshift(makeEntry(`【迁入·事实】${t}`));
+      });
+      (fields.loverAnchors || []).forEach((t) => {
+        if (t.trim()) newInsights.unshift(makeEntry(`【迁入·锚点】${t}`));
+      });
+      (fields.relationshipMemories || []).forEach((t) => {
+        if (t.trim()) newEmotions.unshift(makeEntry(`【迁入·关系】${t}`));
+      });
+      (fields.doNotForget || []).forEach((t) => {
+        if (t.trim()) newFacts.unshift(makeEntry(`【迁入·规则】${t}`));
+      });
+      if (fields.wakeSummary?.trim()) {
+        newInsights.unshift(makeEntry(`【迁入·唤醒】${fields.wakeSummary}`));
+      }
+
+      return {
+        ...prev,
+        [charId]: {
+          ...existing,
+          fact: newFacts,
+          emotion: newEmotions,
+          insight: newInsights,
+        },
+      };
+    });
+
+    // 3. 标记草稿为已采纳
+    updateDraftStatus(draftId, "approved");
+  };
+
   // 头像上传
   const handleAvatarUpload = (e) => {
     const file = e.target.files?.[0];
@@ -1276,6 +1373,8 @@ ${chunksText}
           handleGenerateDraft={handleGenerateDraft}
           deleteMigrationDraft={deleteMigrationDraft}
           updateDraftStatus={updateDraftStatus}
+          updateDraftContent={updateDraftContent}
+          adoptDraft={adoptDraft}
           navigateTo={navigateTo}
         />
       )}
