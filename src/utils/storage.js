@@ -13,6 +13,7 @@ import {
   MEMORY_CHUNKS_STORAGE_KEY,
   MIGRATION_DRAFTS_STORAGE_KEY,
   TIMELINE_EVENTS_STORAGE_KEY,
+  SETTLEMENT_DRAFTS_STORAGE_KEY,
 } from "../constants";
 
 // 通用读写
@@ -108,6 +109,14 @@ export function loadTimelineEvents() {
 }
 export function saveTimelineEvents(events) {
   saveJSON(TIMELINE_EVENTS_STORAGE_KEY, events);
+}
+
+// 阶段沉淀草稿
+export function loadSettlementDrafts() {
+  return loadJSON(SETTLEMENT_DRAFTS_STORAGE_KEY, []);
+}
+export function saveSettlementDrafts(drafts) {
+  saveJSON(SETTLEMENT_DRAFTS_STORAGE_KEY, drafts);
 }
 
 // 记忆注入配置

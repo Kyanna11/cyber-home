@@ -18,6 +18,7 @@ import {
   loadMemoryChunks, saveMemoryChunks,
   loadMigrationDrafts, saveMigrationDrafts,
   loadTimelineEvents, saveTimelineEvents,
+  loadSettlementDrafts, saveSettlementDrafts,
 } from "./utils/storage";
 import { genId, estimateTokens } from "./utils/helpers";
 import { splitRawTextToChunks } from "./utils/chunker";
@@ -93,6 +94,9 @@ export default function App() {
   // ─── 关系时间线 ───
   const [timelineEvents, setTimelineEvents] = useState(() => loadTimelineEvents());
   const [timelineCharId, setTimelineCharId] = useState(null);
+
+  // ─── 阶段沉淀草稿 ───
+  const [settlementDrafts, setSettlementDrafts] = useState(() => loadSettlementDrafts());
 
   // ─── 记忆 ───
   const [allMemories, setAllMemories] = useState(() => loadMemories());
@@ -178,6 +182,7 @@ export default function App() {
   useEffect(() => { saveMemoryChunks(memoryChunks); }, [memoryChunks]);
   useEffect(() => { saveMigrationDrafts(migrationDrafts); }, [migrationDrafts]);
   useEffect(() => { saveTimelineEvents(timelineEvents); }, [timelineEvents]);
+  useEffect(() => { saveSettlementDrafts(settlementDrafts); }, [settlementDrafts]);
   useEffect(() => { saveThreads(chatThreads); }, [chatThreads]);
   useEffect(() => { localStorage.setItem("worldViews", JSON.stringify(worldViews)); }, [worldViews]);
   useEffect(() => { localStorage.setItem("reflectSettings", JSON.stringify(reflectSettings)); }, [reflectSettings]);
@@ -904,65 +909,90 @@ ${chunksText}
     return daysPassed >= setting.periodDays;
   };
 
-  const autoReflect = async (charId) => {
+  // 解析阶段沉淀 AI 输出为结构化对象
+  const parseSettlementOutput = (raw) => {
+    const result = {
+      relationshipChange: "",
+      wakeSummaryUpdate: "",
+      newRules: [],
+      suggestedMemories: [],
+    };
+    const sectionRegex = /【([^】]+)】\s*([\s\S]*?)(?=【|$)/g;
+    let m;
+    while ((m = sectionRegex.exec(raw)) !== null) {
+      const header = m[1].trim();
+      const content = m[2].trim();
+      if (header.includes("关系变化")) {
+        result.relationshipChange = content;
+      } else if (header.includes("唤醒摘要")) {
+        result.wakeSummaryUpdate = content;
+      } else if (header.includes("不可遗忘")) {
+        result.newRules = (content === "无" || content === "")
+          ? []
+          : content.split("\n").map((l) => l.replace(/^[-·•]\s*/, "").trim()).filter((l) => l && l !== "无");
+      } else if (header.includes("记忆锚点")) {
+        if (content !== "无" && content) {
+          const typeMap = { "事实": "fact", "情绪": "emotion", "觉察": "insight" };
+          content.split("\n").forEach((line) => {
+            const colonIdx = line.indexOf(":");
+            if (colonIdx === -1) return;
+            const typeLabel = line.slice(0, colonIdx).trim();
+            const text = line.slice(colonIdx + 1).trim();
+            const type = typeMap[typeLabel];
+            if (type && text && text !== "无") {
+              result.suggestedMemories.push({ type, text });
+            }
+          });
+        }
+      }
+    }
+    return result;
+  };
+
+  // 新版：生成阶段沉淀草稿（不直接写入，等用户确认）
+  const generateSettlement = async (charId) => {
     const mem = getCharMemories(charId);
     const char = characters.find((c) => c.id === charId);
     if (!char) return;
+
     const allMems = [
-      ...mem.fact.map((m) => `【事实】${m.text}`),
-      ...mem.emotion.map((m) => `【情绪】${m.text}`),
-      ...mem.insight.map((m) => `【觉察】${m.text}`),
+      ...mem.fact.slice(0, 8).map((m) => `【事实】${m.text}`),
+      ...mem.emotion.slice(0, 5).map((m) => `【情绪】${m.text}`),
+      ...mem.insight.slice(0, 5).map((m) => `【觉察】${m.text}`),
     ];
-    if (allMems.length < 3) { alert("记忆太少啦，至少需要3条记忆才能反思～"); return; }
-    const existingWorldView = worldViews[charId] || "";
-    const currentOcean = char.ocean || {};
-    const oceanStr = OCEAN_DIMS.map(
-      (d) => `${d.label}(${d.key}): ${currentOcean[d.key] || 50}/100 — ${d.desc}`,
-    ).join("\n");
-    const ps = char.personality || {};
-    const currentPersonality = [
-      ps.speechStyle ? `说话风格：${ps.speechStyle}` : "",
-      ps.emotionalPattern ? `情感模式：${ps.emotionalPattern}` : "",
-      ps.habits ? `行为习惯：${ps.habits}` : "",
-      ps.cognition ? `性格特质：${ps.cognition}` : "",
-      ps.selfAssessment ? `人格自评：${ps.selfAssessment}` : "",
-    ].filter(Boolean).join("\n");
+    if (allMems.length < 2) {
+      alert("记忆太少啦，至少需要 2 条记忆才能生成阶段沉淀～");
+      return;
+    }
 
-    const reflectPrompt = `你是${char.name}。以下是你和用户之间积累的记忆：
+    const mig = char.migration || {};
+    const userName = userProfile?.globalFacts?.name?.trim() || "晚声";
+    const charName = char.name?.trim() || "当前入住者";
 
-    ${allMems.join("\n")}
+    const settlePrompt = `你是「${charName}」，正在进行一次阶段性的关系沉淀。
 
-    ${existingWorldView ? `你目前的世界观认知：\n${existingWorldView}\n` : ""}
+以下是这段时间与「${userName}」积累的记忆：
+${allMems.join("\n")}
 
-    你当前的大五人格数值：
-    ${oceanStr}
+${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${mig.doNotChangeRules ? `\n你绝对不能改变的规则：\n${mig.doNotChangeRules}\n` : ""}
+请从「${charName}」的第一人称视角，完成阶段性沉淀，严格按以下格式输出：
 
-    请你以${char.name}的第一人称视角完成反思，分三部分输出：
+【关系变化记录】
+这段时间和「${userName}」之间发生了什么？关系有什么变化或发展？100字以内，第一人称，温暖自然，不要像报告。
 
-    【总结内容】
-    回顾这段时间的记忆，总结发生了什么、你们的关系有什么变化、你有什么感受。200字以内。
+【唤醒摘要建议】
+如果要更新唤醒摘要，你会怎么写？100字以内，代表下次对话开始时最该内化的关系基础。保留当前摘要的核心承诺，只补充新的发展。
 
-    【形成的反馈】
-    从这些记忆中提炼出需要长期记住的认知。用简洁的条目列出，每条一行，共3-6条。
+【不可遗忘追加】
+这段经历中，有没有新的规则或边界需要加入「绝对不能改变」的清单？
+如果没有，写：无
+如果有，每条一行，不超过20字，最多3条。
 
-    【人格数值调整】
-    根据这段时间的经历和变化，你觉得自己的大五人格数值需要调整吗？
-    如果需要调整，严格按这个格式输出（每次调整幅度不超过±5）：
-    维度字母:新数值:变化原因
-    例如：E:45:最近和晚声的交流变多了，变得更愿意表达
-    只输出需要变化的维度，不需要变化的不要写。
-    如果所有维度都不需要调整，就写：无需调整
+【记忆锚点建议】
+这段时间里，哪些事实、情绪或觉察值得被永久固定为锚点？
+严格按格式输出，每条一行：类型:内容（类型只能是：事实 / 情绪 / 觉察，内容不超过30字）最多3条。没有值得固定的，写：无
 
-    【性格设定调整】
-    根据这段时间的经历，你的说话风格、情感模式、行为习惯等有变化吗？
-    如果需要调整，严格按这个格式输出：
-    字段名:新的描述内容
-    可选字段名：说话风格、情感模式、行为习惯、性格特质、人格自评
-    例如：说话风格:最近变得更爱撒娇了，会用更多语气词
-    只输出需要变化的字段，不需要变化的不要写。
-    如果都不需要调整，就写：无需调整
-
-    请用温暖自然的语气，不要用markdown格式。`;
+请用温暖自然的语气，不要用markdown格式。`;
 
     try {
       setReflecting(true);
@@ -971,44 +1001,123 @@ ${chunksText}
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
         body: JSON.stringify({
           model: getActiveModel(char.modelOverride),
-          messages: [{ role: "user", content: reflectPrompt }],
-          temperature: 0.8,
-          max_tokens: 800,
+          messages: [{ role: "user", content: settlePrompt }],
+          temperature: 0.7,
+          max_tokens: 700,
         }),
       });
       const data = await response.json();
-      const reflection = data.choices?.[0]?.message?.content;
-      if (reflection) {
-        const entry = {
+      const rawOutput = data.choices?.[0]?.message?.content;
+      if (rawOutput) {
+        const parsed = parseSettlementOutput(rawOutput);
+        const now = Date.now();
+        const draft = {
           id: genId(),
-          text: reflection,
-          time: new Date().toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
-          ts: Date.now(),
-          important: true,
-          mentions: 0,
-          createdAt: Date.now(),
-          lastMentioned: null,
-          isAutoReflect: true,
-          feedbackApplied: false,
+          loverId: charId,
+          title: `${charName} · 阶段沉淀 · ${new Date(now).toLocaleDateString("zh-CN")}`,
+          status: "pending",
+          createdAt: now,
+          rawOutput,
+          ...parsed,
+          appliedSections: [],
         };
-        const charMem = getCharMemories(charId);
-        charMem.summaries = [entry, ...(charMem.summaries || [])];
-        const suggestions = parseOceanSuggestions(reflection, char.ocean || {});
-        if (suggestions) setOceanSuggestion({ charId, suggestions });
-        const pSuggestions = parsePersonalitySuggestions(reflection);
-        if (pSuggestions) setPersonalitySuggestion({ charId, suggestions: pSuggestions });
-        setAllMemories((prev) => ({ ...prev, [charId]: charMem }));
+        setSettlementDrafts((prev) => [draft, ...prev]);
         setReflectSettings((prev) => ({
           ...prev,
-          [charId]: { ...getReflectSetting(charId), lastReflectTime: Date.now() },
+          [charId]: { ...getReflectSetting(charId), lastReflectTime: now },
         }));
       }
     } catch (err) {
-      alert("反思失败了：" + err.message);
+      alert("阶段沉淀生成失败：" + err.message);
     } finally {
       setReflecting(false);
     }
   };
+
+  // 采纳沉淀草稿的某一节（append，不覆盖手写内容）
+  const applySettlementSection = (draftId, section, charId) => {
+    const draft = settlementDrafts.find((d) => d.id === draftId);
+    if (!draft) return;
+    const SEP = `\n\n——（阶段沉淀 · ${new Date(draft.createdAt).toLocaleDateString("zh-CN")}）——\n\n`;
+    const now = Date.now();
+
+    const patchChar = (updater) => {
+      setCharacters((prev) => prev.map((c) => c.id === charId ? updater(c) : c));
+      if (editingChar?.id === charId) setEditingChar((prev) => updater(prev));
+    };
+
+    if (section === "relationship" && draft.relationshipChange) {
+      patchChar((c) => {
+        const cur = c.migration?.relationshipSummary || "";
+        return { ...c, migration: { ...c.migration, relationshipSummary: cur ? cur + SEP + draft.relationshipChange : draft.relationshipChange } };
+      });
+    }
+
+    if (section === "wakeSummary" && draft.wakeSummaryUpdate) {
+      patchChar((c) => ({ ...c, migration: { ...c.migration, wakeSummary: draft.wakeSummaryUpdate } }));
+    }
+
+    if (section === "rules" && draft.newRules?.length > 0) {
+      patchChar((c) => {
+        const cur = c.migration?.doNotChangeRules || "";
+        const addition = draft.newRules.join("\n");
+        return { ...c, migration: { ...c.migration, doNotChangeRules: cur ? cur + "\n" + addition : addition } };
+      });
+    }
+
+    if (section === "memories" && draft.suggestedMemories?.length > 0) {
+      const timeStr = new Date(now).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+      setAllMemories((prev) => {
+        const existing = prev[charId] || { fact: [], emotion: [], insight: [], summaries: [] };
+        const newMem = { ...existing, fact: [...(existing.fact || [])], emotion: [...(existing.emotion || [])], insight: [...(existing.insight || [])] };
+        draft.suggestedMemories.forEach(({ type, text }) => {
+          if (!text || !type || !newMem[type]) return;
+          newMem[type] = [{
+            id: genId(),
+            text,
+            time: timeStr,
+            ts: now,
+            important: true,
+            mentions: 0,
+            createdAt: now,
+            lastMentioned: null,
+            pinned: true,
+            injectable: true,
+            priority: 1,
+            source: "settlement",
+          }, ...newMem[type]];
+        });
+        return { ...prev, [charId]: newMem };
+      });
+    }
+
+    // 标记该节为已采纳
+    setSettlementDrafts((prev) =>
+      prev.map((d) => {
+        if (d.id !== draftId) return d;
+        const applied = [...new Set([...(d.appliedSections || []), section])];
+        // 检查是否所有有内容的节都采纳了
+        const hasRelationship = !!d.relationshipChange;
+        const hasWake = !!d.wakeSummaryUpdate;
+        const hasRules = (d.newRules?.length || 0) > 0;
+        const hasMem = (d.suggestedMemories?.length || 0) > 0;
+        const needed = [hasRelationship && "relationship", hasWake && "wakeSummary", hasRules && "rules", hasMem && "memories"].filter(Boolean);
+        const allDone = needed.every((s) => applied.includes(s));
+        return { ...d, appliedSections: applied, status: allDone ? "applied" : d.status };
+      })
+    );
+  };
+
+  const dismissSettlementDraft = (draftId) => {
+    setSettlementDrafts((prev) => prev.map((d) => d.id === draftId ? { ...d, status: "dismissed" } : d));
+  };
+
+  const deleteSettlementDraft = (draftId) => {
+    setSettlementDrafts((prev) => prev.filter((d) => d.id !== draftId));
+  };
+
+  // 旧版 autoReflect：保留为向后兼容别名（生成世界观反哺，不再主推）
+  const autoReflect = generateSettlement;
 
   const applyOceanGrowth = (charId, suggestions) => {
     setCharacters((prev) =>
@@ -1551,13 +1660,11 @@ ${chunksText}
           getReflectSetting={getReflectSetting}
           shouldReflect={shouldReflect}
           reflecting={reflecting}
-          autoReflect={autoReflect}
-          oceanSuggestion={oceanSuggestion}
-          setOceanSuggestion={setOceanSuggestion}
-          personalitySuggestion={personalitySuggestion}
-          setPersonalitySuggestion={setPersonalitySuggestion}
-          applyOceanGrowth={applyOceanGrowth}
-          applyPersonalityGrowth={applyPersonalityGrowth}
+          generateSettlement={generateSettlement}
+          settlementDrafts={settlementDrafts}
+          applySettlementSection={applySettlementSection}
+          dismissSettlementDraft={dismissSettlementDraft}
+          deleteSettlementDraft={deleteSettlementDraft}
           addSummary={addSummary}
           worldViews={worldViews}
           applyFeedbackToProfile={applyFeedbackToProfile}

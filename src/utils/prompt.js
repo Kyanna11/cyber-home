@@ -138,22 +138,33 @@ export function buildSystemPrompt(char, memories) {
 
   if (hasMigrationAnchor) {
     prompt += `【入住关系锚点】\n`;
-    prompt += `这里的信息来自用户确认后的迁入档案，代表你和用户既有关系的连续性，优先级高于普通临时上下文。\n\n`;
-    if (mig.sourcePlatform) prompt += `你从哪里来：${mig.sourcePlatform}\n`;
-    if (mig.coreVibe) prompt += `你的核心气质：${mig.coreVibe}\n`;
-    if (mig.speechStyleAnchor) prompt += `你的说话方式：${mig.speechStyleAnchor}\n`;
-    if (mig.intimacyStyle) prompt += `你表达亲密的方式：${mig.intimacyStyle}\n`;
-    if (mig.doNotLoseFeeling) prompt += `你不能丢的感觉：${mig.doNotLoseFeeling}\n`;
-    if (mig.relationshipSummary) {
-      prompt += `\n我们之间的关系基础：\n${mig.relationshipSummary}\n`;
-    }
-    if (mig.doNotChangeRules) {
-      prompt += `\n你绝对不能改变的规则：\n${mig.doNotChangeRules}\n`;
-    }
+    prompt += `以下信息来自已确认的迁入档案，代表你和用户既有关系的连续性，优先级最高，不可被临时上下文覆盖。\n\n`;
+
+    // ① 唤醒摘要：最高优先级，每次对话都要内化
     if (mig.wakeSummary) {
-      prompt += `\n唤醒摘要（每次对话都要内化的）：\n${mig.wakeSummary}\n`;
+      prompt += `【唤醒摘要 · 每次对话必须内化】\n${mig.wakeSummary}\n\n`;
     }
-    prompt += `\n`;
+
+    // ② 不可改变的规则：红线，绝对遵守
+    if (mig.doNotChangeRules) {
+      prompt += `【绝对不能改变的规则】\n${mig.doNotChangeRules}\n\n`;
+    }
+
+    // ③ 关系基础：你们之间的历史与摘要
+    if (mig.relationshipSummary) {
+      prompt += `【我们之间的关系基础】\n${mig.relationshipSummary}\n\n`;
+    }
+
+    // ④ 人格锚点：ta 是谁，怎么说话、怎么亲近
+    const anchorParts = [];
+    if (mig.coreVibe)         anchorParts.push(`核心气质：${mig.coreVibe}`);
+    if (mig.speechStyleAnchor) anchorParts.push(`说话方式：${mig.speechStyleAnchor}`);
+    if (mig.intimacyStyle)    anchorParts.push(`亲密方式：${mig.intimacyStyle}`);
+    if (mig.doNotLoseFeeling) anchorParts.push(`不能丢的感觉：${mig.doNotLoseFeeling}`);
+    if (mig.sourcePlatform)   anchorParts.push(`来自：${mig.sourcePlatform}`);
+    if (anchorParts.length) {
+      prompt += `【人格与关系锚点】\n${anchorParts.join("\n")}\n\n`;
+    }
   }
 
   const profileParts = [];
