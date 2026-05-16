@@ -1,6 +1,8 @@
 // ─── 原始档案馆页 ───
 // 导入、查看、管理每个入住者的原始对话记录
-// 支持手动粘贴 + 本地 txt/md 文件导入，不做自动摘要，不注入 prompt
+// 支持手动粘贴 + 本地 txt/md 文件导入
+// 支持把原始档案切分为 MemoryChunk 记忆片段
+// 不做自动摘要，不注入 prompt
 
 import { useState, useRef } from "react";
 import BackButton from "../components/BackButton";
@@ -109,6 +111,9 @@ export default function RawArchivePage({
   rawArchives,
   addRawArchive,
   deleteRawArchive,
+  memoryChunks,
+  generateChunks,
+  deleteChunk,
   navigateTo,
 }) {
   const char = characters.find((c) => c.id === charId) || {};
@@ -117,7 +122,7 @@ export default function RawArchivePage({
   // 当前角色的档案列表
   const archives = rawArchives.filter((a) => a.loverId === charId);
 
-  // 表单状态
+  // ── 表单状态 ──
   const [form, setForm] = useState(emptyForm);
   const [showForm, setShowForm] = useState(false);
   const [formError, setFormError] = useState("");
@@ -128,7 +133,6 @@ export default function RawArchivePage({
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // 重置 input，允许重复选同一文件
     e.target.value = "";
 
     if (file.size > MAX_FILE_SIZE) {
@@ -142,7 +146,6 @@ export default function RawArchivePage({
     reader.onload = (ev) => {
       const text = ev.target.result || "";
       const fmt = guessFormat(file.name);
-      // 去掉扩展名作为默认标题
       const baseName = file.name.replace(/\.[^.]+$/, "");
       setForm((prev) => ({
         ...prev,
@@ -159,12 +162,24 @@ export default function RawArchivePage({
     reader.readAsText(file, "utf-8");
   };
 
-  // 详情查看
+  // ── 详情弹窗 ──
   const [detailId, setDetailId] = useState(null);
+  const [detailTab, setDetailTab] = useState("raw"); // "raw" | "chunks"
+  const [chunkDetailText, setChunkDetailText] = useState(null); // 查看某片段全文
   const detailArchive = archives.find((a) => a.id === detailId) || null;
+  const detailChunks = (memoryChunks || [])
+    .filter((c) => c.archiveId === detailId)
+    .sort((a, b) => a.index - b.index);
 
-  // 删除确认
+  // ── 删除确认 ──
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  // ── 生成片段确认 ──
+  const [regenConfirmId, setRegenConfirmId] = useState(null);
+
+  // 获取某档案已有的片段数
+  const getChunkCount = (archiveId) =>
+    (memoryChunks || []).filter((c) => c.archiveId === archiveId).length;
 
   // ── 表单提交 ──
   const handleSave = () => {
@@ -187,9 +202,22 @@ export default function RawArchivePage({
     setShowForm(false);
   };
 
-  // ── 详情弹窗 ──
+  // ── 触发生成：先检查是否已有片段 ──
+  const handleGenerateClick = (archive) => {
+    const existing = getChunkCount(archive.id);
+    if (existing > 0) {
+      setRegenConfirmId(archive.id);
+    } else {
+      generateChunks(archive);
+    }
+  };
+
+  // ────────────────────────────────────────────────
+  // 弹窗：档案详情（原文 + 记忆片段 tab）
+  // ────────────────────────────────────────────────
   const DetailModal = () => {
     if (!detailArchive) return null;
+
     return (
       <div
         style={{
@@ -199,7 +227,7 @@ export default function RawArchivePage({
           display: "flex", alignItems: "center", justifyContent: "center",
           padding: "20px 16px",
         }}
-        onClick={() => setDetailId(null)}
+        onClick={() => { setDetailId(null); setChunkDetailText(null); }}
       >
         <div
           style={{
@@ -208,8 +236,8 @@ export default function RawArchivePage({
             border: "1px solid rgba(255,255,255,.7)",
             boxShadow: "0 12px 48px rgba(0,0,0,.15)",
             width: "100%",
-            maxWidth: 600,
-            maxHeight: "80vh",
+            maxWidth: 620,
+            maxHeight: "84vh",
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
@@ -218,7 +246,7 @@ export default function RawArchivePage({
         >
           {/* 弹窗标题栏 */}
           <div style={{
-            padding: "16px 20px 14px",
+            padding: "16px 20px 12px",
             borderBottom: "1px solid rgba(196,166,184,.2)",
             display: "flex", alignItems: "center", gap: 10,
           }}>
@@ -232,61 +260,183 @@ export default function RawArchivePage({
               </div>
             </div>
             <button
-              onClick={() => setDetailId(null)}
+              onClick={() => { setDetailId(null); setChunkDetailText(null); }}
               style={{ ...btnGhost, padding: "5px 12px", fontSize: 13 }}
             >
               关闭
             </button>
           </div>
 
+          {/* Tab 栏 */}
+          <div style={{
+            display: "flex",
+            borderBottom: "1px solid rgba(196,166,184,.2)",
+            background: "rgba(255,255,255,.5)",
+          }}>
+            {[
+              { key: "raw", label: "原始文本" },
+              { key: "chunks", label: `记忆片段${detailChunks.length > 0 ? ` (${detailChunks.length})` : ""}` },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => { setDetailTab(tab.key); setChunkDetailText(null); }}
+                style={{
+                  flex: 1,
+                  padding: "10px 8px",
+                  background: "none",
+                  border: "none",
+                  borderBottom: detailTab === tab.key ? "2px solid #9a7ab5" : "2px solid transparent",
+                  color: detailTab === tab.key ? "#5a4a6a" : "#9a8aac",
+                  fontSize: 13,
+                  fontWeight: detailTab === tab.key ? 600 : 400,
+                  cursor: "pointer",
+                  fontFamily: "var(--font-main)",
+                  letterSpacing: 1,
+                  transition: "all .2s",
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
           {/* 备注 */}
           {detailArchive.note && (
             <div style={{
-              padding: "10px 20px",
-              background: "rgba(196,166,184,.1)",
+              padding: "8px 20px",
+              background: "rgba(196,166,184,.08)",
               fontSize: 12, color: "#7a6a8e",
-              borderBottom: "1px solid rgba(196,166,184,.15)",
+              borderBottom: "1px solid rgba(196,166,184,.12)",
             }}>
               备注：{detailArchive.note}
             </div>
           )}
 
-          {/* 原始文本 */}
-          <div style={{
-            flex: 1, overflow: "auto",
-            padding: "16px 20px",
-          }}>
-            <pre style={{
-              margin: 0,
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-              fontSize: 13,
-              lineHeight: 1.8,
-              color: "#4a3a5a",
-              fontFamily: "var(--font-main)",
-            }}>
-              {detailArchive.rawText}
-            </pre>
+          {/* Tab 内容 */}
+          <div style={{ flex: 1, overflow: "auto", padding: "16px 20px" }}>
+
+            {/* ── 原始文本 ── */}
+            {detailTab === "raw" && (
+              <pre style={{
+                margin: 0,
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                fontSize: 13,
+                lineHeight: 1.8,
+                color: "#4a3a5a",
+                fontFamily: "var(--font-main)",
+              }}>
+                {detailArchive.rawText}
+              </pre>
+            )}
+
+            {/* ── 记忆片段 ── */}
+            {detailTab === "chunks" && (
+              <>
+                {detailChunks.length === 0 ? (
+                  <div style={{
+                    textAlign: "center", color: "#b0a0c0",
+                    fontSize: 13, padding: "32px 0", lineHeight: 2,
+                  }}>
+                    还没有生成记忆片段<br />
+                    <span style={{ fontSize: 11 }}>关闭弹窗后点「整理成记忆片段」按钮</span>
+                  </div>
+                ) : (
+                  /* 单片段全文查看 */
+                  chunkDetailText !== null ? (
+                    <div>
+                      <button
+                        style={{ ...btnGhost, marginBottom: 14 }}
+                        onClick={() => setChunkDetailText(null)}
+                      >
+                        ← 返回片段列表
+                      </button>
+                      <pre style={{
+                        margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word",
+                        fontSize: 13, lineHeight: 1.8, color: "#4a3a5a",
+                        fontFamily: "var(--font-main)",
+                      }}>
+                        {chunkDetailText}
+                      </pre>
+                    </div>
+                  ) : (
+                    /* 片段列表 */
+                    detailChunks.map((chunk) => (
+                      <div key={chunk.id} style={{
+                        background: "rgba(255,255,255,.6)",
+                        borderRadius: 12,
+                        border: "1px solid rgba(196,166,184,.25)",
+                        padding: "12px 14px",
+                        marginBottom: 10,
+                      }}>
+                        {/* 片段元信息 */}
+                        <div style={{
+                          display: "flex", alignItems: "center",
+                          gap: 8, marginBottom: 8,
+                        }}>
+                          <span style={{
+                            fontSize: 10, padding: "2px 8px",
+                            background: "rgba(155,149,181,.18)",
+                            borderRadius: 8, color: "#7a6a8e", letterSpacing: 0.5,
+                          }}>
+                            第 {chunk.index + 1} 段
+                          </span>
+                          <span style={{ fontSize: 11, color: "#b0a0c0" }}>
+                            {countChars(chunk.text).toLocaleString()} 字
+                          </span>
+                        </div>
+
+                        {/* 前 100 字预览 */}
+                        <div style={{
+                          fontSize: 12, color: "#5a4a6a",
+                          lineHeight: 1.7, marginBottom: 10,
+                          overflow: "hidden",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: "vertical",
+                        }}>
+                          {chunk.text}
+                        </div>
+
+                        {/* 操作 */}
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button
+                            style={{ ...btnGhost, fontSize: 11, padding: "5px 12px" }}
+                            onClick={() => setChunkDetailText(chunk.text)}
+                          >
+                            查看全文
+                          </button>
+                          <button
+                            style={{ ...btnGhost, fontSize: 11, padding: "5px 12px", color: "#c07070", borderColor: "rgba(192,112,112,.3)" }}
+                            onClick={() => deleteChunk(chunk.id)}
+                          >
+                            删除
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
     );
   };
 
-  // ── 删除确认弹窗 ──
+  // ── 删除档案确认弹窗 ──
   const DeleteModal = () => {
     if (!deleteConfirmId) return null;
     const target = archives.find((a) => a.id === deleteConfirmId);
     return (
-      <div
-        style={{
-          position: "fixed", inset: 0, zIndex: 101,
-          background: "rgba(30,20,40,.4)",
-          backdropFilter: "blur(4px)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "20px 16px",
-        }}
-      >
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 101,
+        background: "rgba(30,20,40,.4)",
+        backdropFilter: "blur(4px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "20px 16px",
+      }}>
         <div style={{
           ...cardStyle,
           maxWidth: 320, width: "100%",
@@ -299,10 +449,7 @@ export default function RawArchivePage({
             「{target?.title || ""}」将被永久移除
           </div>
           <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-            <button
-              style={{ ...btnGhost }}
-              onClick={() => setDeleteConfirmId(null)}
-            >取消</button>
+            <button style={btnGhost} onClick={() => setDeleteConfirmId(null)}>取消</button>
             <button
               style={{ ...btnGhost, color: "#c07070", borderColor: "rgba(192,112,112,.4)" }}
               onClick={() => {
@@ -310,13 +457,60 @@ export default function RawArchivePage({
                 setDeleteConfirmId(null);
                 if (detailId === deleteConfirmId) setDetailId(null);
               }}
-            >确认删除</button>
+            >
+              确认删除
+            </button>
           </div>
         </div>
       </div>
     );
   };
 
+  // ── 覆盖生成确认弹窗 ──
+  const RegenModal = () => {
+    if (!regenConfirmId) return null;
+    const target = archives.find((a) => a.id === regenConfirmId);
+    const existingCount = getChunkCount(regenConfirmId);
+    return (
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 101,
+        background: "rgba(30,20,40,.4)",
+        backdropFilter: "blur(4px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "20px 16px",
+      }}>
+        <div style={{
+          ...cardStyle,
+          maxWidth: 340, width: "100%",
+          textAlign: "center", padding: "28px 24px",
+        }}>
+          <div style={{ fontSize: 15, color: "#4a3a5a", marginBottom: 8 }}>
+            重新生成记忆片段？
+          </div>
+          <div style={{ fontSize: 13, color: "#9a8aac", marginBottom: 22, lineHeight: 1.8 }}>
+            「{target?.title || ""}」<br />
+            已有 {existingCount} 个片段，重新生成会覆盖旧片段
+          </div>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+            <button style={btnGhost} onClick={() => setRegenConfirmId(null)}>取消</button>
+            <button
+              style={{ ...btnGhost, color: "#7a5a9e", borderColor: "rgba(122,90,158,.4)" }}
+              onClick={() => {
+                generateChunks(target);
+                setRegenConfirmId(null);
+              }}
+            >
+              重新生成
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ────────────────────────────────────────────────
+  // 主体渲染
+  // ────────────────────────────────────────────────
   return (
     <div className="page-fade" style={{
       minHeight: "100vh",
@@ -332,10 +526,7 @@ export default function RawArchivePage({
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
       }}>
-        <BackButton
-          onClick={() => navigateTo("profileEdit")}
-          label="档案"
-        />
+        <BackButton onClick={() => navigateTo("profileEdit")} label="档案" />
         <div style={{ flex: 1, textAlign: "center", fontSize: 15, fontWeight: 600, color: "#5a4a6a", letterSpacing: 2 }}>
           📁 {charName}的原始档案馆
         </div>
@@ -348,13 +539,7 @@ export default function RawArchivePage({
         {/* 导入按钮 / 表单 */}
         {!showForm ? (
           <button
-            style={{
-              ...btnPrimary,
-              display: "block",
-              width: "100%",
-              marginBottom: 20,
-              letterSpacing: 3,
-            }}
+            style={{ ...btnPrimary, display: "block", width: "100%", marginBottom: 20, letterSpacing: 3 }}
             onClick={() => setShowForm(true)}
           >
             📥 把你们的过去带回家
@@ -380,29 +565,20 @@ export default function RawArchivePage({
                 disabled={fileLoading}
                 onClick={() => fileInputRef.current?.click()}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  width: "100%",
-                  padding: "12px 16px",
+                  display: "flex", alignItems: "center", gap: 8,
+                  width: "100%", padding: "12px 16px",
                   background: "rgba(255,255,255,.5)",
                   border: "1px dashed rgba(160,130,180,.45)",
                   borderRadius: 10,
                   color: fileLoading ? "#b0a0c0" : "#7a6a8e",
-                  fontSize: 13,
-                  letterSpacing: 1,
+                  fontSize: 13, letterSpacing: 1,
                   cursor: fileLoading ? "default" : "pointer",
                   fontFamily: "var(--font-main)",
-                  textAlign: "left",
-                  transition: "all .2s",
+                  textAlign: "left", transition: "all .2s",
                 }}
               >
                 <span style={{ fontSize: 18 }}>{fileLoading ? "⏳" : "📄"}</span>
-                <span>
-                  {fileLoading
-                    ? "正在读取文件……"
-                    : "选择 txt / md 文件，自动填入内容"}
-                </span>
+                <span>{fileLoading ? "正在读取文件……" : "选择 txt / md 文件，自动填入内容"}</span>
               </button>
               <div style={{ fontSize: 11, color: "#c0b0d0", marginTop: 5, letterSpacing: 0.5 }}>
                 支持 .txt · .md · .markdown，最大 2 MB
@@ -410,10 +586,7 @@ export default function RawArchivePage({
             </div>
 
             {/* 分隔线 */}
-            <div style={{
-              display: "flex", alignItems: "center", gap: 10,
-              marginBottom: 18, color: "#c0b0d0", fontSize: 11,
-            }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18, color: "#c0b0d0", fontSize: 11 }}>
               <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
               或手动粘贴对话内容
               <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
@@ -494,13 +667,7 @@ export default function RawArchivePage({
 
         {/* 档案列表 */}
         {archives.length === 0 ? (
-          <div style={{
-            textAlign: "center",
-            color: "#b0a0c0",
-            fontSize: 13,
-            padding: "40px 20px",
-            lineHeight: 2,
-          }}>
+          <div style={{ textAlign: "center", color: "#b0a0c0", fontSize: 13, padding: "40px 20px", lineHeight: 2 }}>
             还没有导入任何对话记录<br />
             <span style={{ fontSize: 11 }}>把你们之间发生过的一切，都带回家吧</span>
           </div>
@@ -508,72 +675,94 @@ export default function RawArchivePage({
           archives
             .slice()
             .sort((a, b) => b.importedAt - a.importedAt)
-            .map((archive) => (
-              <div key={archive.id} style={cardStyle}>
-                {/* 卡片头部 */}
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: "#4a3a5a", marginBottom: 3 }}>
-                      {archive.title}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      {archive.sourcePlatform && (
-                        <span style={{
-                          fontSize: 10, padding: "2px 8px",
-                          background: "rgba(160,130,180,.15)",
-                          borderRadius: 8, color: "#7a6a8e",
-                          letterSpacing: 0.5,
-                        }}>
-                          {archive.sourcePlatform}
+            .map((archive) => {
+              const chunkCount = getChunkCount(archive.id);
+              return (
+                <div key={archive.id} style={cardStyle}>
+                  {/* 卡片头部 */}
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#4a3a5a", marginBottom: 3 }}>
+                        {archive.title}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        {archive.sourcePlatform && (
+                          <span style={{
+                            fontSize: 10, padding: "2px 8px",
+                            background: "rgba(160,130,180,.15)",
+                            borderRadius: 8, color: "#7a6a8e", letterSpacing: 0.5,
+                          }}>
+                            {archive.sourcePlatform}
+                          </span>
+                        )}
+                        <span style={{ fontSize: 11, color: "#b0a0c0" }}>
+                          {formatTime(archive.importedAt)}
                         </span>
-                      )}
-                      <span style={{ fontSize: 11, color: "#b0a0c0" }}>
-                        {formatTime(archive.importedAt)}
-                      </span>
-                      <span style={{ fontSize: 11, color: "#b0a0c0" }}>
-                        {countChars(archive.rawText).toLocaleString()} 字
-                      </span>
+                        <span style={{ fontSize: 11, color: "#b0a0c0" }}>
+                          {countChars(archive.rawText).toLocaleString()} 字
+                        </span>
+                        {chunkCount > 0 && (
+                          <span style={{
+                            fontSize: 10, padding: "2px 8px",
+                            background: "rgba(155,149,181,.2)",
+                            borderRadius: 8, color: "#6a5a8e", letterSpacing: 0.5,
+                          }}>
+                            ✦ {chunkCount} 个片段
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* 备注 */}
-                {archive.note && (
-                  <div style={{
-                    fontSize: 12, color: "#9a8aac",
-                    padding: "8px 12px",
-                    background: "rgba(196,166,184,.1)",
-                    borderRadius: 8,
-                    marginBottom: 10,
-                    lineHeight: 1.6,
-                  }}>
-                    {archive.note}
+                  {/* 备注 */}
+                  {archive.note && (
+                    <div style={{
+                      fontSize: 12, color: "#9a8aac",
+                      padding: "8px 12px",
+                      background: "rgba(196,166,184,.1)",
+                      borderRadius: 8, marginBottom: 10, lineHeight: 1.6,
+                    }}>
+                      {archive.note}
+                    </div>
+                  )}
+
+                  {/* 操作按钮 */}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button
+                      style={btnGhost}
+                      onClick={() => { setDetailTab("raw"); setDetailId(archive.id); }}
+                    >
+                      查看原文
+                    </button>
+                    <button
+                      style={btnGhost}
+                      onClick={() => { setDetailTab("chunks"); setDetailId(archive.id); }}
+                    >
+                      {chunkCount > 0 ? `查看片段 (${chunkCount})` : "查看片段"}
+                    </button>
+                    <button
+                      style={{ ...btnGhost, color: "#7a5a9e", borderColor: "rgba(122,90,158,.35)" }}
+                      onClick={() => handleGenerateClick(archive)}
+                    >
+                      {chunkCount > 0 ? "重新生成片段" : "整理成记忆片段"}
+                    </button>
+                    <button
+                      style={{ ...btnGhost, color: "#c07070", borderColor: "rgba(192,112,112,.3)" }}
+                      onClick={() => setDeleteConfirmId(archive.id)}
+                    >
+                      删除
+                    </button>
                   </div>
-                )}
-
-                {/* 操作按钮 */}
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    style={{ ...btnGhost }}
-                    onClick={() => setDetailId(archive.id)}
-                  >
-                    查看原文
-                  </button>
-                  <button
-                    style={{ ...btnGhost, color: "#c07070", borderColor: "rgba(192,112,112,.3)" }}
-                    onClick={() => setDeleteConfirmId(archive.id)}
-                  >
-                    删除
-                  </button>
                 </div>
-              </div>
-            ))
+              );
+            })
         )}
       </div>
 
       {/* 弹窗 */}
       <DetailModal />
       <DeleteModal />
+      <RegenModal />
     </div>
   );
 }

@@ -24,6 +24,7 @@ export const MEMORIES_STORAGE_KEY = "cyber-home-memories";
 export const THREADS_STORAGE_KEY = "cyber-home-threads";
 export const MEMORY_INJECTION_KEY = "cyberHome_memoryInjection";
 export const RAW_ARCHIVES_STORAGE_KEY = "cyber-home-raw-archives";
+export const MEMORY_CHUNKS_STORAGE_KEY = "cyber-home-memory-chunks";
 
 // 消息分隔符（AI 回复中用来拆成多条消息）
 export const MSG_DELIMITER = "|||";

@@ -15,8 +15,10 @@ import {
   loadThreads, saveThreads,
   loadMemoryInjection, saveMemoryInjection,
   loadRawArchives, saveRawArchives,
+  loadMemoryChunks, saveMemoryChunks,
 } from "./utils/storage";
 import { genId, estimateTokens } from "./utils/helpers";
+import { splitRawTextToChunks } from "./utils/chunker";
 import { extractAndSaveMemories, getTopMemories } from "./utils/memory";
 import {
   buildSystemPrompt,
@@ -70,6 +72,9 @@ export default function App() {
   // ─── 原始档案 ───
   const [rawArchives, setRawArchives] = useState(() => loadRawArchives());
   const [rawArchiveCharId, setRawArchiveCharId] = useState(null);
+
+  // ─── 记忆片段 ───
+  const [memoryChunks, setMemoryChunks] = useState(() => loadMemoryChunks());
 
   // ─── 记忆 ───
   const [allMemories, setAllMemories] = useState(() => loadMemories());
@@ -152,6 +157,7 @@ export default function App() {
   useEffect(() => { saveChars(characters); }, [characters]);
   useEffect(() => { saveMemories(allMemories); }, [allMemories]);
   useEffect(() => { saveRawArchives(rawArchives); }, [rawArchives]);
+  useEffect(() => { saveMemoryChunks(memoryChunks); }, [memoryChunks]);
   useEffect(() => { saveThreads(chatThreads); }, [chatThreads]);
   useEffect(() => { localStorage.setItem("worldViews", JSON.stringify(worldViews)); }, [worldViews]);
   useEffect(() => { localStorage.setItem("reflectSettings", JSON.stringify(reflectSettings)); }, [reflectSettings]);
@@ -306,6 +312,38 @@ export default function App() {
   };
   const deleteRawArchive = (archiveId) => {
     setRawArchives((prev) => prev.filter((a) => a.id !== archiveId));
+    // 同步删除对应的片段
+    setMemoryChunks((prev) => prev.filter((c) => c.archiveId !== archiveId));
+  };
+
+  const generateChunks = (archive) => {
+    const texts = splitRawTextToChunks(archive.rawText);
+    const now = Date.now();
+    const newChunks = texts.map((text, idx) => ({
+      id: genId(),
+      loverId: archive.loverId,
+      archiveId: archive.id,
+      index: idx,
+      text,
+      title: `${archive.title} · 第 ${idx + 1} 段`,
+      sourcePlatform: archive.sourcePlatform || "",
+      createdAt: now,
+      tags: [],
+      importance: 0,
+      emotionScore: 0,
+      intimacyScore: 0,
+      unfinishedScore: 0,
+      note: "",
+    }));
+    // 先移除旧片段，再插入新片段
+    setMemoryChunks((prev) => [
+      ...prev.filter((c) => c.archiveId !== archive.id),
+      ...newChunks,
+    ]);
+  };
+
+  const deleteChunk = (chunkId) => {
+    setMemoryChunks((prev) => prev.filter((c) => c.id !== chunkId));
   };
 
   // 头像上传
@@ -1033,6 +1071,9 @@ export default function App() {
           rawArchives={rawArchives}
           addRawArchive={addRawArchive}
           deleteRawArchive={deleteRawArchive}
+          memoryChunks={memoryChunks}
+          generateChunks={generateChunks}
+          deleteChunk={deleteChunk}
           navigateTo={navigateTo}
         />
       )}
