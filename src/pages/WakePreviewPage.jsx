@@ -143,6 +143,7 @@ export default function WakePreviewPage({
   charMemories,
   worldView,
   userProfile,
+  homeMemory,
   ctxConfig,
   navigateTo,
   prevPage,
@@ -174,7 +175,19 @@ export default function WakePreviewPage({
   - 你从对话中获得的觉察和理解 → [记忆:觉察]内容[/记忆]
   每条记忆控制在30字以内，简洁准确。不是每次都需要写入，只在确实有值得记住的内容时才写。一次最多写入2条。`;
 
-  const userCtx = char ? buildUserContext(userProfile, char.id) : "";
+  // ── 声声档案分区（结构化预览用）──
+  const hm = homeMemory || {};
+  const hmSections = [
+    { key: "homeRules",              label: "全家共同规则",   emoji: "🏠", items: hm.homeRules              || [] },
+    { key: "interactionGuide",       label: "我的相处说明书", emoji: "📖", items: hm.interactionGuide       || [] },
+    { key: "preferencesAndBoundaries", label: "长期偏好与雷点", emoji: "💝", items: hm.preferencesAndBoundaries || [] },
+    { key: "identityFacts",          label: "我是谁",         emoji: "🪪", items: hm.identityFacts          || [] },
+    { key: "pastStories",            label: "我的过去",       emoji: "📚", items: hm.pastStories            || [] },
+    { key: "currentState",           label: "近期状态",       emoji: "🔆", items: hm.currentState           || [], isCurrent: true },
+  ];
+  const hasHomeMemory = hmSections.some((s) => s.items.length > 0);
+
+  const userCtx = char ? buildUserContext(userProfile, char.id, homeMemory) : "";
   const mainPrompt = char
     ? buildSystemPrompt(char, charMemories)
     : "（未选择入住者）";
@@ -287,6 +300,11 @@ export default function WakePreviewPage({
         {memCount === 0 && (
           <Tip color="blue">
             记忆宫殿还没有可注入的记忆。聊天时 AI 写入的记忆、以及你手动添加的记忆会在下次注入进来。
+          </Tip>
+        )}
+        {!hasHomeMemory && (
+          <Tip color="blue">
+            声声档案还没有可注入内容。在「我的档案」里手动添加信息后，会注入给所有入住者。
           </Tip>
         )}
 
@@ -408,13 +426,62 @@ export default function WakePreviewPage({
           </div>
         </Block>
 
-        {/* 用户档案 */}
+        {/* 我的档案注入（声声档案）*/}
         <Block
-          emoji="🪪" title="用户档案"
+          emoji="🪪" title={`我的档案注入${hasHomeMemory ? "" : "（旧版）"}`}
           isEmpty={!userCtx}
           isOpen={!!userCtx}
         >
-          <pre style={{ ...preStyle, paddingTop: 8 }}>{userCtx}</pre>
+          <div style={{ paddingTop: 8 }}>
+            {hasHomeMemory ? (
+              <>
+                {hmSections.map(({ key, label, emoji, items, isCurrent }) =>
+                  items.length > 0 ? (
+                    <div key={key} style={{ marginBottom: 12 }}>
+                      <div style={{ ...sectionLabelStyle, display: "flex", alignItems: "center", gap: 4 }}>
+                        <span>{emoji}</span>
+                        <span>{label}</span>
+                        <span style={{ marginLeft: 4, background: "rgba(196,166,184,.15)", borderRadius: 5, padding: "1px 6px" }}>
+                          {items.length} 条
+                        </span>
+                        {isCurrent && (
+                          <span style={{ fontSize: 9, color: "#b08a50", background: "rgba(192,160,80,.1)", borderRadius: 5, padding: "1px 6px" }}>
+                            短期·仅供参考
+                          </span>
+                        )}
+                      </div>
+                      {items.map((e, i) => (
+                        <div key={i} style={{ ...memItemStyle, display: "flex", alignItems: "flex-start", gap: 4 }}>
+                          <span style={{ color: "#c0b0d0", flexShrink: 0 }}>·</span>
+                          <span>{isCurrent ? `近期：${e.text}` : e.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null
+                )}
+                {/* sharedVault 提示 */}
+                {(userProfile?.sharedVault || []).filter(
+                  (v) => v.content?.trim() && (v.allowedChars || []).includes(char?.id)
+                ).length > 0 && (
+                  <div style={{ marginTop: 4, paddingTop: 8, borderTop: "1px solid rgba(196,166,184,.2)" }}>
+                    <div style={sectionLabelStyle}>📦 分享给 {char?.name} 的内容</div>
+                    {(userProfile.sharedVault || [])
+                      .filter((v) => v.content?.trim() && (v.allowedChars || []).includes(char?.id))
+                      .map((v, i) => (
+                        <div key={i} style={{ ...memItemStyle, display: "flex", gap: 4 }}>
+                          <span style={{ color: "#c0b0d0" }}>·</span>
+                          <span>{v.content}</span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                )}
+              </>
+            ) : (
+              /* 旧版 globalFacts 兜底 */
+              <pre style={{ ...preStyle }}>{userCtx}</pre>
+            )}
+          </div>
         </Block>
 
         {/* 世界观认知 */}

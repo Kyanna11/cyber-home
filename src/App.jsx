@@ -1922,6 +1922,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
             charMemories={wakeChar ? getCharMemories(wakeChar.id) : {}}
             worldView={wakeChar ? (worldViews[wakeChar.id] || "") : ""}
             userProfile={userProfile}
+            homeMemory={homeMemory}
             ctxConfig={ctxConfig}
             navigateTo={navigateTo}
             prevPage={prevPage}
