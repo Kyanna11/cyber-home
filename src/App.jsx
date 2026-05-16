@@ -1449,6 +1449,7 @@ ${chunksText}
           openRawArchive={openRawArchive}
           openMigrationDraft={openMigrationDraft}
           openWakePreview={openWakePreview}
+          openTimeline={openTimeline}
         />
       )}
 

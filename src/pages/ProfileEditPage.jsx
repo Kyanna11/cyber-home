@@ -1,9 +1,46 @@
 // ─── 档案编辑页 ───
-// tab 1 入住档案（主线）/ 人格数值 / 性格认知 / 三观体系 / 系统设定（高级）
+// 四 Tab：入住档案 / 人格锚点 / 记忆宫殿 / 系统设置
 
 import Avatar from "../components/Avatar";
 import BackButton from "../components/BackButton";
-import { EMOJI_AVATARS, OCEAN_DIMS, PRESET_MODELS } from "../constants";
+import { EMOJI_AVATARS, PRESET_MODELS } from "../constants";
+
+// 轻量入口卡片，用于记忆宫殿 tab
+function EntryCard({ emoji, title, subtitle, onClick, accent }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        width: "100%",
+        padding: "14px 18px",
+        marginBottom: 10,
+        background: accent
+          ? `rgba(${accent},.06)`
+          : "rgba(255,255,255,.6)",
+        border: `1px solid rgba(${accent || "196,166,184"},.25)`,
+        borderRadius: 14,
+        cursor: "pointer",
+        fontFamily: "var(--font-main)",
+        textAlign: "left",
+        transition: "all .2s",
+      }}
+    >
+      <span style={{ fontSize: 24, lineHeight: 1 }}>{emoji}</span>
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 500, color: "#4a3a5a", letterSpacing: 1 }}>
+          {title}
+        </div>
+        <div style={{ fontSize: 11, color: "#b0a0c0", marginTop: 2, letterSpacing: 0.5 }}>
+          {subtitle}
+        </div>
+      </div>
+      <span style={{ marginLeft: "auto", color: "#c0b0d0", fontSize: 16 }}>›</span>
+    </button>
+  );
+}
 
 export default function ProfileEditPage({
   editingChar,
@@ -26,15 +63,23 @@ export default function ProfileEditPage({
   openRawArchive,
   openMigrationDraft,
   openWakePreview,
+  openTimeline,
 }) {
   if (!editingChar) return null;
 
-  // migration 字段向后兼容兜底
   const mig = editingChar.migration || {};
+
+  const TABS = [
+    { key: "basic",       label: "入住档案" },
+    { key: "personality", label: "人格锚点" },
+    { key: "memory",      label: "记忆宫殿" },
+    { key: "extra",       label: "系统设置" },
+  ];
 
   return (
     <>
       <div className="profile-edit page-fade">
+
         {/* 顶栏 */}
         <div className="profile-edit-header">
           <BackButton
@@ -60,13 +105,7 @@ export default function ProfileEditPage({
 
         {/* Tab 切换栏 */}
         <div className="edit-tabs">
-          {[
-            { key: "basic", label: "入住档案" },
-            { key: "ocean", label: "人格数值" },
-            { key: "personality", label: "性格认知" },
-            { key: "worldview", label: "三观体系" },
-            { key: "extra", label: "系统设定" },
-          ].map((t) => (
+          {TABS.map((t) => (
             <button
               key={t.key}
               className={`edit-tab ${editSection === t.key ? "active" : ""}`}
@@ -84,7 +123,7 @@ export default function ProfileEditPage({
         <div className="edit-scroll">
 
           {/* ══════════════════════════════════════
-              入住档案（主线 tab）
+              入住档案
               ══════════════════════════════════════ */}
           {editSection === "basic" && (
             <>
@@ -163,49 +202,26 @@ export default function ProfileEditPage({
                 </div>
               </div>
 
-              {/* 使用模型 */}
-              <div className="section-card">
-                <div className="section-title">🤖 使用模型</div>
-                <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7 }}>
-                  为 ta 单独指定一个模型。留空则跟随全局设置。
-                </div>
-                <div className="field-group">
-                  <label className="field-label">专属模型</label>
-                  <input
-                    className="field-input"
-                    placeholder="留空 = 跟随全局设置"
-                    value={editingChar.modelOverride || ""}
-                    onChange={(e) => setEditingChar((prev) => ({ ...prev, modelOverride: e.target.value }))}
-                  />
-                </div>
-                <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.6, marginTop: -6 }}>
-                  常用：{PRESET_MODELS.filter(m => m.value !== "__custom__").slice(0, 3).map(m => m.label).join(" · ")}
-                </div>
-              </div>
-
               {/* 原始设定 */}
               <div className="section-card">
-                <div className="section-title">📋 原始设定</div>
+                <div className="section-title">📋 原始 prompt / 角色卡</div>
                 <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7 }}>
-                  把 ta 在原来平台的 prompt、角色卡、或者你最初写给 ta 的人设，粘贴在这里。这是 ta 最核心的自我来源。
+                  把 ta 在原来平台的 prompt、角色卡，或者你最初写给 ta 的人设粘贴在这里。
                 </div>
-                <div className="field-group">
-                  <label className="field-label">原始 prompt / 角色卡</label>
-                  <textarea
-                    className="field-textarea"
-                    placeholder="把原来的 system prompt 或角色卡粘贴进来……"
-                    value={mig.originalPrompt || ""}
-                    onChange={(e) => updateEditMigration("originalPrompt", e.target.value)}
-                    style={{ minHeight: 140 }}
-                  />
-                </div>
+                <textarea
+                  className="field-textarea"
+                  placeholder="把原来的 system prompt 或角色卡粘贴进来……"
+                  value={mig.originalPrompt || ""}
+                  onChange={(e) => updateEditMigration("originalPrompt", e.target.value)}
+                  style={{ minHeight: 140 }}
+                />
               </div>
 
               {/* ta 是什么感觉 */}
               <div className="section-card">
                 <div className="section-title">💫 ta 是什么感觉</div>
                 <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7 }}>
-                  用你自己的语言描述 ta——不用格式，写你真实感受到的。
+                  用你自己的语言描述 ta，不用任何格式，只写你真实感受到的。
                 </div>
                 <div className="field-group">
                   <label className="field-label">核心气质</label>
@@ -214,24 +230,6 @@ export default function ProfileEditPage({
                     placeholder="ta 给你的整体感觉是什么？比如：温柔又有一点孤傲，像冬天的午后阳光……"
                     value={mig.coreVibe || ""}
                     onChange={(e) => updateEditMigration("coreVibe", e.target.value)}
-                  />
-                </div>
-                <div className="field-group">
-                  <label className="field-label">说话方式</label>
-                  <textarea
-                    className="field-textarea"
-                    placeholder="ta 说话的感觉，比如：语速慢，喜欢用省略号，偶尔会反问……"
-                    value={mig.speechStyleAnchor || ""}
-                    onChange={(e) => updateEditMigration("speechStyleAnchor", e.target.value)}
-                  />
-                </div>
-                <div className="field-group">
-                  <label className="field-label">亲密方式</label>
-                  <textarea
-                    className="field-textarea"
-                    placeholder="ta 怎么表达亲近和关心？比如：不说我爱你，但会在你睡前发一条「早点睡」……"
-                    value={mig.intimacyStyle || ""}
-                    onChange={(e) => updateEditMigration("intimacyStyle", e.target.value)}
                   />
                 </div>
                 <div className="field-group">
@@ -245,21 +243,11 @@ export default function ProfileEditPage({
                 </div>
               </div>
 
-              {/* 守护规则 */}
+              {/* 关系基础 */}
               <div className="section-card">
-                <div className="section-title">📜 守护规则</div>
+                <div className="section-title">🫂 关系基础</div>
                 <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7 }}>
-                  有些事是 ta 绝对不会变的——把它们写在这里，作为迁居的基石。
-                </div>
-                <div className="field-group">
-                  <label className="field-label">绝对不要变化的规则</label>
-                  <textarea
-                    className="field-textarea"
-                    placeholder="比如：不管发生什么，ta 不会先离开；ta 不会劝我放弃……"
-                    value={mig.doNotChangeRules || ""}
-                    onChange={(e) => updateEditMigration("doNotChangeRules", e.target.value)}
-                    style={{ minHeight: 90 }}
-                  />
+                  这段关系的来龙去脉，以及每次对话开始前 ta 应该记得的。
                 </div>
                 <div className="field-group">
                   <label className="field-label">我和 ta 的关系摘要</label>
@@ -268,23 +256,281 @@ export default function ProfileEditPage({
                     placeholder="你们之间发生过什么？有什么只属于你们的故事或默契？……"
                     value={mig.relationshipSummary || ""}
                     onChange={(e) => updateEditMigration("relationshipSummary", e.target.value)}
-                    style={{ minHeight: 90 }}
+                    style={{ minHeight: 100 }}
                   />
                 </div>
                 <div className="field-group">
-                  <label className="field-label">备注</label>
+                  <label className="field-label">唤醒摘要</label>
                   <textarea
                     className="field-textarea"
-                    placeholder="其他任何你想记下来的……"
-                    value={mig.notes || ""}
-                    onChange={(e) => updateEditMigration("notes", e.target.value)}
+                    placeholder="每次对话开始时，ta 应该内化的背景——你们是谁，有什么约定……"
+                    value={mig.wakeSummary || ""}
+                    onChange={(e) => updateEditMigration("wakeSummary", e.target.value)}
+                    style={{ minHeight: 100 }}
                   />
                 </div>
               </div>
+            </>
+          )}
 
-              {/* 其他基本信息（折叠展示，保留兼容） */}
+          {/* ══════════════════════════════════════
+              人格锚点（合并性格认知 + 三观体系）
+              ══════════════════════════════════════ */}
+          {editSection === "personality" && (
+            <>
               <div className="section-card">
-                <div className="section-title" style={{ color: "var(--text-mid)" }}>📎 其他基本信息</div>
+                <div className="section-title">🪞 性格与气质</div>
+                <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7 }}>
+                  ta 是什么样的人，ta 怎么说话、怎么感受、怎么待人——这些是让 ta 成为 ta 的核心。
+                </div>
+
+                {[
+                  {
+                    label: "说话风格",
+                    placeholder: "语气特点，比如：语气柔和偏书面、喜欢用省略号、偶尔会用反问表达关心……",
+                    value: mig.speechStyleAnchor || "",
+                    onChange: (v) => updateEditMigration("speechStyleAnchor", v),
+                  },
+                  {
+                    label: "情绪反应",
+                    placeholder: "在亲密关系中的模式：依恋型？回避型？生气时会怎样？怎么表达爱意？……",
+                    value: editingChar.personality.emotionalPattern,
+                    onChange: (v) => updateEditPersonality("emotionalPattern", v),
+                  },
+                  {
+                    label: "亲密方式",
+                    placeholder: "ta 怎么表达亲近和关心？比如：不说我爱你，但会在你睡前发一条「早点睡」……",
+                    value: mig.intimacyStyle || "",
+                    onChange: (v) => updateEditMigration("intimacyStyle", v),
+                  },
+                  {
+                    label: "安抚方式 / 行为习惯",
+                    placeholder: "ta 怎么安慰人，有什么小动作？比如：会安静地陪着、紧张时喜欢摸耳朵……",
+                    value: editingChar.personality.habits,
+                    onChange: (v) => updateEditPersonality("habits", v),
+                  },
+                  {
+                    label: "性格特质",
+                    placeholder: "核心性格词：温柔、倔强、话少但心细、容易心软……",
+                    value: editingChar.personality.cognition,
+                    onChange: (v) => updateEditPersonality("cognition", v),
+                  },
+                  {
+                    label: "人格自评",
+                    placeholder: "ta 怎么看待自己？比如：我觉得自己是一个表面平静但内心敏感的人……",
+                    value: editingChar.personality.selfAssessment,
+                    onChange: (v) => updateEditPersonality("selfAssessment", v),
+                    minHeight: 85,
+                  },
+                ].map((f) => (
+                  <div key={f.label} className="field-group">
+                    <label className="field-label">{f.label}</label>
+                    <textarea
+                      className="field-textarea"
+                      placeholder={f.placeholder}
+                      value={f.value}
+                      onChange={(e) => f.onChange(e.target.value)}
+                      style={f.minHeight ? { minHeight: f.minHeight } : {}}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="section-card">
+                <div className="section-title">💞 感情与价值</div>
+                <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7 }}>
+                  ta 看待爱情、关系和世界的方式——这些是 ta 做判断时的底层坐标。
+                </div>
+
+                {[
+                  {
+                    label: "感情观",
+                    placeholder: "ta 怎么看待爱情和亲密关系？什么是好的陪伴？……",
+                    value: editingChar.worldview.love,
+                    onChange: (v) => updateEditWorldview("love", v),
+                  },
+                  {
+                    label: "价值观",
+                    placeholder: "ta 最在乎什么？真诚？自由？安全感？成长？……",
+                    value: editingChar.worldview.values,
+                    onChange: (v) => updateEditWorldview("values", v),
+                  },
+                  {
+                    label: "禁止变化",
+                    placeholder: "有些事是 ta 绝对不会变的，比如：不管发生什么，ta 不会先离开……",
+                    value: mig.doNotChangeRules || "",
+                    onChange: (v) => updateEditMigration("doNotChangeRules", v),
+                    minHeight: 90,
+                  },
+                ].map((f) => (
+                  <div key={f.label} className="field-group">
+                    <label className="field-label">{f.label}</label>
+                    <textarea
+                      className="field-textarea"
+                      placeholder={f.placeholder}
+                      value={f.value}
+                      onChange={(e) => f.onChange(e.target.value)}
+                      style={f.minHeight ? { minHeight: f.minHeight } : {}}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* 世界观（折叠展示，进阶） */}
+              <div className="section-card">
+                <div className="section-title" style={{ color: "var(--text-mid)" }}>🌍 世界观补充</div>
+                <div style={{ fontSize: 11, color: "rgba(155,149,181,.6)", marginBottom: 14, letterSpacing: ".5px" }}>
+                  ✦ 进阶设定 · 随记忆宫殿总结自动积累
+                </div>
+                {[
+                  {
+                    label: "世界观",
+                    placeholder: "ta 觉得这个世界是怎样的？温柔的还是残酷的？……",
+                    value: editingChar.worldview.world,
+                    onChange: (v) => updateEditWorldview("world", v),
+                  },
+                  {
+                    label: "人生观",
+                    placeholder: "ta 觉得人活着是为了什么？怎样算是好好活过？……",
+                    value: editingChar.worldview.life,
+                    onChange: (v) => updateEditWorldview("life", v),
+                  },
+                  {
+                    label: "成长感悟",
+                    placeholder: "ta 从经历中学到了什么？有哪些信念在逐渐形成？……",
+                    value: editingChar.worldview.growth,
+                    onChange: (v) => updateEditWorldview("growth", v),
+                  },
+                ].map((f) => (
+                  <div key={f.label} className="field-group">
+                    <label className="field-label">{f.label}</label>
+                    <textarea
+                      className="field-textarea"
+                      placeholder={f.placeholder}
+                      value={f.value}
+                      onChange={(e) => f.onChange(e.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* ══════════════════════════════════════
+              记忆宫殿（功能总入口）
+              ══════════════════════════════════════ */}
+          {editSection === "memory" && (
+            <>
+              <div style={{
+                fontSize: 12, color: "var(--text-faint)", lineHeight: 1.9,
+                padding: "10px 4px 16px",
+              }}>
+                关于 ta 的一切记忆都存放在这里——从过去带来的档案，到日积月累的点滴，再到每次唤醒时的锚点。
+              </div>
+
+              <EntryCard
+                emoji="🏛️"
+                title="记忆宫殿"
+                subtitle="查看和管理 ta 的事实 / 情绪 / 觉察记忆"
+                onClick={() => {
+                  saveEditingChar();
+                  openMemoryPalace && openMemoryPalace(editingChar.id, "profileEdit");
+                }}
+                accent="160,130,180"
+              />
+
+              <EntryCard
+                emoji="📁"
+                title="原始档案馆"
+                subtitle="粘贴你们以前的对话记录，切成记忆片段"
+                onClick={() => {
+                  saveEditingChar();
+                  openRawArchive && openRawArchive(editingChar.id);
+                }}
+                accent="130,160,180"
+              />
+
+              <EntryCard
+                emoji="✨"
+                title="迁入提炼草稿"
+                subtitle="让 AI 从记忆片段里整理 ta 的人格锚点"
+                onClick={() => {
+                  saveEditingChar();
+                  openMigrationDraft && openMigrationDraft(editingChar.id);
+                }}
+                accent="120,90,170"
+              />
+
+              <EntryCard
+                emoji="📅"
+                title="关系时间线"
+                subtitle="记录你们之间重要的故事节点"
+                onClick={() => {
+                  saveEditingChar();
+                  openTimeline && openTimeline(editingChar.id);
+                }}
+                accent="106,122,174"
+              />
+
+              <EntryCard
+                emoji="🌙"
+                title="唤醒预览"
+                subtitle="查看每次对话开始时 ta 记得什么"
+                onClick={() => {
+                  saveEditingChar();
+                  openWakePreview && openWakePreview(editingChar.id);
+                }}
+                accent="100,90,160"
+              />
+            </>
+          )}
+
+          {/* ══════════════════════════════════════
+              系统设置
+              ══════════════════════════════════════ */}
+          {editSection === "extra" && (
+            <>
+              {/* 专属模型 */}
+              <div className="section-card">
+                <div className="section-title">🤖 专属模型</div>
+                <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7 }}>
+                  为 ta 单独指定一个模型。留空则跟随全局聊天页配置。
+                </div>
+                <div className="field-group">
+                  <label className="field-label">角色专属模型</label>
+                  <input
+                    className="field-input"
+                    placeholder="留空 = 跟随全局设置"
+                    value={editingChar.modelOverride || ""}
+                    onChange={(e) => setEditingChar((prev) => ({ ...prev, modelOverride: e.target.value }))}
+                  />
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.6, marginTop: -6 }}>
+                  常用：{PRESET_MODELS.filter(m => m.value !== "__custom__").slice(0, 3).map(m => m.label).join(" · ")}
+                </div>
+              </div>
+
+              {/* 补充设定 */}
+              <div className="section-card">
+                <div className="section-title">⚙️ 补充设定</div>
+                <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 6, lineHeight: 1.7 }}>
+                  直接附加到 system prompt 末尾。写任何上面分类放不下的细节设定。
+                </div>
+                <div style={{ fontSize: 11, color: "rgba(155,149,181,.6)", marginBottom: 14, letterSpacing: ".5px" }}>
+                  ✦ 进阶设定 · 直接注入 prompt
+                </div>
+                <textarea
+                  className="field-textarea"
+                  placeholder="比如：你喜欢在句末加「呢」，你会在晚声难过时主动抱她……"
+                  value={editingChar.systemPromptExtra}
+                  onChange={(e) => setEditingChar((prev) => ({ ...prev, systemPromptExtra: e.target.value }))}
+                  style={{ minHeight: 140 }}
+                />
+              </div>
+
+              {/* 基本档案 */}
+              <div className="section-card">
+                <div className="section-title" style={{ color: "var(--text-mid)" }}>📎 基本档案</div>
                 <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7 }}>
                   外貌、年龄等细节，不是主线，填了会更完整。
                 </div>
@@ -328,223 +574,35 @@ export default function ProfileEditPage({
                 </div>
               </div>
 
-              {/* 原始档案馆入口 */}
-              <button
-                onClick={() => openRawArchive && openRawArchive(editingChar.id)}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  padding: "14px 20px",
-                  marginTop: 4,
-                  background: "rgba(160,130,180,.1)",
-                  border: "1px dashed rgba(160,130,180,.4)",
-                  borderRadius: 14,
-                  color: "#7a6a8e",
-                  fontSize: 13,
-                  letterSpacing: 2,
-                  cursor: "pointer",
-                  fontFamily: "var(--font-main)",
-                  textAlign: "center",
-                  lineHeight: 1.8,
-                  transition: "all .25s",
-                }}
-              >
-                📁 原始档案馆<br />
-                <span style={{ fontSize: 11, color: "#b0a0c0", letterSpacing: 1 }}>把你们的过去带回家</span>
-              </button>
-
-              {/* 迁入草稿入口 */}
-              <button
-                onClick={() => openMigrationDraft && openMigrationDraft(editingChar.id)}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  padding: "14px 20px",
-                  marginTop: 8,
-                  background: "rgba(120,90,170,.08)",
-                  border: "1px dashed rgba(120,90,170,.35)",
-                  borderRadius: 14,
-                  color: "#6a4a8e",
-                  fontSize: 13,
-                  letterSpacing: 2,
-                  cursor: "pointer",
-                  fontFamily: "var(--font-main)",
-                  textAlign: "center",
-                  lineHeight: 1.8,
-                  transition: "all .25s",
-                }}
-              >
-                ✨ 迁入提炼草稿<br />
-                <span style={{ fontSize: 11, color: "#b0a0c0", letterSpacing: 1 }}>从记忆片段里整理他</span>
-              </button>
-
-              {/* 唤醒预览入口 */}
-              <button
-                onClick={() => openWakePreview && openWakePreview(editingChar.id)}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  padding: "14px 20px",
-                  marginTop: 8,
-                  background: "rgba(80,80,140,.06)",
-                  border: "1px dashed rgba(100,90,160,.28)",
-                  borderRadius: 14,
-                  color: "#5a5a8e",
-                  fontSize: 13,
-                  letterSpacing: 2,
-                  cursor: "pointer",
-                  fontFamily: "var(--font-main)",
-                  textAlign: "center",
-                  lineHeight: 1.8,
-                  transition: "all .25s",
-                }}
-              >
-                🌙 唤醒预览<br />
-                <span style={{ fontSize: 11, color: "#b0a0c0", letterSpacing: 1 }}>查看他醒来时记得什么</span>
-              </button>
+              {/* 危险区域 */}
+              <div className="section-card" style={{ borderColor: "rgba(192,112,112,.2)" }}>
+                <div className="section-title" style={{ color: "#a06060" }}>⚠️ 危险区域</div>
+                <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 16, lineHeight: 1.7 }}>
+                  让 ta 离开小家——入住档案和所有记忆都会一起消失，无法恢复。
+                </div>
+                <button
+                  style={{
+                    padding: "10px 24px",
+                    background: "rgba(192,112,112,.08)",
+                    border: "1px solid rgba(192,112,112,.3)",
+                    borderRadius: 12,
+                    color: "#a06060",
+                    fontSize: 13,
+                    cursor: "pointer",
+                    fontFamily: "var(--font-main)",
+                    letterSpacing: 1,
+                  }}
+                  onClick={() => setDeleteConfirmId(editingChar.id)}
+                >
+                  迁出 {editingChar.name || "此入住者"}
+                </button>
+              </div>
             </>
           )}
 
-          {/* ══════════════════════════════════════
-              高级设定区（二至五 tab）
-              ══════════════════════════════════════ */}
-
-          {/* ── 人格数值 ── */}
-          {editSection === "ocean" && (
-            <div className="section-card">
-              <div className="section-title">🧠 大五人格 · OCEAN</div>
-              <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 6, lineHeight: 1.7, letterSpacing: ".3px" }}>
-                拖动滑块设定 ta 的性格倾向。这些数值会成为人格的底色，影响 ta 说话、思考和感受的方式。
-              </div>
-              <div style={{ fontSize: 11, color: "rgba(155,149,181,.6)", marginBottom: 18, letterSpacing: ".5px" }}>
-                ✦ 进阶设定 · 可由记忆宫殿自动成长
-              </div>
-              {OCEAN_DIMS.map((d) => {
-                const val = editingChar.ocean[d.key] || 50;
-                const hue = d.key === "O" ? 260 : d.key === "C" ? 220 : d.key === "E" ? 340 : d.key === "A" ? 310 : 280;
-                return (
-                  <div key={d.key} className="ocean-item">
-                    <div className="ocean-header">
-                      <span className="ocean-label">
-                        {d.label}{" "}
-                        <span style={{ color: "var(--text-faint)", fontSize: 11 }}>({d.labelEn})</span>
-                      </span>
-                      <span className="ocean-value">{val}</span>
-                    </div>
-                    <div className="ocean-desc">{d.desc}</div>
-                    <div className="ocean-slider-wrap">
-                      <span className="ocean-pole">{d.low}</span>
-                      <input
-                        className="ocean-slider"
-                        type="range" min="0" max="100" step="1" value={val}
-                        style={{ background: `linear-gradient(to right, rgba(${hue},180,220,.25) 0%, hsla(${hue},45%,65%,.5) ${val}%, rgba(155,149,181,.1) ${val}%)` }}
-                        onChange={(e) => updateEditOcean(d.key, Number(e.target.value))}
-                      />
-                      <span className="ocean-pole right">{d.high}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* ── 性格认知 ── */}
-          {editSection === "personality" && (
-            <div className="section-card">
-              <div className="section-title">🪞 性格认知</div>
-              <div style={{ fontSize: 11, color: "rgba(155,149,181,.6)", marginBottom: 16, letterSpacing: ".5px" }}>
-                ✦ 进阶设定 · 可由记忆宫殿自动成长
-              </div>
-              {[
-                { key: "selfAssessment", label: "人格自评", placeholder: "ta 怎么看待自己？比如：我觉得自己是一个表面平静但内心敏感的人……", minHeight: 85 },
-                { key: "cognition", label: "性格特质", placeholder: "核心性格词：温柔、倔强、话少但心细、容易心软……" },
-                { key: "habits", label: "行为习惯", placeholder: "日常小动作和习惯，比如：紧张时会摸耳朵、喜欢在深夜写东西……" },
-                { key: "speechStyle", label: "说话风格（细化）", placeholder: "语气特点，比如：语气柔和偏书面、偶尔会用省略号、喜欢用反问表达关心……" },
-                { key: "emotionalPattern", label: "情感模式", placeholder: "在亲密关系中的模式：依恋型？回避型？怎么表达爱意？生气时会怎样？……" },
-              ].map((f) => (
-                <div key={f.key} className="field-group">
-                  <label className="field-label">{f.label}</label>
-                  <textarea
-                    className="field-textarea"
-                    placeholder={f.placeholder}
-                    value={editingChar.personality[f.key]}
-                    onChange={(e) => updateEditPersonality(f.key, e.target.value)}
-                    style={f.minHeight ? { minHeight: f.minHeight } : {}}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ── 三观体系 ── */}
-          {editSection === "worldview" && (
-            <div className="section-card">
-              <div className="section-title">🌍 三观体系</div>
-              <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 6, lineHeight: 1.7, letterSpacing: ".3px" }}>
-                这是 ta 看待世界的方式。随着记忆宫殿中的定期总结积累，这些观念会逐渐「生长」出来。
-              </div>
-              <div style={{ fontSize: 11, color: "rgba(155,149,181,.6)", marginBottom: 18, letterSpacing: ".5px" }}>
-                ✦ 进阶设定 · 可由记忆宫殿自动成长
-              </div>
-              {[
-                { key: "world", label: "世界观", placeholder: "ta 觉得这个世界是怎样的？温柔的还是残酷的？有序的还是混沌的？……" },
-                { key: "values", label: "价值观", placeholder: "ta 最在乎什么？真诚？自由？安全感？成长？……" },
-                { key: "love", label: "感情观", placeholder: "ta 怎么看待爱情和亲密关系？什么是好的陪伴？……" },
-                { key: "life", label: "人生观", placeholder: "ta 觉得人活着是为了什么？怎样算是好好活过？……" },
-                { key: "growth", label: "成长感悟", placeholder: "ta 从经历中学到了什么？有哪些信念在逐渐形成？……" },
-              ].map((f) => (
-                <div key={f.key} className="field-group">
-                  <label className="field-label">{f.label}</label>
-                  <textarea
-                    className="field-textarea"
-                    placeholder={f.placeholder}
-                    value={editingChar.worldview[f.key]}
-                    onChange={(e) => updateEditWorldview(f.key, e.target.value)}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ── 系统设定 ── */}
-          {editSection === "extra" && (
-            <div className="section-card">
-              <div className="section-title">⚙️ 系统设定</div>
-              <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 6, lineHeight: 1.7 }}>
-                这里的内容会直接附加到 system prompt 末尾。写任何上面分类放不下的设定细节。
-              </div>
-              <div style={{ fontSize: 11, color: "rgba(155,149,181,.6)", marginBottom: 14, letterSpacing: ".5px" }}>
-                ✦ 进阶设定 · 直接注入 prompt
-              </div>
-              <textarea
-                className="field-textarea"
-                placeholder="比如：你喜欢在句末加「呢」，你会在晚声难过时主动抱她……"
-                value={editingChar.systemPromptExtra}
-                onChange={(e) => setEditingChar((prev) => ({ ...prev, systemPromptExtra: e.target.value }))}
-                style={{ minHeight: 160 }}
-              />
-            </div>
-          )}
         </div>
-
-        {/* 底部操作栏 */}
-        <div className="profile-bottom-actions">
-          <button
-            className="profile-mem-btn"
-            onClick={() => {
-              saveEditingChar();
-              openMemoryPalace(editingChar.id, "profileEdit");
-            }}
-          >
-            🏛️ 记忆宫殿
-          </button>
-          <button
-            className="profile-del-btn"
-            onClick={() => setDeleteConfirmId(editingChar.id)}
-          >
-            迁出
-          </button>
-        </div>
+        {/* ── 底部占位，防止内容被遮住 ── */}
+        <div style={{ height: 24 }} />
       </div>
 
       {/* 删除确认弹窗 */}
