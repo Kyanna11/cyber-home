@@ -92,11 +92,23 @@ export function parseResponse(raw) {
   return { thought, parts: parts.length > 0 ? parts : [finalCleaned || "…"] };
 }
 
+// 把用户写的第一人称视角统一转成第三人称，避免 AI 混淆
+// "我喜欢贴贴" → "晚声喜欢贴贴"  "我们有约定" → "晚声和你有约定"
+function normalizePov(text, name) {
+  if (!text) return text;
+  return text
+    .replace(/我们/g, `${name}和你`)
+    .replace(/我的/g, `${name}的`)
+    .replace(/我(?!们)/g, name);
+}
+
 // 构建"关于用户"的上下文段落
 // homeMemory 为新版声声档案数据，优先读取；为空时回退到旧版 globalFacts
 export function buildUserContext(userProfile, charId, homeMemory = null) {
   const parts = [];
   const hm = homeMemory || {};
+  // 取用户称呼（用于 section 标题和第一人称转换）
+  const userName = userProfile?.globalFacts?.name || "晚声";
 
   // ── 新版声声档案注入（homeMemory 有内容时优先）──
   const hasHomeMemory = [
@@ -104,38 +116,42 @@ export function buildUserContext(userProfile, charId, homeMemory = null) {
     "preferencesAndBoundaries", "currentState", "homeRules",
   ].some((k) => (hm[k] || []).length > 0);
 
+  // 辅助：把 entry 文本标准化（第一人称 → 第三人称 + 过滤空值）
+  const norm = (arr) =>
+    (arr || []).map((e) => normalizePov(e.text, userName)).filter(Boolean);
+
   if (hasHomeMemory) {
     // 优先级 ① 全家规则 + 相处说明书
-    const rules = (hm.homeRules || []).map((e) => e.text).filter(Boolean);
-    const guide = (hm.interactionGuide || []).map((e) => e.text).filter(Boolean);
+    const rules = norm(hm.homeRules);
+    const guide = norm(hm.interactionGuide);
     if (rules.length || guide.length) {
-      let block = "【与用户相处的规则】";
+      let block = `【与${userName}相处的规则】`;
       if (guide.length) block += "\n" + guide.map((t) => `- ${t}`).join("\n");
       if (rules.length) block += "\n" + rules.map((t) => `- ${t}`).join("\n");
       parts.push(block);
     }
 
     // 优先级 ② 长期偏好与雷点
-    const prefs = (hm.preferencesAndBoundaries || []).map((e) => e.text).filter(Boolean);
+    const prefs = norm(hm.preferencesAndBoundaries);
     if (prefs.length) {
-      parts.push("【用户偏好与雷点】\n" + prefs.map((t) => `- ${t}`).join("\n"));
+      parts.push(`【${userName}的偏好与雷点】\n` + prefs.map((t) => `- ${t}`).join("\n"));
     }
 
     // 优先级 ③ 身份事实 + 过去
-    const facts   = (hm.identityFacts || []).map((e) => e.text).filter(Boolean);
-    const stories = (hm.pastStories   || []).map((e) => e.text).filter(Boolean);
+    const facts   = norm(hm.identityFacts);
+    const stories = norm(hm.pastStories);
     if (facts.length || stories.length) {
-      let block = "【关于用户】";
+      let block = `【关于${userName}】`;
       if (facts.length)   block += "\n" + facts.map((t) => `- ${t}`).join("\n");
       if (stories.length) block += "\n" + stories.map((t) => `- ${t}`).join("\n");
       parts.push(block);
     }
 
     // 优先级 ④ 近期状态（加「近期」标注）
-    const current = (hm.currentState || []).map((e) => e.text).filter(Boolean);
+    const current = norm(hm.currentState);
     if (current.length) {
       parts.push(
-        "【用户近期状态（短期，仅供参考）】\n" +
+        `【${userName}近期状态（短期，仅供参考）】\n` +
         current.map((t) => `- 近期：${t}`).join("\n")
       );
     }
@@ -152,7 +168,7 @@ export function buildUserContext(userProfile, charId, homeMemory = null) {
     if (g.dislikes)    legacyFacts.push(`雷区（避免提及）：${g.dislikes}`);
     if (g.extra)       legacyFacts.push(`其他：${g.extra}`);
     if (legacyFacts.length > 0) {
-      parts.push(`【关于用户】\n${legacyFacts.join("\n")}`);
+      parts.push(`【关于${userName}】\n${legacyFacts.join("\n")}`);
     }
   }
 
@@ -161,7 +177,7 @@ export function buildUserContext(userProfile, charId, homeMemory = null) {
     (v) => v.content && v.content.trim() && (v.allowedChars || []).includes(charId)
   );
   if (vault.length > 0) {
-    parts.push(`【用户分享给你的】\n${vault.map((v) => `· ${v.content}`).join("\n")}`);
+    parts.push(`【${userName}分享给你的】\n${vault.map((v) => `· ${v.content}`).join("\n")}`);
   }
 
   return parts.length > 0 ? parts.join("\n\n") : "";
@@ -226,11 +242,6 @@ export function buildSystemPrompt(char, memories) {
   if (injection.layers.L1_personality) {
     if (profileParts.length)
       prompt += ` 【基本档案】\n${profileParts.join("\n")}\n\n`;
-
-    const oceanLines = OCEAN_DIMS.map(
-      (d) => `${d.label}(${d.key})：${o[d.key] || 50}/100`
-    );
-    prompt += ` 【大五人格数值】\n${oceanLines.join("\n")}\n\n`;
 
     const persParts = [];
     if (ps.selfAssessment) persParts.push(`自我评价：${ps.selfAssessment}`);
