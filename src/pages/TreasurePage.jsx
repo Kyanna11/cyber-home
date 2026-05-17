@@ -4,10 +4,18 @@
 import { useState, useMemo } from "react";
 import BackButton from "../components/BackButton";
 import { TREASURE_TYPES } from "../constants";
+import { EVENT_TYPES } from "./TimelinePage";
 
 // ── 工具 ──
 function typeInfo(type) {
   return TREASURE_TYPES.find((t) => t.value === type) || { label: "其他", emoji: "🎁" };
+}
+
+// 宝物类型 → 时间线事件类型的推断
+function treasureTypeToEventType(treasureType) {
+  if (["quote", "comfort", "letter"].includes(treasureType)) return "sweet";
+  if (["story", "essay"].includes(treasureType)) return "milestone";
+  return "other";
 }
 
 function fmtDate(ts) {
@@ -356,12 +364,281 @@ function TreasureContinuePanel({ treasure, characters, activeCharId, onConfirm, 
   );
 }
 
+// ── 记下这一刻 · 添加到时间线面板 ──
+function TreasureToTimelinePanel({ treasure, characters, activeCharId, onSave, onNavigateTimeline, onClose }) {
+  const defaultCharId = activeCharId || characters[0]?.id || "";
+  const today = new Date().toISOString().split("T")[0];
+
+  const [form, setForm] = useState({
+    loverId:     defaultCharId,
+    title:       treasure.title || treasure.content.slice(0, 30),
+    description: treasure.content.slice(0, 300),
+    eventType:   treasureTypeToEventType(treasure.type),
+    occurredAt:  today,
+    emotion:     "",
+    importance:  treasure.important ? 4 : 3,
+    pinned:      false,
+    note:        "",
+  });
+  const [done, setDone] = useState(false);
+
+  const canConfirm = form.loverId && form.title.trim().length > 0;
+
+  const handleConfirm = () => {
+    if (!canConfirm) return;
+    onSave({ ...form, title: form.title.trim() });
+    setDone(true);
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 200,
+      background: "rgba(74,69,96,.35)",
+      backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+      display: "flex", alignItems: "flex-end", justifyContent: "center",
+    }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{
+        width: "100%", maxWidth: 480, maxHeight: "92vh",
+        background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+        borderRadius: "20px 20px 0 0",
+        display: "flex", flexDirection: "column",
+        overflow: "hidden",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.18)",
+      }}>
+
+        {/* 顶栏 */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 18px 12px",
+          borderBottom: "1px solid rgba(196,166,184,.2)",
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>🕰 记下这一刻</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
+        </div>
+
+        {done ? (
+          /* ── 成功状态 ── */
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 24px 48px", gap: 18, textAlign: "center" }}>
+            <div style={{ fontSize: 36 }}>🌿</div>
+            <div style={{ fontSize: 15, color: "#5a4a6a", fontWeight: 500, lineHeight: 1.7 }}>
+              已经把这一刻放进回忆里了。
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", lineHeight: 1.8, maxWidth: 260 }}>
+              它会静静等在你们的时间线上。
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 8, width: "100%", maxWidth: 320 }}>
+              <button
+                onClick={() => { onNavigateTimeline?.(form.loverId); onClose(); }}
+                style={{
+                  flex: 1, padding: "11px", borderRadius: 12,
+                  background: "rgba(120,100,160,.85)", border: "none",
+                  color: "white", fontSize: 13, cursor: "pointer",
+                  fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                }}
+              >去关系时间线看看</button>
+              <button
+                onClick={onClose}
+                style={{
+                  flex: 1, padding: "11px", borderRadius: 12,
+                  background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)",
+                  color: "#7a6a8e", fontSize: 13, cursor: "pointer",
+                  fontFamily: "var(--font-main)",
+                }}
+              >留在宝库</button>
+            </div>
+          </div>
+        ) : (
+          /* ── 填写表单 ── */
+          <div style={{ flex: 1, overflow: "auto", padding: "14px 18px 32px" }}>
+
+            {/* 宝物预览 */}
+            <div style={{
+              padding: "9px 12px", borderRadius: 10, marginBottom: 16,
+              background: "rgba(255,255,255,.55)", border: "1px solid rgba(196,166,184,.2)",
+            }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 3 }}>
+                {typeInfo(treasure.type).emoji} {treasure.title || treasure.content.slice(0, 28)}
+              </div>
+              <div style={{
+                fontSize: 12, color: "#5a4a6a", lineHeight: 1.7,
+                overflow: "hidden", display: "-webkit-box",
+                WebkitLineClamp: 3, WebkitBoxOrient: "vertical",
+                whiteSpace: "pre-wrap",
+              }}>{treasure.content}</div>
+            </div>
+
+            {/* 入住者选择（多于1人显示） */}
+            {characters.length > 1 && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>记入谁的时间线</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {characters.map((char) => (
+                    <button key={char.id} onClick={() => setForm((f) => ({ ...f, loverId: char.id }))}
+                      style={{
+                        padding: "6px 14px", borderRadius: 20, fontSize: 12,
+                        cursor: "pointer", fontFamily: "var(--font-main)", transition: "all .15s",
+                        background: form.loverId === char.id ? "rgba(120,100,160,.85)" : "rgba(255,255,255,.7)",
+                        color: form.loverId === char.id ? "white" : "#7a6a8e",
+                        border: `1px solid ${form.loverId === char.id ? "transparent" : "rgba(196,166,184,.3)"}`,
+                      }}
+                    >{char.name || "未命名"}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {characters.length === 0 && (
+              <div style={{ padding: "10px 0 14px", fontSize: 12, color: "var(--text-faint)", textAlign: "center" }}>
+                家里还没有入住者，先去「成员档案」添加一位吧
+              </div>
+            )}
+
+            {/* 标题 */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>这一刻的名字</div>
+              <input
+                type="text"
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  padding: "8px 10px", borderRadius: 10, fontSize: 13, color: "#5a4a6a",
+                  background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)",
+                  fontFamily: "var(--font-main)", outline: "none",
+                }}
+              />
+            </div>
+
+            {/* 事件类型 */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>事件类型</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {EVENT_TYPES.map((et) => (
+                  <button key={et.key} onClick={() => setForm((f) => ({ ...f, eventType: et.key }))}
+                    style={{
+                      padding: "5px 11px", borderRadius: 20, fontSize: 11,
+                      cursor: "pointer", fontFamily: "var(--font-main)", transition: "all .15s",
+                      background: form.eventType === et.key ? "rgba(120,100,160,.15)" : "rgba(255,255,255,.65)",
+                      border: `1px solid ${form.eventType === et.key ? "rgba(120,100,160,.45)" : "rgba(196,166,184,.22)"}`,
+                      color: form.eventType === et.key ? "#5a4a8a" : "#7a6a8e",
+                    }}
+                  >{et.emoji} {et.label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* 发生日期 */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>发生时间</div>
+              <input
+                type="date"
+                value={form.occurredAt}
+                onChange={(e) => setForm((f) => ({ ...f, occurredAt: e.target.value }))}
+                style={{
+                  padding: "7px 10px", borderRadius: 10, fontSize: 13, color: "#5a4a6a",
+                  background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)",
+                  fontFamily: "var(--font-main)", outline: "none",
+                }}
+              />
+            </div>
+
+            {/* 情绪标签 */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>情绪标签（可选）</div>
+              <input
+                type="text"
+                placeholder="比如：温柔、感动、想念…"
+                value={form.emotion}
+                onChange={(e) => setForm((f) => ({ ...f, emotion: e.target.value }))}
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  padding: "7px 10px", borderRadius: 10, fontSize: 13, color: "#5a4a6a",
+                  background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)",
+                  fontFamily: "var(--font-main)", outline: "none",
+                }}
+              />
+            </div>
+
+            {/* 重要程度 */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>
+                重要程度
+                <span style={{ marginLeft: 8, fontWeight: 500, color: "#5a4a6a" }}>{form.importance}</span>
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {[1, 2, 3, 4, 5].map((v) => (
+                  <button key={v} onClick={() => setForm((f) => ({ ...f, importance: v }))}
+                    style={{
+                      width: 36, height: 36, borderRadius: 10, fontSize: 16,
+                      cursor: "pointer", border: "none", transition: "all .15s",
+                      background: form.importance >= v ? "rgba(120,100,160,.18)" : "rgba(255,255,255,.6)",
+                      color: form.importance >= v ? "#7a5aaa" : "#c0b0d0",
+                    }}
+                  >★</button>
+                ))}
+              </div>
+            </div>
+
+            {/* 置顶 */}
+            <div
+              onClick={() => setForm((f) => ({ ...f, pinned: !f.pinned }))}
+              style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 14 }}
+            >
+              <div style={{
+                width: 18, height: 18, borderRadius: 5,
+                border: `1.5px solid ${form.pinned ? "rgba(120,100,160,.6)" : "rgba(196,166,184,.4)"}`,
+                background: form.pinned ? "rgba(120,100,160,.14)" : "transparent",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 10, color: "#7a5aaa", flexShrink: 0, transition: "all .15s",
+              }}>
+                {form.pinned ? "📌" : ""}
+              </div>
+              <span style={{ fontSize: 12, color: form.pinned ? "#5a4a8a" : "#9a8aac" }}>置顶这条记忆</span>
+            </div>
+
+            {/* 备注 */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>备注（可选）</div>
+              <textarea
+                placeholder="关于这一刻想多说的…"
+                value={form.note}
+                onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  minHeight: 56, padding: "8px 10px", borderRadius: 10, fontSize: 12,
+                  color: "#7a6a8e", background: "rgba(255,255,255,.6)",
+                  border: "1px solid rgba(196,166,184,.25)",
+                  fontFamily: "var(--font-main)", outline: "none",
+                  resize: "none", lineHeight: 1.7,
+                }}
+              />
+            </div>
+
+            <button
+              onClick={handleConfirm}
+              disabled={!canConfirm}
+              style={{
+                width: "100%", padding: "12px", borderRadius: 14,
+                background: canConfirm ? "rgba(120,100,160,.85)" : "rgba(196,166,184,.3)",
+                border: "none", color: canConfirm ? "white" : "#9a8aac",
+                fontSize: 14, cursor: canConfirm ? "pointer" : "default",
+                fontFamily: "var(--font-main)", letterSpacing: 1, transition: "all .2s",
+              }}
+            >🕰 放进回忆里</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── 宝物详情面板 ──
-function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromTreasure, characters, activeCharId, onContinueFromTreasure }) {
+function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromTreasure, characters, activeCharId, onContinueFromTreasure, onAddTreasureToTimeline, onOpenTimeline }) {
   const [editing, setEditing]             = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [copyFeedback, setCopyFeedback]   = useState(false);
   const [showContinuePanel, setShowContinuePanel] = useState(false);
+  const [showTimelinePanel, setShowTimelinePanel] = useState(false);
   const ti = typeInfo(treasure.type);
 
   if (editing) {
@@ -518,7 +795,12 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromT
 
             {/* 第二行 */}
             <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-              <ActionBtn emoji="🕰" label="记下这一刻" sub="稍后开放" disabled />
+              <ActionBtn
+                emoji="🕰"
+                label="记下这一刻"
+                onClick={() => setShowTimelinePanel(true)}
+                color="#7aadcc"
+              />
               <ActionBtn emoji="💡" label="帮我记住"   sub="稍后开放" disabled />
               <ActionBtn
                 emoji="✍️"
@@ -572,6 +854,28 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromT
         onClose={() => setShowContinuePanel(false)}
       />
     )}
+
+    {/* 记下这一刻面板 */}
+    {showTimelinePanel && (
+      <TreasureToTimelinePanel
+        treasure={treasure}
+        characters={characters || []}
+        activeCharId={activeCharId}
+        onSave={(fields) => {
+          onAddTreasureToTimeline?.({
+            ...fields,
+            source: "treasure",
+            sourceIds: [treasure.id],
+          });
+        }}
+        onNavigateTimeline={(loverId) => {
+          setShowTimelinePanel(false);
+          onClose();
+          onOpenTimeline?.(loverId);
+        }}
+        onClose={() => setShowTimelinePanel(false)}
+      />
+    )}
     </>
   );
 }
@@ -588,6 +892,8 @@ export default function TreasurePage({
   onCreateNoteFromTreasure,
   activeCharId,
   onContinueFromTreasure,
+  onAddTreasureToTimeline,
+  onOpenTimeline,
 }) {
   const [filterType, setFilterType]   = useState("all");
   const [searchText, setSearchText]   = useState("");
@@ -770,6 +1076,8 @@ export default function TreasurePage({
           characters={characters}
           activeCharId={activeCharId}
           onContinueFromTreasure={onContinueFromTreasure}
+          onAddTreasureToTimeline={onAddTreasureToTimeline}
+          onOpenTimeline={onOpenTimeline}
         />
       )}
 

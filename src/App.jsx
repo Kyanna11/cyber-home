@@ -2373,6 +2373,8 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           onCreateNoteFromTreasure={createNoteFromTreasure}
           activeCharId={activeCharId}
           onContinueFromTreasure={continueFromTreasure}
+          onAddTreasureToTimeline={addTimelineEvent}
+          onOpenTimeline={openTimeline}
         />
       )}
 
