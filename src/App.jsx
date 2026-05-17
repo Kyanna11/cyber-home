@@ -2353,12 +2353,15 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           onSaveNote={handleSaveNote}
           onDeleteNote={handleDeleteNote}
           characters={characters}
+          activeCharId={activeCharId}
           shareNoteToChat={shareNoteToChat}
           onGenerateProfileDraft={generateProfileDraftFromNote}
           onOpenMyProfile={() => setShowMyProfile(true)}
           profileDraftGenerating={profileDraftGenerating}
           pendingOpenNoteId={pendingOpenNoteId}
           onClearPendingOpenNoteId={() => setPendingOpenNoteId(null)}
+          onAddNoteToTimeline={addTimelineEvent}
+          onOpenTimeline={openTimeline}
         />
       )}
 
