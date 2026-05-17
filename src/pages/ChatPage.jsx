@@ -2,7 +2,7 @@
 // 顶栏、话题侧边栏、记忆控制台（更多菜单）、消息列表、输入栏
 
 import { useState } from "react";
-import { SHARE_INTENTS } from "../constants";
+import { NOTE_TYPES } from "../constants";
 
 export default function ChatPage({
   // 角色
@@ -46,6 +46,7 @@ export default function ChatPage({
   // 手札分享
   noteEntries,
   shareNoteToChat,
+  sendNoteFromChat,
   // 消息区
   messages,
   isSending,
@@ -61,6 +62,29 @@ export default function ChatPage({
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [attachView, setAttachView] = useState(null); // null | "grid" | "notes" | "intent"
   const [selectedNote, setSelectedNote] = useState(null);
+
+  // 聊天页专用意图标签（用"你"，更自然）
+  const CHAT_INTENTS = [
+    { value: "read",     label: "只是给你看看",   hint: "" },
+    { value: "comfort",  label: "想被安慰",       hint: "陪伴 & 共情" },
+    { value: "reply",    label: "想听你说说",     hint: "分享你的感受" },
+    { value: "organize", label: "希望你帮我整理", hint: "温柔梳理思路" },
+    { value: "remember", label: "希望你以后记得", hint: "放心里就好" },
+  ];
+  const CHAT_INTENTS_MAP = Object.fromEntries(CHAT_INTENTS.map((i) => [i.value, i.label]));
+
+  // 根据 type value 取类型信息
+  const getNoteType = (type) =>
+    NOTE_TYPES.find((t) => t.value === type) || { label: "手札", emoji: "📓" };
+
+  // 日期简短显示
+  const fmtNoteDate = (entry) => {
+    if (entry.createdAt > 0) {
+      const d = new Date(entry.createdAt);
+      return `${d.getMonth() + 1}月${d.getDate()}日`;
+    }
+    return entry.date || "";
+  };
 
   return (
     <div className="chat-scene">
@@ -676,18 +700,44 @@ export default function ChatPage({
             )}
 
             {/* 手札分享卡片 */}
-            {msg.isDiaryShare ? (
+            {(msg.isDiaryShare || msg.isNoteShare) ? (
               <div className="diary-share-card">
                 <div className="diary-share-header">
-                  <span className="diary-share-icon">📓</span>
-                  <span className="diary-share-label">
-                    晚声分享了一篇手札{msg.noteTitle ? `「${msg.noteTitle}」` : ""}
+                  <span className="diary-share-icon">
+                    {NOTE_TYPES.find((t) => t.value === msg.noteType)?.emoji || "📓"}
                   </span>
+                  <div style={{ flex: 1 }}>
+                    <span className="diary-share-label">
+                      {msg.noteTitle ? `「${msg.noteTitle}」` : "分享了一篇手札"}
+                    </span>
+                    {msg.noteType && (
+                      <span style={{
+                        fontSize: 10, color: "var(--text-faint)",
+                        marginLeft: 6, verticalAlign: "middle",
+                        background: "rgba(196,166,184,.15)",
+                        padding: "1px 6px", borderRadius: 8,
+                      }}>
+                        {NOTE_TYPES.find((t) => t.value === msg.noteType)?.label || msg.noteType}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="diary-share-date">{msg.diaryDate || ""}</div>
+                <div className="diary-share-date" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span>{msg.diaryDate || ""}</span>
+                  {msg.shareIntent && msg.shareIntent !== "read" && (
+                    <span style={{
+                      fontSize: 10, color: "var(--accent-dusk)",
+                      background: "rgba(196,166,184,.12)",
+                      padding: "1px 7px", borderRadius: 8,
+                    }}>
+                      {CHAT_INTENTS_MAP[msg.shareIntent] || msg.shareIntent}
+                    </span>
+                  )}
+                </div>
                 <div className="diary-share-divider" />
-                <div className="diary-share-text">{msg.content}</div>
-                <div className="diary-share-footer">✨ 分享给了你</div>
+                <div className="diary-share-text">
+                  {msg.content.length > 200 ? msg.content.slice(0, 200) + "…" : msg.content}
+                </div>
               </div>
             ) : (
               <div
@@ -711,7 +761,7 @@ export default function ChatPage({
                 </div>
 
                 {/* 用户消息：编辑按钮 */}
-                {msg.role === "user" && !msg.isDiaryShare && (
+                {msg.role === "user" && !msg.isDiaryShare && !msg.isNoteShare && (
                   <button
                     onClick={() => {
                       setEditingMsgIdx(i);
@@ -857,37 +907,62 @@ export default function ChatPage({
       {/* ── 手札选择 ── */}
       {attachView === "notes" && (
         <div className="config-overlay" onClick={(e) => { if (e.target === e.currentTarget) setAttachView("grid"); }}>
-          <div className="config-panel" style={{ maxHeight: "72vh", display: "flex", flexDirection: "column" }}>
+          <div className="config-panel" style={{ maxHeight: "76vh", display: "flex", flexDirection: "column" }}>
             <div className="config-header">
               <div className="config-title"><span>📓</span>选一篇手札</div>
               <button className="config-close" onClick={() => setAttachView(null)}>✕</button>
             </div>
             <div style={{ flex: 1, overflow: "auto" }}>
               {(noteEntries || []).filter((e) => !e.isDraft).length === 0 ? (
-                <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--text-faint)", fontSize: 13, lineHeight: 2 }}>
-                  还没有手札<br/>先去写一篇吧
+                <div style={{ padding: "40px 16px", textAlign: "center", color: "var(--text-faint)", fontSize: 13, lineHeight: 2.2 }}>
+                  还没有手札<br />
+                  <span style={{ fontSize: 11, opacity: .7 }}>可以先去书桌写一篇</span>
                 </div>
               ) : (
-                (noteEntries || []).filter((e) => !e.isDraft).map((note) => (
-                  <div
-                    key={note.id}
-                    onClick={() => { setSelectedNote(note); setAttachView("intent"); }}
-                    style={{
-                      padding: "12px 16px", cursor: "pointer",
-                      borderBottom: "1px solid rgba(196,166,184,.1)",
-                      transition: "background .15s",
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = "rgba(196,166,184,.08)"}
-                    onMouseLeave={(e) => e.currentTarget.style.background = ""}
-                  >
-                    <div style={{ fontSize: 13, fontWeight: 500, color: "#5a4a6a", marginBottom: 3 }}>
-                      {note.title || note.text.slice(0, 24) || "无标题"}
-                    </div>
-                    <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.5 }}>
-                      {note.text.slice(0, 60)}{note.text.length > 60 ? "…" : ""}
-                    </div>
-                  </div>
-                ))
+                (noteEntries || [])
+                  .filter((e) => !e.isDraft)
+                  .map((note) => {
+                    const nt = getNoteType(note.type);
+                    const alreadyShared = (note.sharedWith || []).includes(activeCharId);
+                    return (
+                      <div
+                        key={note.id}
+                        onClick={() => { setSelectedNote(note); setAttachView("intent"); }}
+                        style={{
+                          padding: "12px 16px", cursor: "pointer",
+                          borderBottom: "1px solid rgba(196,166,184,.1)",
+                          transition: "background .15s",
+                          opacity: alreadyShared ? 0.65 : 1,
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(196,166,184,.08)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = ""}
+                      >
+                        {/* 标题行 */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                          <span style={{ fontSize: 14 }}>{nt.emoji}</span>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: "#5a4a6a", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {note.title || note.text.slice(0, 20) || "无标题"}
+                          </span>
+                          {alreadyShared && (
+                            <span style={{ fontSize: 10, color: "var(--text-faint)", background: "rgba(155,149,181,.12)", padding: "1px 6px", borderRadius: 8, flexShrink: 0 }}>
+                              已分享
+                            </span>
+                          )}
+                        </div>
+                        {/* 类型 + 日期行 */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 10, color: "var(--text-faint)", background: "rgba(196,166,184,.12)", padding: "1px 7px", borderRadius: 8 }}>
+                            {nt.label}
+                          </span>
+                          <span style={{ fontSize: 10, color: "var(--text-faint)" }}>{fmtNoteDate(note)}</span>
+                        </div>
+                        {/* 正文预览 */}
+                        <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.55, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                          {note.text || "（无内容）"}
+                        </div>
+                      </div>
+                    );
+                  })
               )}
             </div>
           </div>
@@ -899,31 +974,56 @@ export default function ChatPage({
         <div className="config-overlay" onClick={(e) => { if (e.target === e.currentTarget) setAttachView("notes"); }}>
           <div className="config-panel">
             <div className="config-header">
-              <div className="config-title"><span>💌</span>怎么分享给 ta？</div>
+              <div className="config-title"><span>💌</span>
+                怎么分享给{activeChar?.name ? ` ${activeChar.name}` : " ta"}？
+              </div>
               <button className="config-close" onClick={() => { setAttachView(null); setSelectedNote(null); }}>✕</button>
             </div>
-            <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, padding: "0 2px" }}>
-              「{selectedNote.title || selectedNote.text.slice(0, 20) || "手札"}」
+
+            {/* 被分享的手札预览 */}
+            <div style={{
+              background: "rgba(248,244,252,.8)",
+              border: "1px solid rgba(196,166,184,.2)",
+              borderRadius: 12, padding: "10px 12px", marginBottom: 16,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                <span style={{ fontSize: 14 }}>{getNoteType(selectedNote.type).emoji}</span>
+                <span style={{ fontSize: 12, fontWeight: 500, color: "#5a4a6a" }}>
+                  {selectedNote.title || selectedNote.text.slice(0, 20) || "无标题"}
+                </span>
+                <span style={{ fontSize: 10, color: "var(--text-faint)", background: "rgba(196,166,184,.15)", padding: "1px 6px", borderRadius: 8 }}>
+                  {getNoteType(selectedNote.type).label}
+                </span>
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.55, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                {selectedNote.text || "（无内容）"}
+              </div>
             </div>
-            {SHARE_INTENTS.map((intent) => (
+
+            {/* 意图选择 */}
+            {CHAT_INTENTS.map((intent) => (
               <button
                 key={intent.value}
                 onClick={() => {
-                  shareNoteToChat(activeChar?.id, selectedNote, intent.value);
+                  sendNoteFromChat(selectedNote, intent.value);
                   setAttachView(null);
                   setSelectedNote(null);
                 }}
                 style={{
-                  width: "100%", padding: "12px 14px", marginBottom: 8,
+                  width: "100%", padding: "11px 14px", marginBottom: 8,
                   background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.2)",
                   borderRadius: 12, cursor: "pointer",
                   fontFamily: "var(--font-main)", fontSize: 13, color: "#5a4a6a",
                   textAlign: "left", transition: "all .15s",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = "rgba(232,196,196,.12)"}
                 onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,.7)"}
               >
-                {intent.label}
+                <span>{intent.label}</span>
+                {intent.hint && (
+                  <span style={{ fontSize: 10, color: "var(--text-faint)", marginLeft: 8 }}>{intent.hint}</span>
+                )}
               </button>
             ))}
           </div>

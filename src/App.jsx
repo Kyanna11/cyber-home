@@ -81,12 +81,13 @@ function normalizeNotes(entries) {
 // 分享意图 → 给 AI 的提示文本
 function shareIntentHint(intent) {
   const map = {
-    comfort:  "，她想被安慰",
-    organize: "，她想让你帮她整理思路",
-    remember: "，她希望你以后记得这件事",
-    reply:    "，她想听你的回应",
+    read:     "",
+    comfort:  "，她想被安慰，请先温柔地陪伴和共情，不要急着给建议或分析",
+    reply:    "，她想听你说说你自己的感受或想法",
+    organize: "，她希望你帮她温柔地整理思路，可以归纳重点但保持温暖的语气",
+    remember: "，她希望你以后记得这件事，请在回复中真诚确认你理解了、会放在心里，不要自动写入记忆标签",
   };
-  return map[intent] || "";
+  return map[intent] ?? "";
 }
 
 const defaultUserProfile = {
@@ -872,7 +873,7 @@ ${chunksText}
     saveDiary(updated);
   };
 
-  // 分享手札给入住者：标记 entry 为已分享，然后跳转到 chat
+  // 分享手札给入住者：标记 entry 为已分享，然后跳转到 chat（从手札页入口用）
   const shareNoteToChat = (charId, entry, intent) => {
     const updated = {
       ...entry,
@@ -884,6 +885,71 @@ ${chunksText}
     handleSaveNote(updated);
     pendingDiaryRef.current = { ...updated, shareIntent: intent };
     enterChat(charId);
+  };
+
+  // 在聊天页内直接发送手札（不走 pendingDiaryRef / 导航，避免已在 chat 时无法触发 effect）
+  const sendNoteFromChat = (entry, intent) => {
+    // 1. 更新手札状态
+    const updated = {
+      ...entry,
+      visibility: "shared",
+      sharedWith: [...new Set([...(entry.sharedWith || []), activeCharId])],
+      shareIntent: intent,
+      updatedAt: Date.now(),
+    };
+    handleSaveNote(updated);
+
+    // 2. 构建消息并推入聊天
+    const now = new Date();
+    const timeStr = now.toTimeString().slice(0, 5);
+    const noteDate = entry.createdAt > 0
+      ? (() => { const d = new Date(entry.createdAt); return `${d.getMonth() + 1}月${d.getDate()}日`; })()
+      : (entry.date || "某天");
+
+    const noteMsg = {
+      role: "user",
+      content: entry.text,
+      isNoteShare: true,
+      isDiaryShare: true,  // 兼容旧版消息卡片样式
+      noteId: entry.id,
+      noteTitle: entry.title || "",
+      noteType: entry.type || "diary",
+      shareIntent: intent,
+      diaryDate: noteDate,
+      time: timeStr,
+    };
+
+    const allMsgs = [...messages, noteMsg];
+    setMessages(allMsgs);
+
+    if (!isConfigReady()) {
+      setTimeout(() => {
+        showMessagesSequentially(
+          "她分享了手札……但我还没连上大脑。",
+          ["我看到你写的内容了～", "不过我现在还没有连上大脑哦", "帮我在大脑连接里接通吧？"],
+          timeStr,
+        );
+      }, 800);
+      return;
+    }
+    setIsSending(true);
+    setIsTyping(true);
+    callLLM(allMsgs)
+      .then((raw) => {
+        setIsTyping(false);
+        const cleanedRaw = extractAndSaveMemories(raw, activeCharId, allMemories, setAllMemories);
+        const { thought, parts } = parseResponse(cleanedRaw);
+        showMessagesSequentially(thought, parts, timeStr);
+        updateMemoryHeat(activeCharId, cleanedRaw);
+      })
+      .catch((err) => {
+        setIsTyping(false);
+        setIsSending(false);
+        setMessages((prev) => [
+          ...prev,
+          { role: "bot", thought: "呜……读手札的时候出了点问题。", content: `出错了：${err.message}`, time: timeStr },
+        ]);
+      });
   };
 
   const enterChat = (charId) => {
@@ -1634,8 +1700,8 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
       .slice(-ctxConfig.maxMessages)
       .map((m) => ({
         role: m.role === "bot" ? "assistant" : "user",
-        content: m.isDiaryShare
-          ? `[晚声把她的一篇手札分享给了你${shareIntentHint(m.shareIntent)}，请以你的性格自然地回应，可以共情、评论、提问]\n\n「${m.diaryDate || "某天"}${m.noteTitle ? " · " + m.noteTitle : ""}」\n${m.content}`
+        content: (m.isDiaryShare || m.isNoteShare)
+          ? `[晚声把她的一篇手札分享给了你${shareIntentHint(m.shareIntent)}，请以你的性格自然地回应]\n\n「${m.diaryDate || "某天"}${m.noteTitle ? " · " + m.noteTitle : ""}」\n${m.content}`
           : m.content,
       }));
     const charMemories = activeChar ? getCharMemories(activeChar.id) : {};
@@ -2152,6 +2218,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           handleClearChat={handleClearChat}
           noteEntries={noteEntries}
           shareNoteToChat={shareNoteToChat}
+          sendNoteFromChat={sendNoteFromChat}
           messages={messages}
           isSending={isSending}
           isTyping={isTyping}
