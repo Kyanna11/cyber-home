@@ -214,11 +214,154 @@ function ActionBtn({ emoji, label, sub, onClick, disabled, color }) {
   );
 }
 
+// ── 继续写下去确认面板 ──
+const CONTINUE_MODES = [
+  { value: "continue", label: "继续写下去" },
+  { value: "expand",   label: "扩写成更完整的一篇" },
+  { value: "custom",   label: "自定义要求" },
+];
+
+function TreasureContinuePanel({ treasure, characters, activeCharId, onConfirm, onClose }) {
+  const defaultCharId = activeCharId || characters[0]?.id || "";
+  const [targetCharId, setTargetCharId] = useState(defaultCharId);
+  const [mode, setMode]       = useState("continue");
+  const [customText, setCustomText] = useState("");
+  const ti = typeInfo(treasure.type);
+  const canConfirm = targetCharId && (mode !== "custom" || customText.trim().length > 0);
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 200,
+      background: "rgba(74,69,96,.35)",
+      backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+      display: "flex", alignItems: "flex-end", justifyContent: "center",
+    }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{
+        width: "100%", maxWidth: 480, maxHeight: "90vh",
+        background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+        borderRadius: "20px 20px 0 0",
+        display: "flex", flexDirection: "column",
+        overflow: "hidden",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.18)",
+      }}>
+        {/* 顶栏 */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 18px 12px",
+          borderBottom: "1px solid rgba(196,166,184,.2)",
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>✍️ 继续写下去</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
+        </div>
+
+        <div style={{ flex: 1, overflow: "auto", padding: "14px 18px 28px" }}>
+          {/* 宝物预览 */}
+          <div style={{
+            padding: "10px 12px", borderRadius: 10, marginBottom: 16,
+            background: "rgba(255,255,255,.6)", border: "1px solid rgba(196,166,184,.2)",
+          }}>
+            <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 4 }}>
+              {ti.emoji} {treasure.title || treasure.content.slice(0, 24)}
+              {treasure.sourceCharName ? ` · 来自 ${treasure.sourceCharName}` : ""}
+            </div>
+            <div style={{
+              fontSize: 12, color: "#5a4a6a", lineHeight: 1.7,
+              overflow: "hidden", display: "-webkit-box",
+              WebkitLineClamp: 4, WebkitBoxOrient: "vertical",
+              whiteSpace: "pre-wrap",
+            }}>{treasure.content}</div>
+          </div>
+
+          {/* 续写方式 */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 8 }}>续写方式</div>
+            {CONTINUE_MODES.map((m) => (
+              <button
+                key={m.value}
+                onClick={() => setMode(m.value)}
+                style={{
+                  display: "block", width: "100%",
+                  padding: "9px 14px", borderRadius: 10, fontSize: 13, textAlign: "left",
+                  cursor: "pointer", fontFamily: "var(--font-main)", transition: "all .15s",
+                  marginBottom: 6,
+                  background: mode === m.value ? "rgba(120,100,160,.12)" : "rgba(255,255,255,.6)",
+                  border: `1px solid ${mode === m.value ? "rgba(120,100,160,.4)" : "rgba(196,166,184,.2)"}`,
+                  color: mode === m.value ? "#5a4a8a" : "#7a6a8e",
+                }}
+              >{mode === m.value ? "✓ " : ""}{m.label}</button>
+            ))}
+          </div>
+
+          {/* 自定义输入 */}
+          {mode === "custom" && (
+            <textarea
+              autoFocus
+              placeholder="说说你想要什么…"
+              value={customText}
+              onChange={(e) => setCustomText(e.target.value)}
+              style={{
+                width: "100%", boxSizing: "border-box",
+                minHeight: 72, padding: "8px 10px", borderRadius: 10, fontSize: 13,
+                color: "#5a4a6a", background: "rgba(255,255,255,.7)",
+                border: "1px solid rgba(196,166,184,.3)",
+                fontFamily: "var(--font-main)", outline: "none",
+                resize: "none", lineHeight: 1.8, marginBottom: 14,
+              }}
+            />
+          )}
+
+          {/* 选择入住者（多于 1 人时显示） */}
+          {characters.length > 1 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 8 }}>发给谁写</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {characters.map((char) => (
+                  <button
+                    key={char.id}
+                    onClick={() => setTargetCharId(char.id)}
+                    style={{
+                      padding: "6px 14px", borderRadius: 20, fontSize: 12,
+                      cursor: "pointer", fontFamily: "var(--font-main)", transition: "all .15s",
+                      background: targetCharId === char.id ? "rgba(120,100,160,.85)" : "rgba(255,255,255,.7)",
+                      color: targetCharId === char.id ? "white" : "#7a6a8e",
+                      border: `1px solid ${targetCharId === char.id ? "transparent" : "rgba(196,166,184,.3)"}`,
+                    }}
+                  >{char.name || "未命名"}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {characters.length === 0 && (
+            <div style={{ padding: "12px 0", fontSize: 12, color: "var(--text-faint)", textAlign: "center", marginBottom: 14 }}>
+              家里还没有入住者，先去「成员档案」添加一位吧
+            </div>
+          )}
+
+          <button
+            onClick={() => canConfirm && onConfirm(targetCharId, mode, customText)}
+            disabled={!canConfirm}
+            style={{
+              width: "100%", padding: "12px", borderRadius: 14,
+              background: canConfirm ? "rgba(120,100,160,.85)" : "rgba(196,166,184,.3)",
+              border: "none", color: canConfirm ? "white" : "#9a8aac",
+              fontSize: 14, cursor: canConfirm ? "pointer" : "default",
+              fontFamily: "var(--font-main)", letterSpacing: 1, transition: "all .2s",
+            }}
+          >✍️ 发给ta写</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 宝物详情面板 ──
-function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromTreasure }) {
+function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromTreasure, characters, activeCharId, onContinueFromTreasure }) {
   const [editing, setEditing]             = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [copyFeedback, setCopyFeedback]   = useState(false);
+  const [showContinuePanel, setShowContinuePanel] = useState(false);
   const ti = typeInfo(treasure.type);
 
   if (editing) {
@@ -253,6 +396,7 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromT
   };
 
   return (
+    <>
     <div style={{
       position: "fixed", inset: 0, zIndex: 150,
       background: "rgba(74,69,96,.3)",
@@ -372,11 +516,16 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromT
               />
             </div>
 
-            {/* 第二行：稍后开放 */}
+            {/* 第二行 */}
             <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
               <ActionBtn emoji="🕰" label="记下这一刻" sub="稍后开放" disabled />
               <ActionBtn emoji="💡" label="帮我记住"   sub="稍后开放" disabled />
-              <ActionBtn emoji="✍️" label="继续写下去" sub="稍后开放" disabled />
+              <ActionBtn
+                emoji="✍️"
+                label="继续写下去"
+                onClick={() => setShowContinuePanel(true)}
+                color="#7a6a8e"
+              />
             </div>
 
             {/* 复制成功提示 */}
@@ -408,6 +557,22 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromT
         </div>
       </div>
     </div>
+
+    {/* 继续写下去确认面板 */}
+    {showContinuePanel && (
+      <TreasureContinuePanel
+        treasure={treasure}
+        characters={characters || []}
+        activeCharId={activeCharId}
+        onConfirm={(charId, mode, customText) => {
+          onContinueFromTreasure?.(treasure, charId, mode, customText);
+          setShowContinuePanel(false);
+          onClose();
+        }}
+        onClose={() => setShowContinuePanel(false)}
+      />
+    )}
+    </>
   );
 }
 
@@ -421,6 +586,8 @@ export default function TreasurePage({
   onDeleteTreasure,
   characters,
   onCreateNoteFromTreasure,
+  activeCharId,
+  onContinueFromTreasure,
 }) {
   const [filterType, setFilterType]   = useState("all");
   const [searchText, setSearchText]   = useState("");
@@ -600,6 +767,9 @@ export default function TreasurePage({
           onDelete={handleDelete}
           onClose={() => setDetailItem(null)}
           onCreateNoteFromTreasure={onCreateNoteFromTreasure}
+          characters={characters}
+          activeCharId={activeCharId}
+          onContinueFromTreasure={onContinueFromTreasure}
         />
       )}
 

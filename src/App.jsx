@@ -213,6 +213,7 @@ export default function App() {
   // ─── Refs ───
   const messagesEndRef = useRef(null);
   const pendingDiaryRef = useRef(null);
+  const pendingTreasureContinueRef = useRef(null);
   const typingTimers = useRef([]);
 
   // ═══ Effects ═══
@@ -308,6 +309,55 @@ export default function App() {
         setMessages((prev) => [
           ...prev,
           { role: "bot", thought: "呜……读手札的时候出了点问题。", content: `出错了：${err.message}`, time: timeStr },
+        ]);
+      });
+  }, [page, activeCharId]);
+
+  // 宝库续写：从宝库页跳转到聊天页后自动发送消息
+  useEffect(() => {
+    if (page !== "chat" || !pendingTreasureContinueRef.current || !activeCharId) return;
+    const { content, treasureId, treasureTitle, continueMode } = pendingTreasureContinueRef.current;
+    pendingTreasureContinueRef.current = null;
+    const timeStr = new Date().toTimeString().slice(0, 5);
+    const userMsg = {
+      role: "user",
+      content,
+      isTreasureContinue: true,
+      treasureId,
+      treasureTitle,
+      continueMode,
+      replyMode: "long",
+      time: timeStr,
+    };
+    const allMsgs = [...messages, userMsg];
+    setMessages(allMsgs);
+    if (!isConfigReady()) {
+      setTimeout(() => {
+        showMessagesSequentially(
+          "宝库里的内容……但我还没连上大脑。",
+          ["我看到你想继续写的内容了～", "不过我现在还没有连上大脑哦", "帮我在设置里连一下吧？"],
+          timeStr,
+          "long",
+        );
+      }, 800);
+      return;
+    }
+    setIsSending(true);
+    setIsTyping(true);
+    callLLM(allMsgs, "long")
+      .then((raw) => {
+        setIsTyping(false);
+        const cleanedRaw = extractAndSaveMemories(raw, activeCharId, allMemories, setAllMemories);
+        const { thought, parts } = parseResponse(cleanedRaw, "long");
+        showMessagesSequentially(thought, parts, timeStr, "long");
+        updateMemoryHeat(activeCharId, cleanedRaw);
+      })
+      .catch((err) => {
+        setIsTyping(false);
+        setIsSending(false);
+        setMessages((prev) => [
+          ...prev,
+          { role: "bot", thought: "呜……续写的时候出了点问题。", content: `出错了：${err.message}`, time: timeStr },
         ]);
       });
   }, [page, activeCharId]);
@@ -923,6 +973,27 @@ ${chunksText}
     handleSaveNote(noteEntry);
     setPendingOpenNoteId(noteEntry.id);
     navigateTo("diary");
+  };
+
+  // 从宝库「继续写下去」：构建结构化消息，跳转到指定入住者聊天，useEffect 触发发送
+  const continueFromTreasure = (treasure, targetCharId, mode, customText) => {
+    const modeLabel = {
+      continue: "请继续写下去",
+      expand:   "请扩写成更完整的一篇",
+      custom:   customText.trim(),
+    }[mode] || "请继续写下去";
+
+    const content = `我从宝库里拿出了一段想继续写的内容。\n\n【${treasure.title || "宝物"}】\n${treasure.content}\n\n【我想要】${modeLabel}`;
+
+    pendingTreasureContinueRef.current = {
+      content,
+      treasureId:    treasure.id,
+      treasureTitle: treasure.title || treasure.content.slice(0, 24),
+      continueMode:  mode,
+    };
+    // 切换为长文模式（续写故事适合写成一篇）
+    setReplyMode("long");
+    enterChat(targetCharId);
   };
 
   // 分享手札给入住者：标记 entry 为已分享，然后跳转到 chat（从手札页入口用）
@@ -1775,6 +1846,8 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
         role: m.role === "bot" ? "assistant" : "user",
         content: (m.isDiaryShare || m.isNoteShare)
           ? `[晚声把她的一篇手札分享给了你${shareIntentHint(m.shareIntent)}，请以你的性格自然地回应]\n\n「${m.diaryDate || "某天"}${m.noteTitle ? " · " + m.noteTitle : ""}」\n${m.content}`
+          : m.isTreasureContinue
+          ? `[用户从宝库里拿出了一段珍藏的原文，希望你基于这段内容继续写、扩写或改写。请尊重原文的语气和氛围，不要把它当成普通聊天摘要。优先保留原文的情绪和风格。]\n\n${m.content}`
           : m.content,
       }));
     const charMemories = activeChar ? getCharMemories(activeChar.id) : {};
@@ -2253,6 +2326,8 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           onDeleteTreasure={handleDeleteTreasure}
           characters={characters}
           onCreateNoteFromTreasure={createNoteFromTreasure}
+          activeCharId={activeCharId}
+          onContinueFromTreasure={continueFromTreasure}
         />
       )}
 
