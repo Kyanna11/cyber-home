@@ -1475,6 +1475,25 @@ ${sourceText.slice(0, 3000)}
     );
   };
 
+  // 取消采纳某节：移除 homeMemory 中该草稿该节写入的条目，并撤销 appliedSections 标记
+  const unapplyProfileDraftSection = (draftId, section) => {
+    setHomeMemory((prev) => ({
+      ...prev,
+      [section]: (prev[section] || []).filter(
+        (entry) => !(entry.source === "draft" && entry.draftId === draftId)
+      ),
+    }));
+    setProfileDrafts((prev) =>
+      prev.map((d) => {
+        if (d.id !== draftId) return d;
+        const applied = (d.appliedSections || []).filter((s) => s !== section);
+        // 若草稿已被标记为全部采纳，撤回后恢复为 pending
+        const status = d.status === "approved" ? "pending" : d.status;
+        return { ...d, appliedSections: applied, status };
+      })
+    );
+  };
+
   const dismissProfileDraft = (draftId) => {
     setProfileDrafts((prev) =>
       prev.map((d) => d.id === draftId ? { ...d, status: "rejected", updatedAt: Date.now() } : d)
@@ -2133,6 +2152,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           addHomeMemoryEntry={addHomeMemoryEntry}
           deleteHomeMemoryEntry={deleteHomeMemoryEntry}
           applyProfileDraftSection={applyProfileDraftSection}
+          unapplyProfileDraftSection={unapplyProfileDraftSection}
           dismissProfileDraft={dismissProfileDraft}
           deleteProfileDraft={deleteProfileDraft}
         />
@@ -2260,6 +2280,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           addHomeMemoryEntry={addHomeMemoryEntry}
           deleteHomeMemoryEntry={deleteHomeMemoryEntry}
           applyProfileDraftSection={applyProfileDraftSection}
+          unapplyProfileDraftSection={unapplyProfileDraftSection}
           dismissProfileDraft={dismissProfileDraft}
           deleteProfileDraft={deleteProfileDraft}
         />

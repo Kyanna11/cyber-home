@@ -17,7 +17,7 @@ const SECTION_COLORS = {
 };
 
 // ── 草稿卡片 ──
-function ProfileDraftCard({ draft, onApplySection, onDismiss, onDelete }) {
+function ProfileDraftCard({ draft, onApplySection, onUnapplySection, onDismiss, onDelete }) {
   const [expanded, setExpanded] = useState(new Set());
   const applied    = draft.appliedSections || [];
   const date       = new Date(draft.createdAt).toLocaleDateString("zh-CN");
@@ -92,7 +92,16 @@ function ProfileDraftCard({ draft, onApplySection, onDismiss, onDelete }) {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   {isApplied ? (
-                    <span style={{ fontSize: 11, color: "#4a8a4a" }}>✓ 已采纳</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onUnapplySection?.(key); }}
+                      title="撤回本节采纳并从已确认内容中删除"
+                      style={{
+                        fontSize: 11, padding: "3px 11px", borderRadius: 8, cursor: "pointer",
+                        background: "rgba(100,160,100,.08)",
+                        border: "1px solid rgba(100,160,100,.28)",
+                        color: "#4a8a4a", fontFamily: "var(--font-main)",
+                      }}
+                    >✓ 已采纳 · 取消</button>
                   ) : (
                     <button
                       onClick={(e) => { e.stopPropagation(); onApplySection(key); }}
@@ -276,6 +285,7 @@ export default function MyProfilePage({
   addHomeMemoryEntry,
   deleteHomeMemoryEntry,
   applyProfileDraftSection,
+  unapplyProfileDraftSection,
   dismissProfileDraft,
   deleteProfileDraft,
 }) {
@@ -527,6 +537,7 @@ export default function MyProfilePage({
                 key={draft.id}
                 draft={draft}
                 onApplySection={(section) => applyProfileDraftSection && applyProfileDraftSection(draft.id, section)}
+                onUnapplySection={(section) => unapplyProfileDraftSection && unapplyProfileDraftSection(draft.id, section)}
                 onDismiss={() => dismissProfileDraft && dismissProfileDraft(draft.id)}
                 onDelete={() => deleteProfileDraft && deleteProfileDraft(draft.id)}
               />
