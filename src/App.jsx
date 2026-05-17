@@ -1359,10 +1359,10 @@ ${sourceText.slice(0, 3000)}
     const sourceText = [entry.title, entry.text].filter(Boolean).join("\n\n");
     const draftId = await generateProfileDraft({
       sourceText,
-      sourceType:    "diary",
-      sourceIds:     [entry.id],
-      sourceCharId:  null,
-      sourceCharName: "",
+      sourceType:     "note",
+      sourceIds:      [entry.id],
+      sourceCharId:   null,
+      sourceCharName: "我的手札",
     });
     if (draftId) {
       // 更新手札：标记已提炼，记录 draftId

@@ -336,6 +336,98 @@ function ShareModal({ entry, characters, onShare, onClose }) {
 }
 
 // ════════════════════════════════════════════
+// ── 提炼到档案 · 确认面板 ──
+// ════════════════════════════════════════════
+function NoteProfileDraftConfirmPanel({ entry, onConfirm, onClose }) {
+  const ti = typeInfo(entry.type);
+  const preview = (entry.text || "").length > 120
+    ? entry.text.slice(0, 120) + "…"
+    : entry.text;
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 200,
+      background: "rgba(74,69,96,.35)",
+      backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+      display: "flex", alignItems: "flex-end", justifyContent: "center",
+    }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{
+        width: "100%", maxWidth: 480,
+        background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+        borderRadius: "20px 20px 0 0",
+        overflow: "hidden",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.18)",
+      }}>
+        {/* 顶栏 */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 18px 12px",
+          borderBottom: "1px solid rgba(196,166,184,.2)",
+        }}>
+          <span style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>📋 帮我整理进档案</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
+        </div>
+
+        <div style={{ padding: "16px 18px 28px" }}>
+          {/* 手札信息 */}
+          <div style={{
+            padding: "12px 14px", borderRadius: 12, marginBottom: 16,
+            background: "rgba(255,255,255,.6)", border: "1px solid rgba(196,166,184,.2)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+              <span style={{
+                fontSize: 10, padding: "2px 8px", borderRadius: 10,
+                background: "rgba(120,100,160,.1)", color: "#7a6a8e",
+              }}>{ti.emoji} {ti.label}</span>
+              <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{formatNoteDate(entry)}</span>
+            </div>
+            {entry.title && (
+              <div style={{ fontSize: 13, fontWeight: 500, color: "#5a4a6a", marginBottom: 5, letterSpacing: 0.3 }}>
+                {entry.title}
+              </div>
+            )}
+            <div style={{ fontSize: 12, color: "var(--text-mid)", lineHeight: 1.75, whiteSpace: "pre-wrap" }}>
+              {preview}
+            </div>
+          </div>
+
+          {/* 说明文案 */}
+          <div style={{
+            padding: "10px 13px", borderRadius: 10, marginBottom: 18,
+            background: "rgba(106,122,174,.06)", border: "1px solid rgba(106,122,174,.15)",
+            fontSize: 12, color: "#5a5a7a", lineHeight: 1.8,
+          }}>
+            这会从这篇手札中整理关于你的信息，生成声声档案草稿。不会自动写入正式档案。
+          </div>
+
+          {/* 操作按钮 */}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={onClose}
+              style={{
+                flex: 1, padding: "11px", borderRadius: 12,
+                background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)",
+                color: "#7a6a8e", fontSize: 13, cursor: "pointer",
+                fontFamily: "var(--font-main)",
+              }}
+            >取消</button>
+            <button
+              onClick={onConfirm}
+              style={{
+                flex: 2, padding: "11px", borderRadius: 12,
+                background: "rgba(120,100,160,.85)", border: "none",
+                color: "white", fontSize: 13, cursor: "pointer",
+                fontFamily: "var(--font-main)", letterSpacing: 0.5,
+              }}
+            >生成草稿</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════
 // ── 主页面 ──
 // ════════════════════════════════════════════
 export default function DiaryPage({
@@ -356,6 +448,7 @@ export default function DiaryPage({
   const [filterType, setFilterType] = useState("all");
   const [generatingNoteId, setGeneratingNoteId] = useState(null); // 正在提炼的手札 id
   const [draftNotice, setDraftNotice] = useState(""); // 提炼结果通知
+  const [confirmEntry, setConfirmEntry] = useState(null); // 待确认提炼的手札
 
   // 从宝库「写进手札」跳转过来时，自动打开对应手札的编辑器
   useEffect(() => {
@@ -529,8 +622,7 @@ export default function DiaryPage({
                                 setDraftNotice("这篇手札内容还太少，暂时无法整理进档案。");
                                 return;
                               }
-                              setGeneratingNoteId(entry.id);
-                              onGenerateProfileDraft?.(entry).finally(() => setGeneratingNoteId(null));
+                              setConfirmEntry(entry);
                             }}
                             disabled={generatingNoteId !== null || profileDraftGenerating}
                             style={{
@@ -594,6 +686,20 @@ export default function DiaryPage({
             setShareTarget(null);
           }}
           onClose={() => setShareTarget(null)}
+        />
+      )}
+
+      {/* ── 提炼到档案 · 确认面板 ── */}
+      {confirmEntry && (
+        <NoteProfileDraftConfirmPanel
+          entry={confirmEntry}
+          onConfirm={() => {
+            const entry = confirmEntry;
+            setConfirmEntry(null);
+            setGeneratingNoteId(entry.id);
+            onGenerateProfileDraft?.(entry).finally(() => setGeneratingNoteId(null));
+          }}
+          onClose={() => setConfirmEntry(null)}
         />
       )}
     </>
