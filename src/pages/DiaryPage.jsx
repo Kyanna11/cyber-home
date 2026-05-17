@@ -73,9 +73,10 @@ function NoteEditor({ initial, onSave, onDraft, onCancel, onDelete }) {
     visibility:      initial?.visibility      || "private",
     sharedWith:      initial?.sharedWith      || [],
     shareIntent:     initial?.shareIntent     || "",
-    hasProfileDraft: initial?.hasProfileDraft || false,
-    hasMemoryDraft:  initial?.hasMemoryDraft  || false,
-    hasTimelineEvent:initial?.hasTimelineEvent|| false,
+    hasProfileDraft:  initial?.hasProfileDraft  || false,
+    profileDraftId:   initial?.profileDraftId   || null,
+    hasMemoryDraft:   initial?.hasMemoryDraft   || false,
+    hasTimelineEvent: initial?.hasTimelineEvent || false,
   });
 
   return (
@@ -344,10 +345,15 @@ export default function DiaryPage({
   onDeleteNote,
   characters,
   shareNoteToChat,
+  onGenerateProfileDraft,
+  onOpenMyProfile,
+  profileDraftGenerating,
 }) {
   const [editorEntry, setEditorEntry] = useState(null); // null=列表, {}=新建, entry=编辑已有
   const [shareTarget, setShareTarget] = useState(null); // 待分享的手札
   const [filterType, setFilterType] = useState("all");
+  const [generatingNoteId, setGeneratingNoteId] = useState(null); // 正在提炼的手札 id
+  const [draftNotice, setDraftNotice] = useState(""); // 提炼结果通知
 
   const openNew  = () => setEditorEntry({});
   const openEdit = (entry) => setEditorEntry(entry);
@@ -400,6 +406,28 @@ export default function DiaryPage({
             >{t.emoji} {t.label}</button>
           ))}
         </div>
+
+        {/* ── 提炼通知 ── */}
+        {draftNotice && (
+          <div style={{
+            margin: "8px 16px 0",
+            padding: "8px 12px",
+            borderRadius: 10,
+            fontSize: 12, lineHeight: 1.7,
+            background: draftNotice.startsWith("✓")
+              ? "rgba(100,160,100,.1)" : "rgba(196,166,184,.12)",
+            border: `1px solid ${draftNotice.startsWith("✓") ? "rgba(100,160,100,.2)" : "rgba(196,166,184,.2)"}`,
+            color: draftNotice.startsWith("✓") ? "#4a8a4a" : "#7a6a8e",
+            display: "flex", alignItems: "flex-start", gap: 8,
+            flexShrink: 0,
+          }}>
+            <span style={{ flex: 1 }}>{draftNotice}</span>
+            <button
+              onClick={() => setDraftNotice("")}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#9a8aac", padding: 0, lineHeight: 1, flexShrink: 0 }}
+            >✕</button>
+          </div>
+        )}
 
         {/* ── 列表 ── */}
         <div className="diary-content" style={{ flex: 1, overflowY: "auto" }}>
@@ -467,6 +495,48 @@ export default function DiaryPage({
                         }}>#{tag}</span>
                       ))}
                       <div style={{ flex: 1 }} />
+
+                      {/* 提炼到档案按钮（非草稿才显示）*/}
+                      {!entry.isDraft && (
+                        entry.hasProfileDraft ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onOpenMyProfile?.(); }}
+                            style={{
+                              background: "rgba(100,160,100,.08)",
+                              border: "1px solid rgba(100,160,100,.2)",
+                              borderRadius: 8, padding: "3px 10px", fontSize: 11,
+                              color: "#4a8a4a", cursor: "pointer",
+                              fontFamily: "var(--font-main)",
+                            }}
+                          >已提炼 · 查看草稿</button>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if ((entry.text || "").trim().length < 30) {
+                                setDraftNotice("这篇手札内容还太少，暂时无法整理进档案。");
+                                return;
+                              }
+                              setGeneratingNoteId(entry.id);
+                              onGenerateProfileDraft?.(entry).finally(() => setGeneratingNoteId(null));
+                            }}
+                            disabled={generatingNoteId !== null || profileDraftGenerating}
+                            style={{
+                              background: "rgba(106,122,174,.08)",
+                              border: "1px solid rgba(106,122,174,.2)",
+                              borderRadius: 8, padding: "3px 10px", fontSize: 11,
+                              color: generatingNoteId === entry.id ? "#9a8aac" : "#6a7aae",
+                              cursor: generatingNoteId !== null || profileDraftGenerating ? "default" : "pointer",
+                              fontFamily: "var(--font-main)",
+                              opacity: generatingNoteId !== null && generatingNoteId !== entry.id ? 0.5 : 1,
+                              transition: "all .2s",
+                            }}
+                          >
+                            {generatingNoteId === entry.id ? "整理中…" : "帮我整理进档案"}
+                          </button>
+                        )
+                      )}
+
                       {sharedWithNames.length > 0 ? (
                         <span style={{ fontSize: 11, color: "#9a8aac" }}>
                           📤 已分享给 {sharedWithNames.join("、")}

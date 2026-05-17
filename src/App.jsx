@@ -195,6 +195,7 @@ export default function App() {
   const [chatThreads, setChatThreads] = useState(() => loadThreads());
   const [activeThreadId, setActiveThreadId] = useState(null);
   const [showThreadSidebar, setShowThreadSidebar] = useState(false);
+  const [replyMode, setReplyMode] = useState("chat"); // "chat" | "long"
 
   // ─── 手札 ───
   const [noteEntries, setNoteEntries] = useState(() => normalizeNotes(loadDiary()));
@@ -287,12 +288,12 @@ export default function App() {
     }
     setIsSending(true);
     setIsTyping(true);
-    callLLM(allMsgs)
+    callLLM(allMsgs, replyMode)
       .then((raw) => {
         setIsTyping(false);
         const cleanedRaw = extractAndSaveMemories(raw, activeCharId, allMemories, setAllMemories);
-        const { thought, parts } = parseResponse(cleanedRaw);
-        showMessagesSequentially(thought, parts, timeStr);
+        const { thought, parts } = parseResponse(cleanedRaw, replyMode);
+        showMessagesSequentially(thought, parts, timeStr, replyMode);
         updateMemoryHeat(activeCharId, cleanedRaw);
       })
       .catch((err) => {
@@ -934,12 +935,12 @@ ${chunksText}
     }
     setIsSending(true);
     setIsTyping(true);
-    callLLM(allMsgs)
+    callLLM(allMsgs, replyMode)
       .then((raw) => {
         setIsTyping(false);
         const cleanedRaw = extractAndSaveMemories(raw, activeCharId, allMemories, setAllMemories);
-        const { thought, parts } = parseResponse(cleanedRaw);
-        showMessagesSequentially(thought, parts, timeStr);
+        const { thought, parts } = parseResponse(cleanedRaw, replyMode);
+        showMessagesSequentially(thought, parts, timeStr, replyMode);
         updateMemoryHeat(activeCharId, cleanedRaw);
       })
       .catch((err) => {
@@ -1228,6 +1229,26 @@ ${sourceText.slice(0, 3000)}
     } finally {
       setProfileDraftGenerating(false);
     }
+  };
+
+  // 从手札生成声声档案草稿
+  const generateProfileDraftFromNote = async (entry) => {
+    // 合并标题 + 正文作为来源
+    const sourceText = [entry.title, entry.text].filter(Boolean).join("\n\n");
+    const draftId = await generateProfileDraft({
+      sourceText,
+      sourceType:    "diary",
+      sourceIds:     [entry.id],
+      sourceCharId:  null,
+      sourceCharName: "",
+    });
+    if (draftId) {
+      // 更新手札：标记已提炼，记录 draftId
+      handleSaveNote({ ...entry, hasProfileDraft: true, profileDraftId: draftId });
+      // 跳转到我的档案查看草稿
+      setShowMyProfile(true);
+    }
+    return draftId;
   };
 
   // 从迁入草稿生成声声档案草稿（关于用户的部分）
@@ -1673,19 +1694,20 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
 
   // ═══ 聊天 ═══
 
-  const showMessagesSequentially = useCallback((thought, parts, timeStr) => {
+  const showMessagesSequentially = useCallback((thought, parts, timeStr, mode = "chat") => {
     typingTimers.current.forEach(clearTimeout);
     typingTimers.current = [];
     let delay = 0;
     parts.forEach((text, i) => {
       const t1 = setTimeout(() => setIsTyping(true), delay);
       typingTimers.current.push(t1);
-      delay += 600 + Math.random() * 300;
+      // 长文模式：typing 时间短，只有一条消息
+      delay += mode === "long" ? 400 : 600 + Math.random() * 300;
       const t2 = setTimeout(() => {
         setIsTyping(false);
         setMessages((prev) => [
           ...prev,
-          { role: "bot", thought: i === 0 ? thought : null, content: text, time: timeStr },
+          { role: "bot", thought: i === 0 ? thought : null, content: text, time: timeStr, replyMode: mode },
         ]);
         if (i === parts.length - 1) setIsSending(false);
       }, delay);
@@ -1694,7 +1716,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
     });
   }, []);
 
-  const callLLM = async (allMsgs) => {
+  const callLLM = async (allMsgs, mode = "chat") => {
     const ctx = allMsgs
       .filter((m) => m.role === "user" || m.role === "bot")
       .slice(-ctxConfig.maxMessages)
@@ -1714,12 +1736,16 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
   - 对话中产生的重要情绪感受 → [记忆:情绪]内容[/记忆]
   - 你从对话中获得的觉察和理解 → [记忆:觉察]内容[/记忆]
   每条记忆控制在30字以内，简洁准确。不是每次都需要写入，只在确实有值得记住的内容时才写。一次最多写入2条。`;
+    const modeInstruction = mode === "long"
+      ? "\n\n【回复格式】请不要使用 ||| 分隔消息。请把回复写成一篇完整内容，可以自然分段，不要拆成多条短消息。"
+      : "\n\n【回复格式】请像聊天软件一样自然回复。可以使用 ||| 分隔成多条短消息，每条保持简短自然。";
     const sysPrompt =
       timeInfo + "\n\n" +
       buildSystemPrompt(activeChar, charMemories) +
       (activeChar && worldViews[activeChar.id] ? `\n\n【你的世界观与核心认知】\n${worldViews[activeChar.id]}` : "") +
       (userCtx ? `\n\n${userCtx}` : "") +
-      memoryInstruction;
+      memoryInstruction +
+      modeInstruction;
     const modelToUse = getActiveModel(activeChar?.modelOverride);
     const resp = await fetch(config.apiUrl.replace(/\/+$/, "") + "/chat/completions", {
       method: "POST",
@@ -1745,6 +1771,8 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
       if (messages[i].role === "user") { lastUserIdx = i; break; }
     }
     if (lastUserIdx === -1 || isSending) return;
+    // 读取最后一条用户消息里保存的 replyMode，回退到当前状态
+    const msgReplyMode = messages[lastUserIdx]?.replyMode || replyMode;
     const msgsUpToUser = messages.slice(0, lastUserIdx + 1);
     setMessages(msgsUpToUser);
     const now = new Date();
@@ -1754,16 +1782,16 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
     if (!isConfigReady()) {
       setTimeout(() => {
         setIsTyping(false);
-        showMessagesSequentially("大脑还没接通……", ["我想回复你，但还没连上大脑哦", "帮我在设置里接通一下？"], timeStr);
+        showMessagesSequentially("大脑还没接通……", ["我想回复你，但还没连上大脑哦", "帮我在设置里接通一下？"], timeStr, msgReplyMode);
       }, 800);
       return;
     }
     try {
-      const raw = await callLLM(msgsUpToUser);
+      const raw = await callLLM(msgsUpToUser, msgReplyMode);
       setIsTyping(false);
       const cleanedRaw = extractAndSaveMemories(raw, activeChar?.id, allMemories, setAllMemories);
-      const { thought, parts } = parseResponse(cleanedRaw);
-      showMessagesSequentially(thought, parts, timeStr);
+      const { thought, parts } = parseResponse(cleanedRaw, msgReplyMode);
+      showMessagesSequentially(thought, parts, timeStr, msgReplyMode);
       updateMemoryHeat(activeChar?.id, cleanedRaw);
     } catch (err) {
       setIsTyping(false);
@@ -1791,11 +1819,11 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
       return;
     }
     try {
-      const raw = await callLLM(newMsgs);
+      const raw = await callLLM(newMsgs, replyMode);
       setIsTyping(false);
       const cleanedRaw = extractAndSaveMemories(raw, activeChar?.id, allMemories, setAllMemories);
-      const { thought, parts } = parseResponse(cleanedRaw);
-      showMessagesSequentially(thought, parts, timeStr);
+      const { thought, parts } = parseResponse(cleanedRaw, replyMode);
+      showMessagesSequentially(thought, parts, timeStr, replyMode);
       updateMemoryHeat(activeChar?.id, cleanedRaw);
     } catch (err) {
       setIsTyping(false);
@@ -1808,7 +1836,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
     if (!inputText.trim() || isSending) return;
     const now = new Date();
     const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
-    const userMsg = { role: "user", content: inputText, time: timeStr };
+    const userMsg = { role: "user", content: inputText, time: timeStr, replyMode };
     const newMsgs = [...messages, userMsg];
     setMessages(newMsgs);
     setInputText("");
@@ -1828,11 +1856,11 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
       return;
     }
     try {
-      const raw = await callLLM(newMsgs);
+      const raw = await callLLM(newMsgs, replyMode);
       setIsTyping(false);
       const cleanedRaw = extractAndSaveMemories(raw, activeChar?.id, allMemories, setAllMemories);
-      const { thought, parts } = parseResponse(cleanedRaw);
-      showMessagesSequentially(thought, parts, timeStr);
+      const { thought, parts } = parseResponse(cleanedRaw, replyMode);
+      showMessagesSequentially(thought, parts, timeStr, replyMode);
       updateMemoryHeat(activeChar?.id, cleanedRaw);
     } catch (err) {
       setIsTyping(false);
@@ -2157,6 +2185,9 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           onDeleteNote={handleDeleteNote}
           characters={characters}
           shareNoteToChat={shareNoteToChat}
+          onGenerateProfileDraft={generateProfileDraftFromNote}
+          onOpenMyProfile={() => setShowMyProfile(true)}
+          profileDraftGenerating={profileDraftGenerating}
         />
       )}
 
@@ -2219,6 +2250,8 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           noteEntries={noteEntries}
           shareNoteToChat={shareNoteToChat}
           sendNoteFromChat={sendNoteFromChat}
+          replyMode={replyMode}
+          setReplyMode={setReplyMode}
           messages={messages}
           isSending={isSending}
           isTyping={isTyping}
