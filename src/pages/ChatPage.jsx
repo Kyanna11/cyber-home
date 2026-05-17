@@ -130,10 +130,20 @@ function ChatToTimelinePanel({ messages, activeChar, activeCharId, onSave, onNav
           /* ── 表单 ── */
           <div style={{ flex: 1, overflow: "auto", padding: "14px 18px 32px" }}>
 
+            {/* 说明 */}
+            <div style={{
+              fontSize: 12, color: "#7a6a8e", lineHeight: 1.75,
+              marginBottom: 14,
+              padding: "9px 12px", borderRadius: 10,
+              background: "rgba(122,173,204,.07)", border: "1px solid rgba(122,173,204,.18)",
+            }}>
+              把这一小段聊天放进关系时间线，作为一个以后可以回看的瞬间。
+            </div>
+
             {/* 消息预览 */}
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>
-                将记录与 {charName} 的最近 {recentMsgs.length} 条消息
+                最近 {recentMsgs.length} 条消息
               </div>
               <div style={{
                 padding: "10px 12px", borderRadius: 10,
@@ -1247,8 +1257,8 @@ export default function ChatPage({
               { emoji: "🖼",  label: "添加图片",    active: false },
               { emoji: "📎",  label: "添加文件",    active: false },
               { emoji: "💗",  label: "帮我记住",    active: true,  action: () => setAttachView("memorize") },
-              { emoji: "🌙",  label: "记下这一刻",  active: true,  action: () => setAttachView("timeline") },
-              { emoji: "✨",  label: "整理一下我们", active: true,  action: () => setAttachView("settle") },
+              { emoji: "🌙",  label: "记下这一刻",  sub: "留作回忆",    active: true,  action: () => setAttachView("timeline") },
+              { emoji: "✨",  label: "整理一下我们", sub: "更新关系理解", active: true,  action: () => setAttachView("settle") },
             ].map((item) => (
               <button
                 key={item.label}
@@ -1276,6 +1286,7 @@ export default function ChatPage({
                   letterSpacing: 0.5, lineHeight: 1.2, textAlign: "center",
                 }}>
                   {item.label}
+                  {item.sub && <div style={{ fontSize: 9, color: "var(--text-faint)", marginTop: 1, opacity: 0.85 }}>{item.sub}</div>}
                   {!item.active && <div style={{ fontSize: 9, opacity: 0.7 }}>稍后开放</div>}
                 </div>
               </button>
@@ -1554,8 +1565,9 @@ export default function ChatPage({
                   padding: "10px 12px", borderRadius: 10,
                   background: "rgba(196,166,184,.08)", border: "1px solid rgba(196,166,184,.15)",
                 }}>
-                  这会从最近聊天中整理你们的关系变化，生成待确认的<strong>关系沉淀草稿</strong>。
+                  从最近聊天里整理你们的关系变化，生成待确认的<strong>关系沉淀草稿</strong>。
                   不会自动写入档案或 prompt，需要你逐节确认后才生效。
+                  可能影响唤醒摘要、不可遗忘事项等内容。
                 </div>
 
                 {/* 消息预览 */}
@@ -1566,7 +1578,7 @@ export default function ChatPage({
                 ) : (
                   <>
                     <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 0.5, marginBottom: 8 }}>
-                      将整理最近 {recentMsgs.length} 条与 {charName} 的聊天
+                      最近 {recentMsgs.length} 条与 {charName} 的聊天
                     </div>
                     <div>
                       {recentMsgs.map((msg, i) => (
