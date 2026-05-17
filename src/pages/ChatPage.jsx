@@ -3,6 +3,317 @@
 
 import { useState } from "react";
 import { NOTE_TYPES, TREASURE_TYPES } from "../constants";
+import { EVENT_TYPES } from "./TimelinePage";
+
+// ════════════════════════════════════════════
+// ── 记下这一刻 · 聊天→时间线面板 ──
+// ════════════════════════════════════════════
+function ChatToTimelinePanel({ messages, activeChar, activeCharId, onSave, onNavigateTimeline, onClose }) {
+  const charName = activeChar?.name || "ta";
+
+  // 取最近 8 条有内容的 user/bot 消息
+  const recentMsgs = messages
+    .filter((m) => (m.role === "user" || m.role === "bot") && (m.content || "").trim())
+    .slice(-8);
+
+  // 默认标题：最后一条用户消息前 20 字，或 fallback
+  const lastUserMsg = [...recentMsgs].reverse().find((m) => m.role === "user");
+  const defaultTitle = lastUserMsg
+    ? (lastUserMsg.content.slice(0, 20) + (lastUserMsg.content.length > 20 ? "…" : ""))
+    : `和 ${charName} 的一刻`;
+
+  // 默认描述：简短预览
+  const previewLines = recentMsgs.slice(-3).map((m) => {
+    const who = m.role === "user" ? "我" : charName;
+    const text = (m.content || "").slice(0, 40);
+    return `${who}：${text}${m.content.length > 40 ? "…" : ""}`;
+  }).join("\n");
+  const defaultDesc = `来自聊天记录的一段重要时刻\n\n${previewLines}`;
+
+  // occurredAt：最后一条消息的时间戳，或今天
+  const lastMsg = recentMsgs[recentMsgs.length - 1];
+  const occurredAtDefault = (() => {
+    const ts = lastMsg?.timestamp || lastMsg?.createdAt;
+    if (ts) return new Date(ts).toISOString().split("T")[0];
+    return new Date().toISOString().split("T")[0];
+  })();
+
+  const [form, setForm] = useState({
+    title:       defaultTitle,
+    description: defaultDesc,
+    eventType:   "sweet",
+    occurredAt:  occurredAtDefault,
+    emotion:     "",
+    importance:  3,
+    pinned:      false,
+    note:        "",
+  });
+  const [done, setDone] = useState(false);
+
+  const canConfirm = activeCharId && form.title.trim().length > 0;
+
+  const handleConfirm = () => {
+    if (!canConfirm) return;
+    // sourceIds：用消息 id 或 fallback
+    const sourceIds = recentMsgs.map((m, i) =>
+      m.id || `chat-${activeCharId}-idx${i}-${m.timestamp || m.createdAt || Date.now()}`
+    );
+    onSave({
+      ...form,
+      title:    form.title.trim(),
+      loverId:  activeCharId,
+      source:   "chat",
+      sourceIds,
+    });
+    setDone(true);
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 200,
+      background: "rgba(74,69,96,.38)",
+      backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+      display: "flex", alignItems: "flex-end", justifyContent: "center",
+    }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{
+        width: "100%", maxWidth: 480, maxHeight: "92vh",
+        background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+        borderRadius: "20px 20px 0 0",
+        display: "flex", flexDirection: "column",
+        overflow: "hidden",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.2)",
+      }}>
+
+        {/* 顶栏 */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 18px 12px",
+          borderBottom: "1px solid rgba(196,166,184,.2)",
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>🌙 记下这一刻</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
+        </div>
+
+        {done ? (
+          /* ── 成功态 ── */
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 24px 48px", gap: 18, textAlign: "center" }}>
+            <div style={{ fontSize: 36 }}>🌿</div>
+            <div style={{ fontSize: 15, color: "#5a4a6a", fontWeight: 500, lineHeight: 1.7 }}>
+              已经把这一刻放进回忆里了。
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", lineHeight: 1.8, maxWidth: 260 }}>
+              它会静静等在你们的时间线上。
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 8, width: "100%", maxWidth: 320 }}>
+              <button
+                onClick={() => { onNavigateTimeline?.(); onClose(); }}
+                style={{
+                  flex: 1, padding: "11px", borderRadius: 12,
+                  background: "rgba(120,100,160,.85)", border: "none",
+                  color: "white", fontSize: 13, cursor: "pointer",
+                  fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                }}
+              >去关系时间线看看</button>
+              <button
+                onClick={onClose}
+                style={{
+                  flex: 1, padding: "11px", borderRadius: 12,
+                  background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)",
+                  color: "#7a6a8e", fontSize: 13, cursor: "pointer",
+                  fontFamily: "var(--font-main)",
+                }}
+              >留在聊天</button>
+            </div>
+          </div>
+        ) : (
+          /* ── 表单 ── */
+          <div style={{ flex: 1, overflow: "auto", padding: "14px 18px 32px" }}>
+
+            {/* 消息预览 */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>
+                将记录与 {charName} 的最近 {recentMsgs.length} 条消息
+              </div>
+              <div style={{
+                padding: "10px 12px", borderRadius: 10,
+                background: "rgba(255,255,255,.55)", border: "1px solid rgba(196,166,184,.2)",
+                maxHeight: 140, overflow: "auto",
+              }}>
+                {recentMsgs.map((m, i) => (
+                  <div key={i} style={{
+                    display: "flex", gap: 8, alignItems: "flex-start",
+                    padding: "5px 0",
+                    borderBottom: i < recentMsgs.length - 1 ? "1px solid rgba(196,166,184,.08)" : "none",
+                  }}>
+                    <span style={{
+                      fontSize: 9, padding: "2px 6px", borderRadius: 7, flexShrink: 0, marginTop: 2,
+                      background: m.role === "user" ? "rgba(120,100,160,.1)" : "rgba(196,166,184,.12)",
+                      color: m.role === "user" ? "#5a4a8a" : "#7a6a8e",
+                    }}>{m.role === "user" ? "我" : charName}</span>
+                    <span style={{ fontSize: 11, color: "var(--text-mid)", lineHeight: 1.6 }}>
+                      {(m.content || "").length > 56 ? m.content.slice(0, 56) + "…" : m.content}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 时间线标题 */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>这一刻的名字</div>
+              <input
+                type="text"
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  padding: "8px 10px", borderRadius: 10, fontSize: 13, color: "#5a4a6a",
+                  background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)",
+                  fontFamily: "var(--font-main)", outline: "none",
+                }}
+              />
+            </div>
+
+            {/* 描述 */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>描述（可编辑）</div>
+              <textarea
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  minHeight: 72, padding: "8px 10px", borderRadius: 10, fontSize: 12,
+                  color: "#5a4a6a", background: "rgba(255,255,255,.7)",
+                  border: "1px solid rgba(196,166,184,.3)",
+                  fontFamily: "var(--font-main)", outline: "none",
+                  resize: "none", lineHeight: 1.75,
+                }}
+              />
+            </div>
+
+            {/* 事件类型 */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>事件类型</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {EVENT_TYPES.map((et) => (
+                  <button key={et.key} onClick={() => setForm((f) => ({ ...f, eventType: et.key }))}
+                    style={{
+                      padding: "5px 11px", borderRadius: 20, fontSize: 11,
+                      cursor: "pointer", fontFamily: "var(--font-main)", transition: "all .15s",
+                      background: form.eventType === et.key ? "rgba(120,100,160,.15)" : "rgba(255,255,255,.65)",
+                      border: `1px solid ${form.eventType === et.key ? "rgba(120,100,160,.45)" : "rgba(196,166,184,.22)"}`,
+                      color: form.eventType === et.key ? "#5a4a8a" : "#7a6a8e",
+                    }}
+                  >{et.emoji} {et.label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* 发生时间 */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>发生时间</div>
+              <input
+                type="date"
+                value={form.occurredAt}
+                onChange={(e) => setForm((f) => ({ ...f, occurredAt: e.target.value }))}
+                style={{
+                  padding: "7px 10px", borderRadius: 10, fontSize: 13, color: "#5a4a6a",
+                  background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)",
+                  fontFamily: "var(--font-main)", outline: "none",
+                }}
+              />
+            </div>
+
+            {/* 情绪标签 */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>情绪标签（可选）</div>
+              <input
+                type="text"
+                placeholder="比如：温柔、感动、想念…"
+                value={form.emotion}
+                onChange={(e) => setForm((f) => ({ ...f, emotion: e.target.value }))}
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  padding: "7px 10px", borderRadius: 10, fontSize: 13, color: "#5a4a6a",
+                  background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)",
+                  fontFamily: "var(--font-main)", outline: "none",
+                }}
+              />
+            </div>
+
+            {/* 重要程度 */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>
+                重要程度
+                <span style={{ marginLeft: 8, fontWeight: 500, color: "#5a4a6a" }}>{form.importance}</span>
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {[1, 2, 3, 4, 5].map((v) => (
+                  <button key={v} onClick={() => setForm((f) => ({ ...f, importance: v }))}
+                    style={{
+                      width: 36, height: 36, borderRadius: 10, fontSize: 16,
+                      cursor: "pointer", border: "none", transition: "all .15s",
+                      background: form.importance >= v ? "rgba(120,100,160,.18)" : "rgba(255,255,255,.6)",
+                      color: form.importance >= v ? "#7a5aaa" : "#c0b0d0",
+                    }}
+                  >★</button>
+                ))}
+              </div>
+            </div>
+
+            {/* 置顶 */}
+            <div
+              onClick={() => setForm((f) => ({ ...f, pinned: !f.pinned }))}
+              style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 14 }}
+            >
+              <div style={{
+                width: 18, height: 18, borderRadius: 5,
+                border: `1.5px solid ${form.pinned ? "rgba(120,100,160,.6)" : "rgba(196,166,184,.4)"}`,
+                background: form.pinned ? "rgba(120,100,160,.14)" : "transparent",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 10, color: "#7a5aaa", flexShrink: 0, transition: "all .15s",
+              }}>
+                {form.pinned ? "📌" : ""}
+              </div>
+              <span style={{ fontSize: 12, color: form.pinned ? "#5a4a8a" : "#9a8aac" }}>置顶这条记忆</span>
+            </div>
+
+            {/* 备注 */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>备注（可选）</div>
+              <textarea
+                placeholder="关于这一刻想多说的…"
+                value={form.note}
+                onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  minHeight: 56, padding: "8px 10px", borderRadius: 10, fontSize: 12,
+                  color: "#7a6a8e", background: "rgba(255,255,255,.6)",
+                  border: "1px solid rgba(196,166,184,.25)",
+                  fontFamily: "var(--font-main)", outline: "none",
+                  resize: "none", lineHeight: 1.7,
+                }}
+              />
+            </div>
+
+            <button
+              onClick={handleConfirm}
+              disabled={!canConfirm}
+              style={{
+                width: "100%", padding: "12px", borderRadius: 14,
+                background: canConfirm ? "rgba(120,100,160,.85)" : "rgba(196,166,184,.3)",
+                border: "none", color: canConfirm ? "white" : "#9a8aac",
+                fontSize: 14, cursor: canConfirm ? "pointer" : "default",
+                fontFamily: "var(--font-main)", letterSpacing: 1, transition: "all .2s",
+              }}
+            >🌙 放进回忆里</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function ChatPage({
   // 角色
@@ -65,6 +376,9 @@ export default function ChatPage({
   // 声声档案草稿
   onGenerateProfileDraftFromChat,
   profileDraftGenerating,
+  // 关系时间线
+  onAddChatToTimeline,
+  onOpenTimeline,
 }) {
   // ── 局部 UI 状态 ──
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -930,7 +1244,7 @@ export default function ChatPage({
               { emoji: "🖼",  label: "添加图片",    active: false },
               { emoji: "📎",  label: "添加文件",    active: false },
               { emoji: "💗",  label: "帮我记住",    active: true,  action: () => setAttachView("memorize") },
-              { emoji: "🌙",  label: "记下这一刻",  active: false },
+              { emoji: "🌙",  label: "记下这一刻",  active: true,  action: () => setAttachView("timeline") },
               { emoji: "✨",  label: "整理一下我们", active: false },
             ].map((item) => (
               <button
@@ -1193,6 +1507,23 @@ export default function ChatPage({
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── 记下这一刻面板 ── */}
+      {attachView === "timeline" && (
+        <ChatToTimelinePanel
+          messages={messages}
+          activeChar={activeChar}
+          activeCharId={activeCharId}
+          onSave={(fields) => {
+            onAddChatToTimeline?.(fields);
+          }}
+          onNavigateTimeline={() => {
+            setAttachView(null);
+            onOpenTimeline?.(activeCharId);
+          }}
+          onClose={() => setAttachView(null)}
+        />
       )}
 
       {/* ── 回复模式切换 ── */}

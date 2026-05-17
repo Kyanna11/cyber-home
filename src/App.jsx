@@ -2453,6 +2453,8 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           onSaveTreasure={handleSaveTreasure}
           onGenerateProfileDraftFromChat={generateProfileDraftFromChat}
           profileDraftGenerating={profileDraftGenerating}
+          onAddChatToTimeline={addTimelineEvent}
+          onOpenTimeline={openTimeline}
         />
       )}
     </>
