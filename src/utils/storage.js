@@ -17,6 +17,7 @@ import {
   PROFILE_DRAFTS_STORAGE_KEY,
   HOME_MEMORY_KEY,
   DEFAULT_HOME_MEMORY,
+  TREASURES_STORAGE_KEY,
 } from "../constants";
 
 // 通用读写
@@ -136,6 +137,14 @@ export function loadHomeMemory() {
 }
 export function saveHomeMemory(m) {
   saveJSON(HOME_MEMORY_KEY, m);
+}
+
+// 宝库
+export function loadTreasures() {
+  return loadJSON(TREASURES_STORAGE_KEY, []);
+}
+export function saveTreasures(t) {
+  saveJSON(TREASURES_STORAGE_KEY, t);
 }
 
 // 记忆注入配置

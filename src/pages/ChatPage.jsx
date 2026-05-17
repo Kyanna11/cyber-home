@@ -2,7 +2,7 @@
 // 顶栏、话题侧边栏、记忆控制台（更多菜单）、消息列表、输入栏
 
 import { useState } from "react";
-import { NOTE_TYPES } from "../constants";
+import { NOTE_TYPES, TREASURE_TYPES } from "../constants";
 
 export default function ChatPage({
   // 角色
@@ -47,6 +47,9 @@ export default function ChatPage({
   noteEntries,
   shareNoteToChat,
   sendNoteFromChat,
+  // 回复模式
+  replyMode,
+  setReplyMode,
   // 消息区
   messages,
   isSending,
@@ -57,11 +60,17 @@ export default function ChatPage({
   inputText,
   setInputText,
   handleSend,
+  // 宝库
+  onSaveTreasure,
 }) {
   // ── 局部 UI 状态 ──
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [attachView, setAttachView] = useState(null); // null | "grid" | "notes" | "intent"
   const [selectedNote, setSelectedNote] = useState(null);
+  // 宝库收藏
+  const [treasureTarget, setTreasureTarget] = useState(null); // 要收藏的 msg
+  const [treasureForm, setTreasureForm] = useState(null);     // 收藏表单
+  const [treasureSaved, setTreasureSaved] = useState(false);  // 短暂成功提示
 
   // 聊天页专用意图标签（用"你"，更自然）
   const CHAT_INTENTS = [
@@ -76,6 +85,18 @@ export default function ChatPage({
   // 根据 type value 取类型信息
   const getNoteType = (type) =>
     NOTE_TYPES.find((t) => t.value === type) || { label: "手札", emoji: "📓" };
+
+  // 打开宝库收藏弹窗
+  const openTreasure = (msg) => {
+    setTreasureTarget(msg);
+    setTreasureForm({
+      title:     msg.content.replace(/\s+/g, "").slice(0, 20),
+      type:      msg.replyMode === "long" ? "essay" : "quote",
+      tagsRaw:   "",
+      note:      "",
+      important: false,
+    });
+  };
 
   // 日期简短显示
   const fmtNoteDate = (entry) => {
@@ -742,8 +763,28 @@ export default function ChatPage({
             ) : (
               <div
                 className={`bubble ${msg.role === "bot" ? "bot" : "user"}`}
+                style={msg.replyMode === "long" ? {
+                  whiteSpace: "pre-wrap",
+                  maxWidth: "88%",
+                  lineHeight: 1.75,
+                } : undefined}
               >
-                {msg.content}
+                {msg.replyMode === "long" && msg.role === "bot" && (
+                  <span style={{
+                    display: "inline-block",
+                    fontSize: 9,
+                    color: "var(--text-faint)",
+                    background: "rgba(196,166,184,.18)",
+                    padding: "1px 6px",
+                    borderRadius: 8,
+                    marginBottom: 6,
+                    letterSpacing: 0.5,
+                    verticalAlign: "top",
+                  }}>长文</span>
+                )}
+                {msg.replyMode === "long" && msg.role === "bot"
+                  ? <div style={{ marginTop: msg.content.trim() ? 2 : 0 }}>{msg.content}</div>
+                  : msg.content}
               </div>
             )}
 
@@ -782,6 +823,25 @@ export default function ChatPage({
                   >
                     ✏️
                   </button>
+                )}
+
+                {/* bot 消息：珍藏这段 */}
+                {msg.role === "bot" && onSaveTreasure && (
+                  <button
+                    onClick={() => openTreasure(msg)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: 11,
+                      color: "var(--text-faint)",
+                      padding: "2px 4px",
+                      borderRadius: 4,
+                      transition: "color .2s",
+                      fontFamily: "var(--font-main)",
+                    }}
+                    title="珍藏这段"
+                  >💎</button>
                 )}
 
                 {/* 最后一条 bot 消息：重新生成 */}
@@ -1030,6 +1090,49 @@ export default function ChatPage({
         </div>
       )}
 
+      {/* ── 回复模式切换 ── */}
+      <div style={{
+        display: "flex", justifyContent: "center",
+        padding: "5px 16px 2px",
+        background: "rgba(248,244,252,.95)",
+        borderTop: attachView === "grid" ? "none" : "1px solid rgba(196,166,184,.1)",
+        flexShrink: 0,
+      }}>
+        <div style={{
+          display: "inline-flex",
+          background: "rgba(196,166,184,.15)",
+          borderRadius: 20,
+          padding: 2,
+        }}>
+          {[
+            { value: "chat", label: "一句一句说" },
+            { value: "long", label: "写成一篇" },
+          ].map((m) => (
+            <button
+              key={m.value}
+              onClick={() => setReplyMode(m.value)}
+              style={{
+                padding: "3px 13px",
+                borderRadius: 18,
+                border: "none",
+                background: replyMode === m.value ? "rgba(255,255,255,.92)" : "transparent",
+                color: replyMode === m.value ? "#5a4a6a" : "#9a8aac",
+                fontSize: 11,
+                fontWeight: replyMode === m.value ? 500 : 400,
+                cursor: "pointer",
+                fontFamily: "var(--font-main)",
+                letterSpacing: 0.5,
+                transition: "all .2s",
+                boxShadow: replyMode === m.value ? "0 1px 4px rgba(74,69,96,.1)" : "none",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* ── 输入栏 ── */}
       <div className="input-bar">
 
@@ -1093,6 +1196,146 @@ export default function ChatPage({
           </svg>
         </button>
       </div>
+
+      {/* ── 珍藏到宝库弹窗 ── */}
+      {treasureTarget && treasureForm && (
+        <div
+          className="config-overlay"
+          onClick={(e) => { if (e.target === e.currentTarget) { setTreasureTarget(null); setTreasureForm(null); } }}
+        >
+          <div className="config-panel" style={{ maxWidth: 380 }}>
+            <div className="config-header">
+              <div className="config-title"><span>💎</span>珍藏这段</div>
+              <button className="config-close" onClick={() => { setTreasureTarget(null); setTreasureForm(null); }}>✕</button>
+            </div>
+
+            {/* 内容预览 */}
+            <div style={{
+              padding: "10px 12px", borderRadius: 10, marginBottom: 14,
+              background: "rgba(248,244,252,.9)", border: "1px solid rgba(196,166,184,.2)",
+              fontSize: 12, color: "var(--text-mid)", lineHeight: 1.7,
+              maxHeight: 90, overflow: "hidden",
+              display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical",
+              whiteSpace: "pre-wrap",
+            }}>
+              {treasureTarget.content}
+            </div>
+
+            {/* 标题 */}
+            <div className="config-field" style={{ marginBottom: 12 }}>
+              <label className="config-label">标题</label>
+              <input
+                className="config-input"
+                type="text"
+                placeholder="留空则取正文前 20 字"
+                value={treasureForm.title}
+                onChange={(e) => setTreasureForm((f) => ({ ...f, title: e.target.value }))}
+              />
+            </div>
+
+            {/* 类型 */}
+            <div className="config-field" style={{ marginBottom: 12 }}>
+              <label className="config-label">类型</label>
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                {TREASURE_TYPES.map((t) => (
+                  <button
+                    key={t.value}
+                    onClick={() => setTreasureForm((f) => ({ ...f, type: t.value }))}
+                    style={{
+                      padding: "3px 10px", borderRadius: 16, fontSize: 11,
+                      cursor: "pointer", fontFamily: "var(--font-main)", transition: "all .12s",
+                      background: treasureForm.type === t.value ? "rgba(120,100,160,.85)" : "rgba(255,255,255,.7)",
+                      color: treasureForm.type === t.value ? "white" : "#7a6a8e",
+                      border: `1px solid ${treasureForm.type === t.value ? "transparent" : "rgba(196,166,184,.3)"}`,
+                    }}
+                  >{t.emoji} {t.label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* 标签 */}
+            <div className="config-field" style={{ marginBottom: 12 }}>
+              <label className="config-label">标签（可选）</label>
+              <input
+                className="config-input"
+                type="text"
+                placeholder="空格分隔"
+                value={treasureForm.tagsRaw}
+                onChange={(e) => setTreasureForm((f) => ({ ...f, tagsRaw: e.target.value }))}
+              />
+            </div>
+
+            {/* 备注 */}
+            <div className="config-field" style={{ marginBottom: 12 }}>
+              <label className="config-label">备注（可选）</label>
+              <input
+                className="config-input"
+                type="text"
+                placeholder="记下当时的感受…"
+                value={treasureForm.note}
+                onChange={(e) => setTreasureForm((f) => ({ ...f, note: e.target.value }))}
+              />
+            </div>
+
+            {/* 重要标记 */}
+            <div
+              onClick={() => setTreasureForm((f) => ({ ...f, important: !f.important }))}
+              style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 18 }}
+            >
+              <div style={{
+                width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                border: `1.5px solid ${treasureForm.important ? "#c08030" : "rgba(196,166,184,.4)"}`,
+                background: treasureForm.important ? "rgba(200,140,60,.15)" : "transparent",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 10, color: "#c08030", transition: "all .15s",
+              }}>
+                {treasureForm.important ? "★" : ""}
+              </div>
+              <span style={{ fontSize: 12, color: treasureForm.important ? "#8a6020" : "#9a8aac" }}>
+                标记为重要宝物
+              </span>
+            </div>
+
+            {/* 确认 */}
+            {treasureSaved ? (
+              <div style={{ textAlign: "center", padding: "10px 0", fontSize: 13, color: "#4a8a4a" }}>✓ 已存进宝库</div>
+            ) : (
+              <button
+                className="btn-primary"
+                style={{ width: "100%" }}
+                onClick={() => {
+                  const now = Date.now();
+                  const title = treasureForm.title.trim() || treasureTarget.content.replace(/\s+/g, "").slice(0, 20);
+                  onSaveTreasure({
+                    id: `treasure-${now}-${Math.random().toString(36).slice(2, 6)}`,
+                    title,
+                    content:   treasureTarget.content,   // 完整原文，不截断
+                    type:      treasureForm.type,
+                    tags:      treasureForm.tagsRaw.split(/[,，\s]+/).map((s) => s.trim()).filter(Boolean),
+                    note:      treasureForm.note.trim(),
+                    important: treasureForm.important,
+                    sourceCharId:    activeCharId || null,
+                    sourceCharName:  activeChar?.name || "",
+                    sourceThreadId:  activeThreadId || null,
+                    sourceMessageId: null,
+                    createdAt: now,
+                    updatedAt: now,
+                    canUseForMemory: false,
+                  });
+                  setTreasureSaved(true);
+                  setTimeout(() => {
+                    setTreasureTarget(null);
+                    setTreasureForm(null);
+                    setTreasureSaved(false);
+                  }, 900);
+                }}
+              >
+                存进宝库
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

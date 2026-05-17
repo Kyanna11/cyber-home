@@ -79,6 +79,23 @@ export default function BedroomPage({
           }}
         />
 
+        {/* 宝库热区（书桌左侧） */}
+        <div
+          onClick={() => navigateTo("treasure")}
+          onMouseEnter={() => setHoveredItem("treasure")}
+          onMouseLeave={() => setHoveredItem(null)}
+          style={{
+            position: "absolute",
+            left: "6%",
+            top: "55%",
+            width: "26%",
+            height: "15%",
+            cursor: "pointer",
+            zIndex: 3,
+            borderRadius: 8,
+          }}
+        />
+
         {/* 门热区 */}
         <div
           onClick={() => setShowCharSelect(true)}
@@ -119,6 +136,30 @@ export default function BedroomPage({
             }}
           >
             📓 我的手札
+          </div>
+        )}
+        {hoveredItem === "treasure" && (
+          <div
+            style={{
+              position: "absolute",
+              left: "8%",
+              top: "50%",
+              background: "rgba(255,255,255,.85)",
+              backdropFilter: "blur(8px)",
+              padding: "8px 14px",
+              borderRadius: 10,
+              fontSize: 12,
+              fontWeight: 400,
+              color: "var(--text-deep)",
+              letterSpacing: 1.5,
+              boxShadow: "0 4px 16px rgba(74,69,96,.12)",
+              border: "1px solid rgba(232,196,196,.2)",
+              zIndex: 5,
+              pointerEvents: "none",
+              animation: "tooltipIn .25s ease-out",
+            }}
+          >
+            💎 我的宝库
           </div>
         )}
         {hoveredItem === "door" && (

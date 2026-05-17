@@ -21,6 +21,7 @@ import {
   loadSettlementDrafts, saveSettlementDrafts,
   loadProfileDrafts, saveProfileDrafts,
   loadHomeMemory, saveHomeMemory,
+  loadTreasures, saveTreasures,
 } from "./utils/storage";
 import { genId, estimateTokens } from "./utils/helpers";
 import { splitRawTextToChunks } from "./utils/chunker";
@@ -48,6 +49,7 @@ import WakePreviewPage from "./pages/WakePreviewPage";
 import TimelinePage from "./pages/TimelinePage";
 import ProfileHomePage from "./pages/ProfileHomePage";
 import ConfigPage from "./pages/ConfigPage";
+import TreasurePage from "./pages/TreasurePage";
 
 // MSG_DELIMITER is used internally by parseResponse in utils/prompt.js
 
@@ -199,6 +201,9 @@ export default function App() {
 
   // ─── 手札 ───
   const [noteEntries, setNoteEntries] = useState(() => normalizeNotes(loadDiary()));
+
+  // ─── 宝库 ───
+  const [treasures, setTreasures] = useState(() => loadTreasures());
 
   // ─── API 配置 ───
   const [config, setConfig] = useState(loadConfig);
@@ -872,6 +877,25 @@ ${chunksText}
     const updated = noteEntries.filter((e) => e.id !== id);
     setNoteEntries(updated);
     saveDiary(updated);
+  };
+
+  // ── 宝库 CRUD ──
+  const handleSaveTreasure = (item) => {
+    const now = Date.now();
+    let updated;
+    if (item.id && treasures.some((t) => t.id === item.id)) {
+      updated = treasures.map((t) => t.id === item.id ? { ...item, updatedAt: now } : t);
+    } else {
+      updated = [{ ...item, createdAt: item.createdAt || now, updatedAt: now }, ...treasures];
+    }
+    setTreasures(updated);
+    saveTreasures(updated);
+  };
+
+  const handleDeleteTreasure = (id) => {
+    const updated = treasures.filter((t) => t.id !== id);
+    setTreasures(updated);
+    saveTreasures(updated);
   };
 
   // 分享手札给入住者：标记 entry 为已分享，然后跳转到 chat（从手札页入口用）
@@ -2191,6 +2215,17 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
         />
       )}
 
+      {/* 宝库 */}
+      {page === "treasure" && (
+        <TreasurePage
+          navigateTo={navigateTo}
+          treasures={treasures}
+          onSaveTreasure={handleSaveTreasure}
+          onDeleteTreasure={handleDeleteTreasure}
+          characters={characters}
+        />
+      )}
+
       {/* 大脑连接（API 设置页）*/}
       {page === "config" && (
         <ConfigPage
@@ -2260,6 +2295,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           inputText={inputText}
           setInputText={setInputText}
           handleSend={handleSend}
+          onSaveTreasure={handleSaveTreasure}
         />
       )}
     </>

@@ -159,6 +159,21 @@ export const SHARE_INTENTS = [
   { value: "reply",    label: "想让他回复我" },
 ];
 
+// 宝库存储键
+export const TREASURES_STORAGE_KEY = "cyber-home-treasures";
+
+// 宝库条目类型
+export const TREASURE_TYPES = [
+  { value: "quote",       label: "原话",   emoji: "💬" },
+  { value: "essay",       label: "小作文", emoji: "📝" },
+  { value: "story",       label: "故事",   emoji: "📖" },
+  { value: "letter",      label: "信",     emoji: "💌" },
+  { value: "comfort",     label: "安慰",   emoji: "🤗" },
+  { value: "setting",     label: "设定",   emoji: "🌌" },
+  { value: "inspiration", label: "灵感",   emoji: "✨" },
+  { value: "other",       label: "其他",   emoji: "🎁" },
+];
+
 // 记忆类型定义
 export const MEMORY_TYPES = [
   { key: "fact", label: "事实", emoji: "📋", color: "#9b95b5", desc: "发生了什么" },
