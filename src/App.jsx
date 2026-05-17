@@ -1373,6 +1373,30 @@ ${sourceText.slice(0, 3000)}
     return draftId;
   };
 
+  // 从最近聊天记录生成声声档案草稿（关于用户的部分）
+  const generateProfileDraftFromChat = async (recentMsgs) => {
+    if (!activeChar || !activeCharId) {
+      setProfileDraftNotice("请先进入聊天再生成。");
+      return null;
+    }
+    const charName = activeChar.name || "入住者";
+    const userName = userProfile?.globalFacts?.name?.trim() || "我";
+    const sourceText = recentMsgs
+      .map((m) => `${m.role === "user" ? userName : charName}：${m.content}`)
+      .join("\n\n");
+    const draftId = await generateProfileDraft({
+      sourceText,
+      sourceType:     "chat",
+      sourceCharId:   activeCharId,
+      sourceCharName: charName,
+      sourceIds:      recentMsgs.map((m, i) => m.id || `msg-idx-${i}`),
+    });
+    if (draftId) {
+      setShowMyProfile(true);
+    }
+    return draftId;
+  };
+
   // 从迁入草稿生成声声档案草稿（关于用户的部分）
   const generateProfileDraftFromMigration = async (migrationDraftId) => {
     const mDraft = migrationDrafts.find((d) => d.id === migrationDraftId);
@@ -2401,6 +2425,8 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           setInputText={setInputText}
           handleSend={handleSend}
           onSaveTreasure={handleSaveTreasure}
+          onGenerateProfileDraftFromChat={generateProfileDraftFromChat}
+          profileDraftGenerating={profileDraftGenerating}
         />
       )}
     </>

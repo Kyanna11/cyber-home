@@ -62,6 +62,9 @@ export default function ChatPage({
   handleSend,
   // 宝库
   onSaveTreasure,
+  // 声声档案草稿
+  onGenerateProfileDraftFromChat,
+  profileDraftGenerating,
 }) {
   // ── 局部 UI 状态 ──
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -926,7 +929,7 @@ export default function ChatPage({
               { emoji: "📓", label: "分享手札",    active: true,  action: () => setAttachView("notes") },
               { emoji: "🖼",  label: "添加图片",    active: false },
               { emoji: "📎",  label: "添加文件",    active: false },
-              { emoji: "💗",  label: "帮我记住",    active: false },
+              { emoji: "💗",  label: "帮我记住",    active: true,  action: () => setAttachView("memorize") },
               { emoji: "🌙",  label: "记下这一刻",  active: false },
               { emoji: "✨",  label: "整理一下我们", active: false },
             ].map((item) => (
@@ -1086,6 +1089,108 @@ export default function ChatPage({
                 )}
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── 帮我记住确认面板 ── */}
+      {attachView === "memorize" && (
+        <div
+          className="config-overlay"
+          onClick={(e) => { if (e.target === e.currentTarget) setAttachView("grid"); }}
+        >
+          <div className="config-panel" style={{ maxHeight: "80vh", display: "flex", flexDirection: "column" }}>
+            <div className="config-header">
+              <div className="config-title"><span>💗</span>帮我记住</div>
+              <button className="config-close" onClick={() => setAttachView(null)}>✕</button>
+            </div>
+
+            {/* 说明 + 消息预览 */}
+            <div style={{ flex: 1, overflow: "auto", padding: "4px 16px 8px" }}>
+              <div style={{
+                fontSize: 12, color: "#7a6a8e", lineHeight: 1.75,
+                margin: "8px 0 14px",
+                padding: "10px 12px", borderRadius: 10,
+                background: "rgba(196,166,184,.08)", border: "1px solid rgba(196,166,184,.15)",
+              }}>
+                这会整理最近聊天中<strong>关于你的信息</strong>，生成声声档案草稿。
+                草稿不会自动写入正式档案，生成后请自行核对、选择性采纳。
+              </div>
+
+              {/* 消息列表 */}
+              {(() => {
+                const recentMsgs = messages
+                  .filter((m) => m.role === "user" || m.role === "bot")
+                  .slice(-10);
+                return (
+                  <>
+                    <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 0.5, marginBottom: 8 }}>
+                      将从以下 {recentMsgs.length} 条消息中提炼
+                    </div>
+                    <div>
+                      {recentMsgs.map((msg, i) => (
+                        <div key={i} style={{
+                          display: "flex", gap: 8, alignItems: "flex-start",
+                          padding: "7px 0",
+                          borderBottom: "1px solid rgba(196,166,184,.08)",
+                        }}>
+                          <span style={{
+                            fontSize: 10, padding: "2px 7px", borderRadius: 8,
+                            flexShrink: 0, marginTop: 2,
+                            background: msg.role === "user" ? "rgba(120,100,160,.1)" : "rgba(196,166,184,.12)",
+                            color: msg.role === "user" ? "#5a4a8a" : "#7a6a8e",
+                          }}>
+                            {msg.role === "user" ? "你" : (activeChar?.name || "ta")}
+                          </span>
+                          <span style={{ fontSize: 12, color: "var(--text-mid)", lineHeight: 1.65 }}>
+                            {msg.content.length > 64
+                              ? msg.content.slice(0, 64) + "…"
+                              : msg.content}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* 按钮区 */}
+            <div style={{
+              padding: "12px 16px 16px", flexShrink: 0,
+              display: "flex", gap: 10,
+              borderTop: "1px solid rgba(196,166,184,.12)",
+            }}>
+              <button
+                onClick={() => setAttachView("grid")}
+                style={{
+                  flex: 1, padding: "10px", borderRadius: 12,
+                  background: "transparent", border: "1px solid rgba(196,166,184,.3)",
+                  fontSize: 13, color: "#9a8aac", cursor: "pointer",
+                  fontFamily: "var(--font-main)",
+                }}
+              >取消</button>
+              <button
+                onClick={() => {
+                  const recentMsgs = messages
+                    .filter((m) => m.role === "user" || m.role === "bot")
+                    .slice(-10);
+                  onGenerateProfileDraftFromChat?.(recentMsgs).finally(() => setAttachView(null));
+                }}
+                disabled={profileDraftGenerating}
+                style={{
+                  flex: 2, padding: "10px", borderRadius: 12,
+                  background: profileDraftGenerating ? "rgba(196,166,184,.3)" : "rgba(120,100,160,.85)",
+                  border: "none",
+                  color: profileDraftGenerating ? "#9a8aac" : "white",
+                  fontSize: 13,
+                  cursor: profileDraftGenerating ? "default" : "pointer",
+                  fontFamily: "var(--font-main)", letterSpacing: 0.5, transition: "all .2s",
+                }}
+              >
+                {profileDraftGenerating ? "生成中…" : "生成草稿"}
+              </button>
+            </div>
           </div>
         </div>
       )}
