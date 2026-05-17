@@ -6,16 +6,58 @@ import { MEMORY_TYPES } from "../constants";
 import { calculateHeat, getHeatLevel } from "../utils/memory";
 
 // ── 阶段沉淀草稿卡片 ──
+// key      = 传给 applySettlementSection 的 section 标识符（需与 App.jsx 一致）
+// dataKey  = draft 对象上实际存储数据的字段名
 const SETTLEMENT_SECTIONS = [
-  { key: "relationshipChange", label: "关系变化记录", emoji: "📖", hint: "追加到「关系基础」" },
-  { key: "wakeSummaryUpdate",  label: "唤醒摘要建议", emoji: "🌙", hint: "替换「唤醒摘要」" },
-  { key: "newRules",           label: "不可遗忘追加", emoji: "🔒", hint: "追加到「不可改变的规则」" },
-  { key: "suggestedMemories",  label: "记忆锚点建议", emoji: "📌", hint: "写入固定锚点记忆" },
+  {
+    key: "relationship", dataKey: "relationshipChange",
+    label: "关系变化记录", emoji: "📖",
+    hint: "追加到入住档案 · 关系基础",
+    target: "入住档案 · 关系基础", navTarget: "charEdit",
+  },
+  {
+    key: "wakeSummary",  dataKey: "wakeSummaryUpdate",
+    label: "唤醒摘要建议", emoji: "🌙",
+    hint: "替换入住档案 · 唤醒摘要",
+    target: "入住档案 · 唤醒摘要", navTarget: "charEdit",
+  },
+  {
+    key: "rules",        dataKey: "newRules",
+    label: "不可遗忘追加", emoji: "🔒",
+    hint: "追加到入住档案 · 不可遗忘事项",
+    target: "入住档案 · 不可遗忘", navTarget: "charEdit",
+  },
+  {
+    key: "memories",     dataKey: "suggestedMemories",
+    label: "记忆锚点建议", emoji: "📌",
+    hint: "写入记忆宫殿 · 固定锚点",
+    target: "记忆宫殿 · 固定锚点", navTarget: "memFact",
+  },
 ];
 
-function SettlementDraftCard({ draft, onApplySection, onDismiss, onDelete }) {
+function SettlementDraftCard({ draft, onApplySection, onDismiss, onDelete, onNavigate }) {
   const applied = draft.appliedSections || [];
   const date = new Date(draft.createdAt).toLocaleDateString("zh-CN");
+
+  // 把 suggestedMemories 数组项（{type,text} 对象）转成可读字符串
+  const toDisplayText = (raw) => {
+    if (!raw) return "";
+    if (Array.isArray(raw)) {
+      return raw.map((item) => {
+        if (typeof item === "object" && item !== null) {
+          const label = item.type ? `【${item.type}】` : "";
+          return label + (item.text || item.content || item.title || JSON.stringify(item));
+        }
+        return String(item);
+      }).join("\n");
+    }
+    return String(raw);
+  };
+
+  const totalSections = SETTLEMENT_SECTIONS.filter(({ dataKey }) => {
+    const c = draft[dataKey];
+    return c && (Array.isArray(c) ? c.length > 0 : String(c).trim());
+  }).length;
 
   return (
     <div style={{
@@ -39,20 +81,29 @@ function SettlementDraftCard({ draft, onApplySection, onDismiss, onDelete }) {
         </div>
         {applied.length > 0 && (
           <span style={{ fontSize: 10, color: "#6a9a6a", background: "rgba(100,160,100,.1)", padding: "2px 8px", borderRadius: 8 }}>
-            已采纳 {applied.length} / {SETTLEMENT_SECTIONS.filter(s => {
-              const c = draft[s.key];
-              return c && (Array.isArray(c) ? c.length > 0 : String(c).trim());
-            }).length} 节
+            已采纳 {applied.length} / {totalSections} 节
           </span>
         )}
       </div>
 
+      {/* 说明提示 */}
+      <div style={{
+        margin: "10px 14px 0",
+        padding: "8px 12px",
+        borderRadius: 8,
+        background: "rgba(106,122,174,.06)",
+        border: "1px solid rgba(106,122,174,.12)",
+        fontSize: 11, color: "#7a7aaa", lineHeight: 1.7,
+      }}>
+        采纳后的内容会<strong>追加写入</strong>对应位置，不会覆盖你手写的内容。若需要修改，可前往写入位置编辑。
+      </div>
+
       {/* 各节内容 */}
       <div style={{ padding: "10px 14px 6px" }}>
-        {SETTLEMENT_SECTIONS.map(({ key, label, emoji, hint }) => {
-          const raw = draft[key];  // 直接从 draft 顶层读取，没有 content 包裹层
+        {SETTLEMENT_SECTIONS.map(({ key, dataKey, label, emoji, hint, target, navTarget }) => {
+          const raw = draft[dataKey];
           if (!raw || (Array.isArray(raw) ? raw.length === 0 : !String(raw).trim())) return null;
-          const displayText = Array.isArray(raw) ? raw.join("\n") : String(raw);
+          const displayText = toDisplayText(raw);
           const isApplied = applied.includes(key);
 
           return (
@@ -63,38 +114,61 @@ function SettlementDraftCard({ draft, onApplySection, onDismiss, onDelete }) {
               border: `1px solid ${isApplied ? "rgba(100,160,100,.2)" : "rgba(196,166,184,.2)"}`,
               transition: "all .2s",
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span>{emoji}</span>
-                  <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-mid)" }}>{label}</span>
-                  <span style={{ fontSize: 10, color: "var(--text-faint)" }}>({hint})</span>
+              {/* 节标题行 */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 5 }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <span>{emoji}</span>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-mid)" }}>{label}</span>
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2, paddingLeft: 20 }}>
+                    写入位置：{target}
+                  </div>
                 </div>
                 {isApplied ? (
-                  <span style={{ fontSize: 11, color: "#6a9a6a", display: "flex", alignItems: "center", gap: 3 }}>
-                    ✓ 已采纳
-                  </span>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+                    <span style={{ fontSize: 11, color: "#6a9a6a" }}>✓ 已采纳</span>
+                    <button
+                      onClick={() => onNavigate?.(navTarget)}
+                      style={{
+                        fontSize: 10, padding: "2px 9px", borderRadius: 7, cursor: "pointer",
+                        background: "rgba(100,160,100,.1)", border: "1px solid rgba(100,160,100,.25)",
+                        color: "#4a8a4a", fontFamily: "var(--font-main)",
+                      }}
+                    >去查看</button>
+                  </div>
                 ) : (
                   <button
                     onClick={() => onApplySection(key)}
                     style={{
                       fontSize: 11, padding: "3px 12px", borderRadius: 8, cursor: "pointer",
                       background: "rgba(106,122,174,.15)", border: "1px solid rgba(106,122,174,.3)",
-                      color: "#6a7aae", fontFamily: "var(--font-main)",
+                      color: "#6a7aae", fontFamily: "var(--font-main)", flexShrink: 0,
                     }}
-                  >
-                    采纳
-                  </button>
+                  >采纳</button>
                 )}
               </div>
+
+              {/* 内容 */}
               <div style={{
-                fontSize: 12, color: isApplied ? "#888" : "var(--text-main)",
+                fontSize: 12, color: isApplied ? "#999" : "var(--text-main)",
                 lineHeight: 1.75, whiteSpace: "pre-wrap",
                 maxHeight: 160, overflowY: "auto",
-                textDecoration: isApplied ? "none" : "none",
                 opacity: isApplied ? 0.6 : 1,
               }}>
                 {displayText}
               </div>
+
+              {/* 采纳成功提示 */}
+              {isApplied && (
+                <div style={{
+                  marginTop: 6, fontSize: 10, color: "#6a9a6a",
+                  padding: "4px 8px", borderRadius: 6,
+                  background: "rgba(100,160,100,.07)",
+                }}>
+                  已写入「{target}」，可前往查看或编辑。
+                </div>
+              )}
             </div>
           );
         })}
@@ -112,9 +186,7 @@ function SettlementDraftCard({ draft, onApplySection, onDismiss, onDelete }) {
             background: "transparent", border: "1px solid rgba(196,166,184,.3)",
             color: "var(--text-faint)", fontFamily: "var(--font-main)",
           }}
-        >
-          忽略草稿
-        </button>
+        >暂不采纳</button>
         <button
           onClick={onDelete}
           style={{
@@ -122,9 +194,7 @@ function SettlementDraftCard({ draft, onApplySection, onDismiss, onDelete }) {
             background: "transparent", border: "1px solid rgba(200,120,120,.2)",
             color: "#c07070", fontFamily: "var(--font-main)",
           }}
-        >
-          删除
-        </button>
+        >删除</button>
       </div>
     </div>
   );
@@ -513,15 +583,25 @@ export default function MemoryPalacePage({
             {/* ── 待确认沉淀草稿 ── */}
             {(settlementDrafts || [])
               .filter((d) => d.loverId === memCharId && d.status === "pending")
-              .map((draft) => (
-                <SettlementDraftCard
-                  key={draft.id}
-                  draft={draft}
-                  onApplySection={(section) => applySettlementSection && applySettlementSection(draft.id, section, memCharId)}
-                  onDismiss={() => dismissSettlementDraft && dismissSettlementDraft(draft.id)}
-                  onDelete={() => deleteSettlementDraft && deleteSettlementDraft(draft.id)}
-                />
-              ))
+              .map((draft) => {
+                const char = (characters || []).find((c) => c.id === memCharId);
+                return (
+                  <SettlementDraftCard
+                    key={draft.id}
+                    draft={draft}
+                    onApplySection={(section) => applySettlementSection && applySettlementSection(draft.id, section, memCharId)}
+                    onDismiss={() => dismissSettlementDraft && dismissSettlementDraft(draft.id)}
+                    onDelete={() => deleteSettlementDraft && deleteSettlementDraft(draft.id)}
+                    onNavigate={(navTarget) => {
+                      if (navTarget === "memFact") {
+                        setMemTab("fact");
+                      } else if (navTarget === "charEdit" && char) {
+                        setEditingChar && setEditingChar(char);
+                      }
+                    }}
+                  />
+                );
+              })
             }
 
             {/* ── 已处理沉淀记录 ── */}
