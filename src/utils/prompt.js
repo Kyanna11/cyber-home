@@ -72,7 +72,8 @@ export function parsePersonalitySuggestions(text) {
 }
 
 // 解析 AI 回复：提取心声，按分隔符拆成多条消息
-export function parseResponse(raw) {
+// mode: "chat"（默认，按 ||| 拆条）| "long"（长文模式，不拆，整段返回）
+export function parseResponse(raw, mode = "chat") {
   const thoughts = [];
   let cleaned = raw.replace(/\[心声\](.*?)\[\/心声\]/gs, (_, t) => {
     thoughts.push(t.trim());
@@ -85,6 +86,12 @@ export function parseResponse(raw) {
   }
   const finalCleaned = cleaned.trim();
   const thought = thoughts.length > 0 ? thoughts.join("\n") : null;
+
+  // 长文模式：整段不拆，直接作为单条消息返回
+  if (mode === "long") {
+    return { thought, parts: [finalCleaned || "…"] };
+  }
+
   const parts = finalCleaned
     .split(MSG_DELIMITER)
     .map((s) => s.trim())

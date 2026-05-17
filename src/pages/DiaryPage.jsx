@@ -1,7 +1,7 @@
 // ─── 手札页 ───
 // 我的手札：日记、心事、灵感、梦、项目、给他的信、笔记
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Avatar from "../components/Avatar";
 import BackButton from "../components/BackButton";
 
@@ -348,12 +348,24 @@ export default function DiaryPage({
   onGenerateProfileDraft,
   onOpenMyProfile,
   profileDraftGenerating,
+  pendingOpenNoteId,
+  onClearPendingOpenNoteId,
 }) {
   const [editorEntry, setEditorEntry] = useState(null); // null=列表, {}=新建, entry=编辑已有
   const [shareTarget, setShareTarget] = useState(null); // 待分享的手札
   const [filterType, setFilterType] = useState("all");
   const [generatingNoteId, setGeneratingNoteId] = useState(null); // 正在提炼的手札 id
   const [draftNotice, setDraftNotice] = useState(""); // 提炼结果通知
+
+  // 从宝库「写进手札」跳转过来时，自动打开对应手札的编辑器
+  useEffect(() => {
+    if (!pendingOpenNoteId) return;
+    const target = noteEntries.find((e) => e.id === pendingOpenNoteId);
+    if (target) {
+      setEditorEntry(target);
+      onClearPendingOpenNoteId?.();
+    }
+  }, [pendingOpenNoteId, noteEntries]);
 
   const openNew  = () => setEditorEntry({});
   const openEdit = (entry) => setEditorEntry(entry);

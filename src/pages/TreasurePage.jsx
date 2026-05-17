@@ -196,15 +196,61 @@ function TreasureEditor({ initial, onSave, onClose }) {
   );
 }
 
-// ── 宝物详情 / 编辑面板 ──
-function TreasureDetail({ treasure, onSave, onDelete, onClose }) {
-  const [editing, setEditing] = useState(false);
+// ── 操作按钮样式辅助 ──
+function ActionBtn({ emoji, label, sub, onClick, disabled, color }) {
+  const base = {
+    flex: 1, minWidth: 0, padding: "10px 8px", borderRadius: 12, cursor: disabled ? "default" : "pointer",
+    fontFamily: "var(--font-main)", textAlign: "center", transition: "all .15s",
+    border: `1px solid ${disabled ? "rgba(196,166,184,.15)" : color ? `${color}30` : "rgba(196,166,184,.25)"}`,
+    background: disabled ? "rgba(255,255,255,.3)" : color ? `${color}0a` : "rgba(255,255,255,.7)",
+    opacity: disabled ? 0.45 : 1,
+  };
+  return (
+    <button onClick={disabled ? undefined : onClick} style={base}>
+      <div style={{ fontSize: 18, marginBottom: 3 }}>{emoji}</div>
+      <div style={{ fontSize: 11, color: disabled ? "var(--text-faint)" : (color || "#5a4a6a"), fontWeight: 500, lineHeight: 1.3 }}>{label}</div>
+      {sub && <div style={{ fontSize: 9, color: "var(--text-faint)", marginTop: 2 }}>{sub}</div>}
+    </button>
+  );
+}
+
+// ── 宝物详情面板 ──
+function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromTreasure }) {
+  const [editing, setEditing]             = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [copyFeedback, setCopyFeedback]   = useState(false);
   const ti = typeInfo(treasure.type);
 
   if (editing) {
-    return <TreasureEditor initial={treasure} onSave={(t) => { onSave(t); setEditing(false); }} onClose={() => setEditing(false)} />;
+    return (
+      <TreasureEditor
+        initial={treasure}
+        onSave={(t) => { onSave(t); setEditing(false); }}
+        onClose={() => setEditing(false)}
+      />
+    );
   }
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(treasure.content).then(() => {
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2200);
+    }).catch(() => {
+      // fallback: select & execCommand
+      const el = document.createElement("textarea");
+      el.value = treasure.content;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2200);
+    });
+  };
+
+  const handleToggleImportant = () => {
+    onSave({ ...treasure, important: !treasure.important, updatedAt: Date.now() });
+  };
 
   return (
     <div style={{
@@ -214,44 +260,65 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose }) {
       display: "flex", alignItems: "flex-end", justifyContent: "center",
     }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{
-        width: "100%", maxWidth: 480, maxHeight: "88vh",
+        width: "100%", maxWidth: 480, maxHeight: "92vh",
         background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
         borderRadius: "20px 20px 0 0",
         display: "flex", flexDirection: "column",
         overflow: "hidden",
         boxShadow: "0 -8px 40px rgba(74,69,96,.18)",
       }}>
-        {/* 顶栏 */}
+
+        {/* ── 顶栏 ── */}
         <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
+          display: "flex", alignItems: "center", gap: 8,
           padding: "14px 16px 10px",
           borderBottom: "1px solid rgba(196,166,184,.2)",
           flexShrink: 0,
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 18, flexShrink: 0 }}>{ti.emoji}</span>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: "#5a4a6a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {treasure.title || treasure.content.slice(0, 24)}
-              </div>
-              <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 1 }}>
-                {ti.label}
-                {treasure.sourceCharName && ` · ${treasure.sourceCharName}`}
-                {treasure.createdAt ? ` · ${fmtDate(treasure.createdAt)}` : ""}
-                {treasure.important && " · ★"}
-              </div>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>{ti.emoji}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#5a4a6a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {treasure.title || treasure.content.slice(0, 28)}
+            </div>
+            {/* 元信息行 */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 9, color: "var(--text-faint)", background: "rgba(196,166,184,.15)", padding: "1px 6px", borderRadius: 7 }}>{ti.label}</span>
+              {treasure.sourceCharName && (
+                <span style={{ fontSize: 10, color: "var(--text-faint)" }}>来自 {treasure.sourceCharName}</span>
+              )}
+              {treasure.createdAt > 0 && (
+                <span style={{ fontSize: 10, color: "var(--text-faint)" }}>{fmtDate(treasure.createdAt)}</span>
+              )}
+              {treasure.important && (
+                <span style={{ fontSize: 10, color: "#c08030" }}>★ 重要</span>
+              )}
             </div>
           </div>
-          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-            <button onClick={() => setEditing(true)} style={{ background: "rgba(196,166,184,.15)", border: "1px solid rgba(196,166,184,.3)", borderRadius: 8, padding: "4px 10px", fontSize: 11, color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)" }}>编辑</button>
-            <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
-          </div>
+          {/* 右侧操作 */}
+          <button
+            onClick={handleToggleImportant}
+            title={treasure.important ? "取消重要标记" : "标记为重要"}
+            style={{
+              background: treasure.important ? "rgba(200,140,60,.15)" : "transparent",
+              border: `1px solid ${treasure.important ? "rgba(200,140,60,.35)" : "rgba(196,166,184,.3)"}`,
+              borderRadius: 8, padding: "4px 8px", cursor: "pointer",
+              fontSize: 14, color: treasure.important ? "#c08030" : "#c0b090",
+              transition: "all .2s", flexShrink: 0,
+            }}
+          >★</button>
+          <button
+            onClick={() => setEditing(true)}
+            style={{ background: "rgba(196,166,184,.15)", border: "1px solid rgba(196,166,184,.3)", borderRadius: 8, padding: "4px 10px", fontSize: 11, color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)", flexShrink: 0 }}
+          >编辑</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: "4px 2px", flexShrink: 0 }}>✕</button>
         </div>
 
-        {/* 正文 */}
-        <div style={{ flex: 1, overflow: "auto", padding: "16px 18px" }}>
+        {/* ── 正文区 ── */}
+        <div style={{ flex: 1, overflow: "auto", padding: "16px 18px 0" }}>
+
+          {/* 原文 */}
           <div style={{
-            fontSize: 14, color: "#4a3a5a", lineHeight: 1.9,
+            fontSize: 14, color: "#4a3a5a", lineHeight: 1.95,
             whiteSpace: "pre-wrap", letterSpacing: 0.3,
           }}>
             {treasure.content}
@@ -260,7 +327,7 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose }) {
           {/* 备注 */}
           {treasure.note && (
             <div style={{
-              marginTop: 16, padding: "10px 12px", borderRadius: 10,
+              marginTop: 14, padding: "10px 12px", borderRadius: 10,
               background: "rgba(196,166,184,.1)", border: "1px solid rgba(196,166,184,.18)",
               fontSize: 12, color: "var(--text-mid)", lineHeight: 1.7,
             }}>
@@ -273,16 +340,59 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose }) {
           {(treasure.tags || []).length > 0 && (
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12 }}>
               {treasure.tags.map((tag, i) => (
-                <span key={i} style={{
-                  fontSize: 10, padding: "2px 8px", borderRadius: 8,
-                  background: "rgba(196,166,184,.12)", color: "#9a8aac",
-                }}>#{tag}</span>
+                <span key={i} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 8, background: "rgba(196,166,184,.12)", color: "#9a8aac" }}>#{tag}</span>
               ))}
             </div>
           )}
 
-          {/* 删除 */}
-          <div style={{ marginTop: 24 }}>
+          {/* ── 操作区 ── */}
+          <div style={{
+            marginTop: 22,
+            paddingTop: 16,
+            borderTop: "1px solid rgba(196,166,184,.15)",
+          }}>
+            <div style={{ fontSize: 10, color: "var(--text-faint)", letterSpacing: 1.5, marginBottom: 12 }}>操作</div>
+
+            {/* 第一行：已实现操作 */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <ActionBtn
+                emoji={copyFeedback ? "✓" : "📋"}
+                label={copyFeedback ? "已复制" : "复制全文"}
+                onClick={handleCopy}
+                color="#6a7aae"
+              />
+              <ActionBtn
+                emoji="📓"
+                label="写进手札"
+                onClick={() => {
+                  onCreateNoteFromTreasure?.(treasure);
+                  onClose();
+                }}
+                color="#9a70b0"
+              />
+            </div>
+
+            {/* 第二行：稍后开放 */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <ActionBtn emoji="🕰" label="记下这一刻" sub="稍后开放" disabled />
+              <ActionBtn emoji="💡" label="帮我记住"   sub="稍后开放" disabled />
+              <ActionBtn emoji="✍️" label="继续写下去" sub="稍后开放" disabled />
+            </div>
+
+            {/* 复制成功提示 */}
+            {copyFeedback && (
+              <div style={{
+                textAlign: "center", fontSize: 12, color: "#4a7a6a",
+                padding: "6px 0", marginBottom: 4,
+                animation: "fadeIn .2s ease-out",
+              }}>
+                已经复制到剪贴板啦。
+              </div>
+            )}
+          </div>
+
+          {/* ── 删除区 ── */}
+          <div style={{ marginTop: 14, marginBottom: 24 }}>
             {showDeleteConfirm ? (
               <div style={{ padding: "12px", borderRadius: 12, background: "rgba(200,100,100,.06)", border: "1px solid rgba(200,100,100,.15)" }}>
                 <div style={{ fontSize: 12, color: "#9a5050", textAlign: "center", marginBottom: 10 }}>确认删除这条宝物？</div>
@@ -292,7 +402,7 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose }) {
                 </div>
               </div>
             ) : (
-              <button onClick={() => setShowDeleteConfirm(true)} style={{ width: "100%", padding: "8px", borderRadius: 10, background: "transparent", border: "1px solid rgba(196,166,184,.2)", fontSize: 11, color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)" }}>🗑 删除这条宝物</button>
+              <button onClick={() => setShowDeleteConfirm(true)} style={{ width: "100%", padding: "8px", borderRadius: 10, background: "transparent", border: "1px solid rgba(196,166,184,.15)", fontSize: 11, color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)" }}>🗑 删除这条宝物</button>
             )}
           </div>
         </div>
@@ -310,6 +420,7 @@ export default function TreasurePage({
   onSaveTreasure,
   onDeleteTreasure,
   characters,
+  onCreateNoteFromTreasure,
 }) {
   const [filterType, setFilterType]   = useState("all");
   const [searchText, setSearchText]   = useState("");
@@ -488,6 +599,7 @@ export default function TreasurePage({
           onSave={(t) => { handleSave(t); setDetailItem(t); }}
           onDelete={handleDelete}
           onClose={() => setDetailItem(null)}
+          onCreateNoteFromTreasure={onCreateNoteFromTreasure}
         />
       )}
 

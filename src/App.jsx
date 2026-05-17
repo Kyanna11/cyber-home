@@ -201,6 +201,7 @@ export default function App() {
 
   // ─── 手札 ───
   const [noteEntries, setNoteEntries] = useState(() => normalizeNotes(loadDiary()));
+  const [pendingOpenNoteId, setPendingOpenNoteId] = useState(null);
 
   // ─── 宝库 ───
   const [treasures, setTreasures] = useState(() => loadTreasures());
@@ -896,6 +897,32 @@ ${chunksText}
     const updated = treasures.filter((t) => t.id !== id);
     setTreasures(updated);
     saveTreasures(updated);
+  };
+
+  // 从宝库「写进手札」：创建手札草稿并跳转到手札页打开编辑器
+  const createNoteFromTreasure = (treasure) => {
+    const now = Date.now();
+    const noteEntry = {
+      id: `note-${now}-${Math.random().toString(36).slice(2, 6)}`,
+      title: `来自宝库：${treasure.title || treasure.content.slice(0, 20)}`,
+      text: `> ${treasure.content.replace(/\n/g, "\n> ")}`,
+      type: "note",
+      mood: "",
+      tags: [...(treasure.tags || [])],
+      isDraft: true,
+      createdAt: now,
+      updatedAt: now,
+      visibility: "private",
+      sharedWith: [],
+      shareIntent: "",
+      hasProfileDraft: false,
+      profileDraftId: null,
+      hasMemoryDraft: false,
+      hasTimelineEvent: false,
+    };
+    handleSaveNote(noteEntry);
+    setPendingOpenNoteId(noteEntry.id);
+    navigateTo("diary");
   };
 
   // 分享手札给入住者：标记 entry 为已分享，然后跳转到 chat（从手札页入口用）
@@ -2212,6 +2239,8 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           onGenerateProfileDraft={generateProfileDraftFromNote}
           onOpenMyProfile={() => setShowMyProfile(true)}
           profileDraftGenerating={profileDraftGenerating}
+          pendingOpenNoteId={pendingOpenNoteId}
+          onClearPendingOpenNoteId={() => setPendingOpenNoteId(null)}
         />
       )}
 
@@ -2223,6 +2252,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           onSaveTreasure={handleSaveTreasure}
           onDeleteTreasure={handleDeleteTreasure}
           characters={characters}
+          onCreateNoteFromTreasure={createNoteFromTreasure}
         />
       )}
 
