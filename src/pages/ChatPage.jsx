@@ -379,6 +379,9 @@ export default function ChatPage({
   // 关系时间线
   onAddChatToTimeline,
   onOpenTimeline,
+  // 关系沉淀
+  onGenerateSettlementFromChat,
+  settlementGenerating,
 }) {
   // ── 局部 UI 状态 ──
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -1245,7 +1248,7 @@ export default function ChatPage({
               { emoji: "📎",  label: "添加文件",    active: false },
               { emoji: "💗",  label: "帮我记住",    active: true,  action: () => setAttachView("memorize") },
               { emoji: "🌙",  label: "记下这一刻",  active: true,  action: () => setAttachView("timeline") },
-              { emoji: "✨",  label: "整理一下我们", active: false },
+              { emoji: "✨",  label: "整理一下我们", active: true,  action: () => setAttachView("settle") },
             ].map((item) => (
               <button
                 key={item.label}
@@ -1525,6 +1528,114 @@ export default function ChatPage({
           onClose={() => setAttachView(null)}
         />
       )}
+
+      {/* ── 整理一下我们 · 关系沉淀确认面板 ── */}
+      {attachView === "settle" && (() => {
+        const recentMsgs = messages
+          .filter((m) => m.role === "user" || m.role === "bot")
+          .slice(-20);
+        const charName = activeChar?.name || "ta";
+        return (
+          <div
+            className="config-overlay"
+            onClick={(e) => { if (e.target === e.currentTarget) setAttachView("grid"); }}
+          >
+            <div className="config-panel" style={{ maxHeight: "82vh", display: "flex", flexDirection: "column" }}>
+              <div className="config-header">
+                <div className="config-title"><span>✨</span>整理一下我们</div>
+                <button className="config-close" onClick={() => setAttachView(null)}>✕</button>
+              </div>
+
+              <div style={{ flex: 1, overflow: "auto", padding: "4px 16px 8px" }}>
+                {/* 说明 */}
+                <div style={{
+                  fontSize: 12, color: "#7a6a8e", lineHeight: 1.75,
+                  margin: "8px 0 14px",
+                  padding: "10px 12px", borderRadius: 10,
+                  background: "rgba(196,166,184,.08)", border: "1px solid rgba(196,166,184,.15)",
+                }}>
+                  这会从最近聊天中整理你们的关系变化，生成待确认的<strong>关系沉淀草稿</strong>。
+                  不会自动写入档案或 prompt，需要你逐节确认后才生效。
+                </div>
+
+                {/* 消息预览 */}
+                {recentMsgs.length === 0 ? (
+                  <div style={{ padding: "16px 0", color: "var(--text-faint)", fontSize: 13, textAlign: "center" }}>
+                    还没有聊天记录
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 0.5, marginBottom: 8 }}>
+                      将整理最近 {recentMsgs.length} 条与 {charName} 的聊天
+                    </div>
+                    <div>
+                      {recentMsgs.map((msg, i) => (
+                        <div key={i} style={{
+                          display: "flex", gap: 8, alignItems: "flex-start",
+                          padding: "7px 0",
+                          borderBottom: "1px solid rgba(196,166,184,.08)",
+                        }}>
+                          <span style={{
+                            fontSize: 10, padding: "2px 7px", borderRadius: 8,
+                            flexShrink: 0, marginTop: 2,
+                            background: msg.role === "user" ? "rgba(120,100,160,.1)" : "rgba(196,166,184,.12)",
+                            color: msg.role === "user" ? "#5a4a8a" : "#7a6a8e",
+                          }}>
+                            {msg.role === "user" ? "你" : charName}
+                          </span>
+                          <span style={{ fontSize: 12, color: "var(--text-mid)", lineHeight: 1.65 }}>
+                            {(msg.content || "").length > 64
+                              ? msg.content.slice(0, 64) + "…"
+                              : msg.content}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* 按钮区 */}
+              <div style={{
+                padding: "12px 16px 16px", flexShrink: 0,
+                display: "flex", gap: 10,
+                borderTop: "1px solid rgba(196,166,184,.12)",
+              }}>
+                <button
+                  onClick={() => setAttachView("grid")}
+                  style={{
+                    flex: 1, padding: "10px", borderRadius: 12,
+                    background: "transparent", border: "1px solid rgba(196,166,184,.3)",
+                    fontSize: 13, color: "#9a8aac", cursor: "pointer",
+                    fontFamily: "var(--font-main)",
+                  }}
+                >取消</button>
+                <button
+                  onClick={() => {
+                    onGenerateSettlementFromChat?.(recentMsgs)
+                      .then(() => setAttachView(null))
+                      .catch(() => setAttachView(null));
+                  }}
+                  disabled={settlementGenerating || recentMsgs.length < 4}
+                  style={{
+                    flex: 2, padding: "10px", borderRadius: 12,
+                    background: (settlementGenerating || recentMsgs.length < 4)
+                      ? "rgba(196,166,184,.3)"
+                      : "rgba(120,100,160,.85)",
+                    border: "none",
+                    color: (settlementGenerating || recentMsgs.length < 4) ? "#9a8aac" : "white",
+                    fontSize: 13,
+                    cursor: (settlementGenerating || recentMsgs.length < 4) ? "default" : "pointer",
+                    fontFamily: "var(--font-main)", letterSpacing: 0.5, transition: "all .2s",
+                  }}
+                >
+                  {settlementGenerating ? "生成中…" : recentMsgs.length < 4 ? "聊天太少" : "生成草稿"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── 回复模式切换 ── */}
       <div style={{

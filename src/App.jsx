@@ -1660,6 +1660,125 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
     }
   };
 
+  // 从聊天记录生成关系沉淀草稿
+  const generateSettlementFromChat = async (recentMsgs) => {
+    if (!activeChar || !activeCharId) return null;
+
+    const charName = activeChar.name?.trim() || "当前入住者";
+    const userName = userProfile?.globalFacts?.name?.trim() || "晚声";
+
+    const validMsgs = (recentMsgs || []).filter(
+      (m) => (m.role === "user" || m.role === "bot") && (m.content || "").trim()
+    );
+    if (validMsgs.length < 4) {
+      setSettlementNotice("最近聊天还太少，暂时整理不出新的关系沉淀。");
+      return null;
+    }
+
+    if (!config.apiUrl?.trim() || !config.apiKey?.trim()) {
+      setSettlementNotice("请先在聊天页配置 API 地址和密钥。");
+      return null;
+    }
+    const model = getActiveModel(activeChar.modelOverride);
+    if (!model) {
+      setSettlementNotice("请先配置要使用的模型。");
+      return null;
+    }
+
+    const chatLines = validMsgs.map((m) => {
+      const who = m.role === "user" ? userName : charName;
+      return `${who}：${(m.content || "").slice(0, 120)}`;
+    }).join("\n");
+
+    const mig = activeChar.migration || {};
+    const settlePrompt = `你是「${charName}」，正在对你和「${userName}」最近的一段聊天进行关系沉淀。
+
+以下是最近的聊天记录：
+${chatLines}
+
+${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${mig.doNotChangeRules ? `\n你绝对不能改变的规则：\n${mig.doNotChangeRules}\n` : ""}
+请从「${charName}」的第一人称视角，完成阶段性沉淀，严格按以下格式输出：
+
+【关系变化记录】
+这段聊天里和「${userName}」之间发生了什么？关系有什么变化或发展？100字以内，第一人称，温暖自然，不要像报告。如果完全没有新变化，写：暂无
+
+【唤醒摘要建议】
+如果要更新唤醒摘要，你会怎么写？100字以内，代表下次对话开始时最该内化的关系基础。保留当前摘要的核心承诺，只补充新的发展。如果不需要更新，写：暂无
+
+【不可遗忘追加】
+这段聊天中，有没有新的规则或边界需要加入「绝对不能改变」的清单？
+如果没有，写：无
+如果有，每条一行，不超过20字，最多3条。
+
+【记忆锚点建议】
+这段聊天里，哪些事实、情绪或觉察值得被永久固定为锚点？
+严格按格式输出，每条一行：类型:内容（类型只能是：事实 / 情绪 / 觉察，内容不超过30字）最多3条。没有值得固定的，写：无
+
+请用温暖自然的语气，不要用markdown格式。`;
+
+    try {
+      setReflecting(true);
+      setSettlementNotice("");
+      const response = await fetch(config.apiUrl.replace(/\/+$/, "") + "/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: settlePrompt }],
+          temperature: 0.7,
+          max_tokens: 700,
+        }),
+      });
+      const data = await response.json();
+      const rawOutput = data.choices?.[0]?.message?.content;
+      if (!rawOutput) throw new Error("返回为空");
+
+      const parsed = parseSettlementOutput(rawOutput);
+
+      const EMPTY_VALUES = ["无", "暂无", "没有", "无内容", "无变化"];
+      const isEmptyStr = (s) => !s || EMPTY_VALUES.includes(s.trim());
+      const isEmpty =
+        isEmptyStr(parsed.relationshipChange) &&
+        isEmptyStr(parsed.wakeSummaryUpdate) &&
+        (!parsed.newRules || parsed.newRules.length === 0) &&
+        (!parsed.suggestedMemories || parsed.suggestedMemories.length === 0);
+
+      if (isEmpty) {
+        setSettlementNotice("这次没有整理出新的关系变化。");
+        return null;
+      }
+
+      const now = Date.now();
+      const sourceIds = validMsgs.map((m, i) =>
+        m.id || `chat-${activeCharId}-idx${i}-${m.timestamp || m.createdAt || now}`
+      );
+      const draft = {
+        id: genId(),
+        loverId: activeCharId,
+        title: `${charName} · 聊天沉淀 · ${new Date(now).toLocaleDateString("zh-CN")}`,
+        status: "pending",
+        source: "chat",
+        sourceIds,
+        createdAt: now,
+        rawOutput,
+        ...parsed,
+        appliedSections: [],
+      };
+      setSettlementDrafts((prev) => [draft, ...prev]);
+      // 跳转到记忆宫殿总结 tab
+      setMemCharId(activeCharId);
+      setMemTab("summary");
+      setMemEntryFrom("chat");
+      navigateTo("memoryPalace");
+      return draft.id;
+    } catch (err) {
+      setSettlementNotice("关系沉淀生成失败：" + err.message);
+      return null;
+    } finally {
+      setReflecting(false);
+    }
+  };
+
   // 采纳沉淀草稿的某一节（append，不覆盖手写内容）
   const applySettlementSection = (draftId, section, charId) => {
     const draft = settlementDrafts.find((d) => d.id === draftId);
@@ -2455,6 +2574,8 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           profileDraftGenerating={profileDraftGenerating}
           onAddChatToTimeline={addTimelineEvent}
           onOpenTimeline={openTimeline}
+          onGenerateSettlementFromChat={generateSettlementFromChat}
+          settlementGenerating={reflecting}
         />
       )}
     </>
