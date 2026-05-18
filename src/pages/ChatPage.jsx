@@ -624,62 +624,68 @@ function SceneInfoCard({ msg }) {
   const { scene, mood, preface, invitation } = msg.sceneConfig || {};
   return (
     <div style={{
-      display: "flex", flexDirection: "column", alignItems: "center",
-      padding: "20px 16px 12px",
+      padding: "28px 20px 16px",
+      textAlign: "center",
+      position: "relative",
     }}>
+      {/* 顶部微光 */}
       <div style={{
-        width: "100%", maxWidth: 300,
-        background: "linear-gradient(160deg, rgba(30,20,50,.88) 0%, rgba(60,30,80,.82) 100%)",
-        borderRadius: 18, border: "1px solid rgba(180,140,220,.18)",
-        boxShadow: "0 4px 24px rgba(0,0,0,.25)",
-        padding: "20px 18px 16px",
-        textAlign: "center",
-        position: "relative", overflow: "hidden",
-      }}>
-        {/* 星光装饰 */}
+        position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
+        width: 120, height: 80,
+        background: "radial-gradient(ellipse at center, rgba(140,90,220,.18) 0%, transparent 70%)",
+        pointerEvents: "none",
+      }} />
+
+      {/* 月亮图标 */}
+      <div style={{ fontSize: 18, marginBottom: 14, opacity: 0.75 }}>🌙</div>
+
+      {/* 场景 · 氛围 */}
+      {(scene || mood) && (
         <div style={{
-          position: "absolute", inset: 0, pointerEvents: "none",
-          background: "radial-gradient(ellipse at 70% 20%, rgba(180,140,220,.12) 0%, transparent 60%)",
-        }} />
-
-        <div style={{ fontSize: 22, marginBottom: 8 }}>🌙</div>
-        <div style={{ fontSize: 13, color: "rgba(230,210,255,.9)", fontWeight: 500, letterSpacing: 1.5, marginBottom: 10 }}>
-          亲密邀请
+          fontSize: 11, color: "rgba(155,120,210,.6)",
+          letterSpacing: 2, marginBottom: 16,
+          textTransform: "none",
+        }}>
+          {[scene, mood].filter(Boolean).join("  ·  ")}
         </div>
+      )}
 
-        {/* 场景/氛围标签 */}
-        <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap", marginBottom: 12 }}>
-          {scene && <span style={{
-            fontSize: 11, color: "rgba(200,170,240,.85)",
-            background: "rgba(180,140,220,.12)", padding: "2px 10px",
-            borderRadius: 20, border: "1px solid rgba(180,140,220,.18)",
-          }}>{scene}</span>}
-          {mood && <span style={{
-            fontSize: 11, color: "rgba(200,170,240,.75)",
-            background: "rgba(180,140,220,.08)", padding: "2px 10px",
-            borderRadius: 20, border: "1px solid rgba(180,140,220,.12)",
-          }}>{mood}</span>}
+      {/* 分隔 */}
+      <div style={{
+        width: 40, height: 1, margin: "0 auto 16px",
+        background: "linear-gradient(90deg, transparent, rgba(140,90,220,.25), transparent)",
+      }} />
+
+      {/* 前情提要 */}
+      {preface && (
+        <div style={{
+          fontSize: 12, color: "rgba(190,165,230,.55)",
+          lineHeight: 1.9, letterSpacing: 0.3,
+          marginBottom: 14, fontStyle: "italic",
+          maxWidth: 280, margin: "0 auto 14px",
+        }}>
+          {preface}
         </div>
+      )}
 
-        {preface && (
-          <div style={{
-            fontSize: 11.5, color: "rgba(200,180,230,.7)", lineHeight: 1.75,
-            fontStyle: "italic", marginBottom: 10,
-            borderTop: "1px solid rgba(180,140,220,.1)", paddingTop: 10,
-          }}>
-            {preface}
-          </div>
-        )}
+      {/* 邀请内容 */}
+      {invitation && (
+        <div style={{
+          fontSize: 13.5, color: "rgba(215,195,255,.72)",
+          lineHeight: 2, letterSpacing: 0.5,
+          maxWidth: 280, margin: "0 auto",
+          paddingTop: preface ? 12 : 0,
+          borderTop: preface ? "1px solid rgba(140,90,220,.1)" : "none",
+        }}>
+          {invitation}
+        </div>
+      )}
 
-        {invitation && (
-          <div style={{
-            fontSize: 12, color: "rgba(230,210,255,.85)", lineHeight: 1.8,
-            borderTop: "1px solid rgba(180,140,220,.1)", paddingTop: 10,
-          }}>
-            {invitation}
-          </div>
-        )}
-      </div>
+      {/* 底部分隔 */}
+      <div style={{
+        width: 40, height: 1, margin: "20px auto 0",
+        background: "linear-gradient(90deg, transparent, rgba(140,90,220,.15), transparent)",
+      }} />
     </div>
   );
 }
@@ -710,34 +716,37 @@ function SceneEndCard({ onSaveTreasure, messages }) {
 
   return (
     <div style={{
-      display: "flex", flexDirection: "column", alignItems: "center",
-      padding: "12px 16px 20px",
+      padding: "16px 20px 24px",
+      textAlign: "center",
     }}>
+      {/* 结束分隔线 */}
       <div style={{
-        width: "100%", maxWidth: 260,
-        background: "rgba(30,20,50,.6)",
-        borderRadius: 14, border: "1px solid rgba(180,140,220,.12)",
-        padding: "14px 16px",
-        textAlign: "center",
+        display: "flex", alignItems: "center", gap: 10,
+        marginBottom: 16,
       }}>
-        <div style={{ fontSize: 14, marginBottom: 6 }}>🌠</div>
-        <div style={{ fontSize: 12, color: "rgba(200,180,230,.75)", letterSpacing: 0.5, lineHeight: 1.7 }}>
-          今天就到这儿了。
-          <br />
-          <span style={{ fontSize: 11, opacity: 0.7 }}>这段时光已经安静地留下来了。</span>
-        </div>
-        {!saved ? (
-          <button onClick={handleSave} style={{
-            marginTop: 10, padding: "6px 14px", borderRadius: 20, fontSize: 11,
-            background: "rgba(180,140,220,.15)", border: "1px solid rgba(180,140,220,.2)",
-            color: "rgba(200,170,240,.85)", cursor: "pointer", fontFamily: "var(--font-main)",
-          }}>
-            💎 收藏到宝库
-          </button>
-        ) : (
-          <div style={{ marginTop: 10, fontSize: 11, color: "rgba(180,160,210,.6)" }}>已收藏 ✓</div>
-        )}
+        <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, transparent, rgba(140,90,220,.15))" }} />
+        <span style={{ fontSize: 14, opacity: 0.45 }}>🌠</span>
+        <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, rgba(140,90,220,.15), transparent)" }} />
       </div>
+
+      <div style={{ fontSize: 12, color: "rgba(190,165,230,.5)", letterSpacing: 1, lineHeight: 1.9 }}>
+        今天就到这儿了。
+        <br />
+        <span style={{ fontSize: 11, opacity: 0.65 }}>这段时光已经安静地留下来了。</span>
+      </div>
+
+      {!saved ? (
+        <button onClick={handleSave} style={{
+          marginTop: 12, padding: "5px 16px", borderRadius: 20, fontSize: 11,
+          background: "rgba(100,65,180,.12)", border: "1px solid rgba(130,90,220,.18)",
+          color: "rgba(175,145,235,.7)", cursor: "pointer", fontFamily: "var(--font-main)",
+          letterSpacing: 0.5,
+        }}>
+          💎 收藏到宝库
+        </button>
+      ) : (
+        <div style={{ marginTop: 12, fontSize: 11, color: "rgba(155,130,210,.5)" }}>已收藏 ✓</div>
+      )}
     </div>
   );
 }
@@ -1117,9 +1126,94 @@ export default function ChatPage({
     return entry.date || "";
   };
 
+  // ── 场景模式颜色常量 ──
+  const S = isSceneMode ? {
+    pageBg:       "linear-gradient(180deg,#0e0a1c 0%,#150f2a 25%,#110d22 60%,#0b0816 100%)",
+    barBg:        "rgba(10,7,20,.92)",
+    barBorder:    "rgba(120,80,200,.1)",
+    msgAreaBg:    "transparent",
+    botBubbleBg:  "rgba(255,255,255,.04)",
+    botBubbleBd:  "rgba(160,120,220,.14)",
+    botBubbleTxt: "rgba(220,200,255,.85)",
+    userBubbleBg: "linear-gradient(135deg,rgba(90,55,150,.72),rgba(70,40,120,.65))",
+    userBubbleTxt:"rgba(220,200,255,.9)",
+    timeTxt:      "rgba(140,110,200,.35)",
+    inputBarBg:   "rgba(10,7,22,.9)",
+    inputBarBd:   "rgba(120,80,200,.1)",
+    inputFieldBg: "rgba(30,18,50,.55)",
+    inputFieldBd: "rgba(120,80,200,.18)",
+    inputTxt:     "rgba(210,190,255,.88)",
+    inputPH:      "rgba(140,110,200,.4)",
+    sendBtnBg:    "linear-gradient(135deg,rgba(100,60,180,.8),rgba(80,50,150,.75))",
+    scrollBtnBg:  "rgba(20,14,38,.8)",
+    scrollBtnBd:  "rgba(120,80,200,.2)",
+    typingDot:    "rgba(160,120,220,.55)",
+    typingBg:     "rgba(255,255,255,.03)",
+    typingBd:     "rgba(160,120,220,.12)",
+  } : null;
+
   return (
-    <div className="chat-scene">
-      {/* ── 顶栏 ── */}
+    <div
+      className="chat-scene"
+      style={S ? { background: S.pageBg } : undefined}
+    >
+      {/* ── 顶栏（场景模式：精简两行） ── */}
+      {isSceneMode ? (
+        <div style={{
+          display: "flex", flexDirection: "column", flexShrink: 0,
+          padding: "calc(16px + env(safe-area-inset-top, 0px)) 16px 10px",
+          background: S.barBg, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
+          borderBottom: `1px solid ${S.barBorder}`, position: "relative", zIndex: 2,
+          gap: 6,
+        }}>
+          {/* 行 1：返回 · 角色名 · 今天就到这儿 */}
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <button
+              onClick={() => navigateTo("bedroom")}
+              style={{
+                background: "none", border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 3,
+                fontSize: 13, color: "rgba(170,140,220,.7)",
+                fontFamily: "var(--font-main)", letterSpacing: 1,
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              回房间
+            </button>
+            <div style={{
+              flex: 1, textAlign: "center",
+              fontSize: 17, fontWeight: 500, letterSpacing: 3,
+              color: "rgba(230,210,255,.92)",
+            }}>
+              {activeChar?.name || "ta"}
+            </div>
+            <button
+              onClick={() => setShowSceneEndConfirm(true)}
+              style={{
+                padding: "5px 12px", borderRadius: 14, fontSize: 11,
+                background: "rgba(90,55,170,.18)", border: "1px solid rgba(130,90,220,.22)",
+                color: "rgba(180,150,240,.85)", cursor: "pointer",
+                fontFamily: "var(--font-main)", letterSpacing: 0.5, flexShrink: 0,
+              }}
+            >今天就到这儿</button>
+          </div>
+          {/* 行 2：场景胶囊 + 场景/氛围 */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <span style={{
+              fontSize: 10, color: "rgba(155,120,210,.75)",
+              background: "rgba(70,45,150,.14)", padding: "2px 10px",
+              borderRadius: 10, border: "1px solid rgba(110,75,200,.18)", letterSpacing: 1,
+            }}>🌙 亲密场景</span>
+            {(activeThread?.sceneConfig?.scene || activeThread?.sceneConfig?.mood) && (
+              <span style={{ fontSize: 10, color: "rgba(135,105,190,.5)", letterSpacing: 0.5 }}>
+                {[activeThread.sceneConfig.scene, activeThread.sceneConfig.mood].filter(Boolean).join(" · ")}
+              </span>
+            )}
+          </div>
+        </div>
+      ) : (
       <div className="chat-top-bar">
 
         {/* 对话列表入口（原汉堡菜单，改为更明确的图标+文字） */}
@@ -1270,6 +1364,7 @@ export default function ChatPage({
           )}
         </div>
       </div>
+      )} {/* end isSceneMode ? scene top bar : regular top bar */}
 
       {/* ── 话题侧边栏 ── */}
       {showThreadSidebar && (
@@ -1742,8 +1837,16 @@ export default function ChatPage({
       )}
 
       {/* ── 消息区 ── */}
-      <div className="messages-area">
-        <div className="time-divider">—— 今天 ——</div>
+      <div
+        className="messages-area"
+        style={S ? {
+          background: S.msgAreaBg,
+          gap: 14,
+          paddingTop: 24,
+          paddingBottom: 20,
+        } : undefined}
+      >
+        <div className="time-divider" style={S ? { color: S.timeTxt } : undefined}>—— 今天 ——</div>
         {messages.map((msg, i) => {
           // ── 系统消息：入住仪式卡片 ──
           if (msg.role === "system" && msg.type === "move_in_ceremony") {
@@ -1766,6 +1869,10 @@ export default function ChatPage({
           <div
             key={i}
             className={`msg-wrap ${msg.role === "bot" ? "is-bot" : "is-user"}`}
+            style={S ? {
+              paddingRight: msg.role === "bot" ? 48 : undefined,
+              paddingLeft:  msg.role === "user" ? 48 : undefined,
+            } : undefined}
           >
             {msg.thought && (
               <div className="thought-bubble">
@@ -1819,11 +1926,23 @@ export default function ChatPage({
             ) : (
               <div
                 className={`bubble ${msg.role === "bot" ? "bot" : "user"}`}
-                style={msg.replyMode === "long" ? {
-                  whiteSpace: "pre-wrap",
-                  maxWidth: "88%",
-                  lineHeight: 1.75,
-                } : undefined}
+                style={{
+                  ...(msg.replyMode === "long" ? { whiteSpace: "pre-wrap", maxWidth: "88%", lineHeight: 1.75 } : {}),
+                  ...(S && msg.role === "bot" ? {
+                    background: S.botBubbleBg,
+                    border: `1px solid ${S.botBubbleBd}`,
+                    color: S.botBubbleTxt,
+                    backdropFilter: "none",
+                    fontSize: 14,
+                    lineHeight: 1.9,
+                    letterSpacing: 0.5,
+                  } : {}),
+                  ...(S && msg.role === "user" ? {
+                    background: S.userBubbleBg,
+                    color: S.userBubbleTxt,
+                    boxShadow: "0 2px 12px rgba(60,30,120,.3)",
+                  } : {}),
+                }}
               >
                 {msg.replyMode === "long" && msg.role === "bot" && (
                   <span style={{
@@ -1853,7 +1972,7 @@ export default function ChatPage({
                   marginTop: 4,
                 }}
               >
-                <div className="msg-time" style={{ margin: 0 }}>
+                <div className="msg-time" style={{ margin: 0, ...(S ? { color: S.timeTxt } : {}) }}>
                   {msg.time}
                 </div>
 
@@ -1930,10 +2049,13 @@ export default function ChatPage({
 
         {isTyping && (
           <div className="typing-wrap">
-            <div className="typing-indicator">
-              <div className="typing-dot" />
-              <div className="typing-dot" />
-              <div className="typing-dot" />
+            <div
+              className="typing-indicator"
+              style={S ? { background: S.typingBg, border: `1px solid ${S.typingBd}` } : undefined}
+            >
+              <div className="typing-dot" style={S ? { background: S.typingDot } : undefined} />
+              <div className="typing-dot" style={S ? { background: S.typingDot } : undefined} />
+              <div className="typing-dot" style={S ? { background: S.typingDot } : undefined} />
             </div>
           </div>
         )}
@@ -1952,10 +2074,10 @@ export default function ChatPage({
           width: 36,
           height: 36,
           borderRadius: "50%",
-          background: "rgba(255,255,255,.8)",
+          background: S ? S.scrollBtnBg : "rgba(255,255,255,.8)",
           backdropFilter: "blur(8px)",
-          border: "1px solid rgba(232,196,196,.2)",
-          boxShadow: "0 2px 12px rgba(74,69,96,.1)",
+          border: S ? `1px solid ${S.scrollBtnBd}` : "1px solid rgba(232,196,196,.2)",
+          boxShadow: S ? "0 2px 12px rgba(0,0,0,.3)" : "0 2px 12px rgba(74,69,96,.1)",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
@@ -1963,7 +2085,7 @@ export default function ChatPage({
           zIndex: 5,
           transition: "all .25s",
           fontSize: 16,
-          color: "var(--accent-dusk)",
+          color: S ? "rgba(180,150,240,.7)" : "var(--accent-dusk)",
         }}
         title="回到最新"
       >
@@ -2404,33 +2526,35 @@ export default function ChatPage({
       {showSceneEndConfirm && (
         <div style={{
           position: "fixed", inset: 0, zIndex: 200,
-          background: "rgba(20,10,40,.5)",
-          backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
+          background: "rgba(6,3,15,.65)",
+          backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
           display: "flex", alignItems: "center", justifyContent: "center",
           padding: "0 24px",
         }} onClick={(e) => { if (e.target === e.currentTarget) setShowSceneEndConfirm(false); }}>
           <div style={{
-            width: "100%", maxWidth: 320,
-            background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
-            borderRadius: 20, padding: "24px 20px",
-            boxShadow: "0 8px 40px rgba(0,0,0,.3)",
+            width: "100%", maxWidth: 300,
+            background: "linear-gradient(160deg, rgba(22,14,40,.97) 0%, rgba(18,12,34,.96) 100%)",
+            borderRadius: 20, padding: "28px 22px",
+            boxShadow: "0 12px 48px rgba(0,0,0,.5)",
             textAlign: "center",
+            border: "1px solid rgba(120,80,200,.18)",
           }}>
-            <div style={{ fontSize: 20, marginBottom: 10 }}>🌠</div>
-            <div style={{ fontSize: 14, color: "#4a3a5a", fontWeight: 500, marginBottom: 8 }}>
+            <div style={{ fontSize: 18, marginBottom: 12, opacity: 0.6 }}>🌠</div>
+            <div style={{ fontSize: 14, color: "rgba(220,200,255,.85)", fontWeight: 400, marginBottom: 10, letterSpacing: 1 }}>
               今天就到这儿了？
             </div>
-            <div style={{ fontSize: 12, color: "#7a6a8e", lineHeight: 1.75, marginBottom: 20 }}>
-              结束场景后这段时光会留下来，
-              <br />可以在宝库里继续珍藏它。
+            <div style={{ fontSize: 12, color: "rgba(170,145,220,.5)", lineHeight: 1.85, marginBottom: 22 }}>
+              结束之后这段时光会静静地留在这里，
+              <br />随时可以回来珍藏它。
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button
                 onClick={() => setShowSceneEndConfirm(false)}
                 style={{
-                  flex: 1, padding: "10px", borderRadius: 12, fontSize: 13,
-                  background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)",
-                  color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)",
+                  flex: 1, padding: "10px", borderRadius: 12, fontSize: 12,
+                  background: "rgba(255,255,255,.04)", border: "1px solid rgba(150,120,220,.2)",
+                  color: "rgba(180,155,230,.65)", cursor: "pointer", fontFamily: "var(--font-main)",
+                  letterSpacing: 0.5,
                 }}
               >再陪我一会儿</button>
               <button
@@ -2439,10 +2563,11 @@ export default function ChatPage({
                   closeSceneThread?.(activeThreadId);
                 }}
                 style={{
-                  flex: 1, padding: "10px", borderRadius: 12, fontSize: 13,
-                  background: "linear-gradient(135deg, rgba(80,50,130,.85), rgba(120,80,160,.8))",
-                  border: "none", color: "white", cursor: "pointer",
-                  fontFamily: "var(--font-main)",
+                  flex: 1, padding: "10px", borderRadius: 12, fontSize: 12,
+                  background: "linear-gradient(135deg, rgba(80,50,150,.75), rgba(100,65,170,.7))",
+                  border: "1px solid rgba(130,90,220,.3)",
+                  color: "rgba(220,200,255,.9)", cursor: "pointer",
+                  fontFamily: "var(--font-main)", letterSpacing: 0.5,
                 }}
               >今天就到这儿</button>
             </div>
@@ -2494,14 +2619,24 @@ export default function ChatPage({
       </div>
 
       {/* ── 输入栏 ── */}
-      <div className="input-bar">
+      <div
+        className="input-bar"
+        style={S ? {
+          background: S.inputBarBg,
+          backdropFilter: "blur(20px)",
+          borderTop: `1px solid ${S.inputBarBd}`,
+        } : undefined}
+      >
 
         <button
           onClick={() => setAttachView((v) => v ? null : "grid")}
           title="更多工具"
           style={{
             background: "none", border: "none", cursor: "pointer",
-            fontSize: 22, color: attachView ? "var(--accent-dusk)" : "var(--text-faint)",
+            fontSize: 22,
+            color: S
+              ? (attachView ? "rgba(160,120,240,.8)" : "rgba(140,100,220,.45)")
+              : (attachView ? "var(--accent-dusk)" : "var(--text-faint)"),
             padding: "6px 6px 6px 2px",
             lineHeight: 1, transition: "color .2s, transform .2s",
             transform: attachView === "grid" ? "rotate(45deg)" : "none",
@@ -2511,9 +2646,18 @@ export default function ChatPage({
 
         <textarea
           className="input-field"
-          placeholder={`想对${activeChar?.name || "ta"}说点什么…`}
+          placeholder={S ? `轻声说…` : `想对${activeChar?.name || "ta"}说点什么…`}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
+          style={{
+            resize: "none", overflow: "hidden",
+            lineHeight: "1.5", minHeight: "42px", maxHeight: "120px",
+            ...(S ? {
+              background: S.inputFieldBg,
+              border: `1px solid ${S.inputFieldBd}`,
+              color: S.inputTxt,
+            } : {}),
+          }}
           onKeyDown={(e) => {
             if (
               e.key === "Enter" &&
@@ -2530,18 +2674,12 @@ export default function ChatPage({
             e.target.style.height =
               Math.min(e.target.scrollHeight, 120) + "px";
           }}
-          style={{
-            resize: "none",
-            overflow: "hidden",
-            lineHeight: "1.5",
-            minHeight: "42px",
-            maxHeight: "120px",
-          }}
         />
         <button
           className="send-btn"
           onClick={handleSend}
           disabled={!inputText.trim() || isSending}
+          style={S ? { background: S.sendBtnBg, boxShadow: "0 2px 12px rgba(60,30,120,.3)" } : undefined}
         >
           <svg
             viewBox="0 0 24 24"
