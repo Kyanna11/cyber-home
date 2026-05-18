@@ -1162,6 +1162,98 @@ ${chunksText}
       });
   };
 
+  // ── 亲密邀请：创建场景线程并触发入住者先开口 ──
+  const createIntimateScene = (sceneConfig) => {
+    if (!activeCharId) return;
+    const charId = activeCharId;
+    const now = Date.now();
+    const dateStr = new Date(now).toLocaleDateString("zh-CN", { month: "long", day: "numeric" });
+    const threadName = `🌙 亲密邀请 · ${dateStr}`;
+
+    const sceneInfoMsg = {
+      id: `scene-info-${charId}-${now}`,
+      role: "system",
+      type: "scene_info",
+      sceneConfig,
+      createdAt: now,
+    };
+    // 开场触发消息（不渲染、不进入 ctx，但让 LLM 知道该开口了）
+    const openingMsg = {
+      id: `scene-open-${charId}-${now}`,
+      role: "user",
+      isSceneOpening: true,
+      content: sceneConfig.invitation || "（亲密邀请已送出，请以温柔的方式开场）",
+      time: new Date(now).toTimeString().slice(0, 5),
+    };
+
+    const thread = {
+      id: genId(),
+      name: threadName,
+      threadType: "scene",
+      sceneType: "intimate",
+      sceneConfig,
+      sceneClosed: false,
+      messages: [sceneInfoMsg, openingMsg],
+      createdAt: now,
+    };
+
+    setChatThreads((prev) => {
+      const charThreads = prev[charId] || [];
+      return { ...prev, [charId]: [thread, ...charThreads] };
+    });
+    setActiveThreadId(thread.id);
+    const initialMsgs = [sceneInfoMsg, openingMsg];
+    setMessages(initialMsgs);
+
+    const timeStr = new Date(now).toTimeString().slice(0, 5);
+    const sceneAddition = buildSceneSystemAddition(sceneConfig);
+
+    if (!isConfigReady()) {
+      setTimeout(() => {
+        showMessagesSequentially("", ["（需要先连接大脑才能开始场景对话）"], timeStr);
+      }, 600);
+      return;
+    }
+    setIsSending(true);
+    setIsTyping(true);
+    callLLM(initialMsgs, sceneConfig.replyMode || "chat", sceneAddition)
+      .then((raw) => {
+        setIsTyping(false);
+        const { thought, parts } = parseResponse(raw, sceneConfig.replyMode || "chat");
+        showMessagesSequentially(thought, parts, timeStr, sceneConfig.replyMode || "chat");
+      })
+      .catch((err) => {
+        setIsTyping(false);
+        setIsSending(false);
+        setMessages((prev) => [
+          ...prev,
+          { role: "bot", thought: "", content: `连接失败：${err.message}`, time: timeStr },
+        ]);
+      });
+  };
+
+  // ── 亲密邀请：结束场景 ──
+  const closeSceneThread = (threadId) => {
+    if (!activeCharId) return;
+    const now = Date.now();
+    const endMsg = {
+      id: `scene-end-${threadId}-${now}`,
+      role: "system",
+      type: "scene_end",
+      createdAt: now,
+    };
+    setMessages((prev) => [...prev, endMsg]);
+    setChatThreads((prev) => {
+      const charThreads = prev[activeCharId] || [];
+      return {
+        ...prev,
+        [activeCharId]: charThreads.map((t) =>
+          t.id === threadId ? { ...t, sceneClosed: true } : t,
+        ),
+      };
+    });
+  };
+
   const enterChat = (charId) => {
     setActiveCharId(charId);
     setShowCharSelect(false);
@@ -2123,9 +2215,24 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
     });
   }, []);
 
-  const callLLM = async (allMsgs, mode = "chat") => {
+  // ── 场景系统提示附加 ──
+  const buildSceneSystemAddition = (sceneConfig) => {
+    if (!sceneConfig) return "";
+    const parts = [
+      "【当前场景模式：亲密邀请】",
+      '现在是一段特殊的亲密场景对话。请完全沉浸在场景中，以温柔、自然的方式回应，不要在回复中提及"场景模式"等元信息。',
+    ];
+    if (sceneConfig.scene)      parts.push(`场景：${sceneConfig.scene}`);
+    if (sceneConfig.mood)       parts.push(`氛围：${sceneConfig.mood}`);
+    if (sceneConfig.preface)    parts.push(`前情提要：${sceneConfig.preface}`);
+    if (sceneConfig.invitation) parts.push(`用户的邀请：${sceneConfig.invitation}`);
+    return "\n\n" + parts.join("\n");
+  };
+
+  const callLLM = async (allMsgs, mode = "chat", extraSystem = "") => {
     const ctx = allMsgs
       .filter((m) => m.role === "user" || m.role === "bot")
+      .filter((m) => !m.isSceneOpening)
       .slice(-ctxConfig.maxMessages)
       .map((m) => ({
         role: m.role === "bot" ? "assistant" : "user",
@@ -2150,11 +2257,18 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
     const modeInstruction = mode === "long"
       ? "\n\n【回复格式】请不要使用 ||| 分隔消息。请把回复写成一篇完整内容，可以自然分段，不要拆成多条短消息。"
       : "\n\n【回复格式】请像聊天软件一样自然回复。可以使用 ||| 分隔成多条短消息，每条保持简短自然。";
+    // 场景系统附加：优先使用调用方传入的 extraSystem，否则从当前线程自动检测
+    const curThread = activeCharId ? (chatThreads[activeCharId] || []).find(t => t.id === activeThreadId) : null;
+    const autoScene = (curThread?.threadType === "scene" && !curThread?.sceneClosed)
+      ? buildSceneSystemAddition(curThread.sceneConfig)
+      : "";
+    const sceneAddition = extraSystem || autoScene;
     const sysPrompt =
       timeInfo + "\n\n" +
       buildSystemPrompt(activeChar, charMemories) +
       (activeChar && worldViews[activeChar.id] ? `\n\n【你的世界观与核心认知】\n${worldViews[activeChar.id]}` : "") +
       (userCtx ? `\n\n${userCtx}` : "") +
+      sceneAddition +
       memoryInstruction +
       modeInstruction;
     const modelToUse = getActiveModel(activeChar?.modelOverride);
@@ -2717,6 +2831,9 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           onGenerateSettlementFromChat={generateSettlementFromChat}
           settlementGenerating={reflecting}
           sendLinkFromChat={sendLinkFromChat}
+          createIntimateScene={createIntimateScene}
+          closeSceneThread={closeSceneThread}
+          activeThread={chatThreads[activeCharId]?.find(t => t.id === activeThreadId) || null}
         />
       )}
     </>

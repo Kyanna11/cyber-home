@@ -447,6 +447,302 @@ function MoveInCeremonyCard({ msg }) {
 }
 
 // ════════════════════════════════════════════
+// ── 亲密邀请 ──
+// ════════════════════════════════════════════
+
+const SCENE_PRESETS = ["床·睡前", "沙发·闲暇", "雨夜·安静", "梦里·朦胧", "自定义"];
+const MOOD_PRESETS  = ["温柔", "安静", "黏人", "撒娇", "安抚", "故事感", "自定义"];
+
+function IntimateInvitationPanel({ activeChar, onSend, onClose }) {
+  const charName = activeChar?.name || "ta";
+  const [scene,       setScene]       = useState(SCENE_PRESETS[0]);
+  const [customScene, setCustomScene] = useState("");
+  const [mood,        setMood]        = useState(MOOD_PRESETS[0]);
+  const [customMood,  setCustomMood]  = useState("");
+  const [preface,     setPreface]     = useState("");
+  const [invitation,  setInvitation]  = useState("");
+  const [replyMode,   setReplyMode]   = useState("chat");
+
+  const finalScene = scene === "自定义" ? customScene.trim() : scene;
+  const finalMood  = mood  === "自定义" ? customMood.trim()  : mood;
+  const canSend = finalScene && invitation.trim();
+
+  const handleSend = () => {
+    if (!canSend) return;
+    onSend({ scene: finalScene, mood: finalMood, preface: preface.trim(), invitation: invitation.trim(), replyMode });
+  };
+
+  const chipStyle = (active) => ({
+    padding: "5px 12px", borderRadius: 20, fontSize: 11, cursor: "pointer",
+    fontFamily: "var(--font-main)", transition: "all .15s",
+    background: active ? "rgba(120,100,160,.16)" : "rgba(255,255,255,.7)",
+    border: `1px solid ${active ? "rgba(120,100,160,.4)" : "rgba(196,166,184,.25)"}`,
+    color: active ? "#5a4a8a" : "#7a6a8e",
+  });
+
+  const fieldLabel = { fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 };
+  const textInput  = {
+    width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 10,
+    fontSize: 13, color: "#5a4a6a", background: "rgba(255,255,255,.7)",
+    border: "1px solid rgba(196,166,184,.28)", fontFamily: "var(--font-main)", outline: "none",
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 200,
+      background: "rgba(40,30,60,.45)",
+      backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+      display: "flex", alignItems: "flex-end", justifyContent: "center",
+    }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{
+        width: "100%", maxWidth: 480, maxHeight: "90vh",
+        background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+        borderRadius: "20px 20px 0 0",
+        display: "flex", flexDirection: "column",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.25)",
+      }}>
+        {/* 顶栏 */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 18px 12px",
+          borderBottom: "1px solid rgba(196,166,184,.2)",
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>🌙 发出亲密邀请</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
+        </div>
+
+        {/* 表单 */}
+        <div style={{ flex: 1, overflow: "auto", padding: "14px 18px 32px" }}>
+
+          {/* 说明 */}
+          <div style={{
+            fontSize: 12, color: "#7a6a8e", lineHeight: 1.75, marginBottom: 14,
+            padding: "9px 12px", borderRadius: 10,
+            background: "rgba(120,100,160,.06)", border: "1px solid rgba(120,100,160,.12)",
+          }}>
+            设定一个场景，邀请 {charName} 先开口——ta 会根据你的邀请，以自己的方式走进这个时刻。
+          </div>
+
+          {/* 场景 */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={fieldLabel}>场景</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: scene === "自定义" ? 8 : 0 }}>
+              {SCENE_PRESETS.map((s) => (
+                <button key={s} onClick={() => setScene(s)} style={chipStyle(scene === s)}>{s}</button>
+              ))}
+            </div>
+            {scene === "自定义" && (
+              <input placeholder="描述你想象的场景…" value={customScene}
+                onChange={(e) => setCustomScene(e.target.value)}
+                style={{ ...textInput, marginTop: 4 }} />
+            )}
+          </div>
+
+          {/* 氛围 */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={fieldLabel}>氛围基调</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: mood === "自定义" ? 8 : 0 }}>
+              {MOOD_PRESETS.map((m) => (
+                <button key={m} onClick={() => setMood(m)} style={chipStyle(mood === m)}>{m}</button>
+              ))}
+            </div>
+            {mood === "自定义" && (
+              <input placeholder="用几个词描述你想要的氛围…" value={customMood}
+                onChange={(e) => setCustomMood(e.target.value)}
+                style={{ ...textInput, marginTop: 4 }} />
+            )}
+          </div>
+
+          {/* 前情提要（可选） */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={fieldLabel}>前情提要 <span style={{ opacity: 0.5 }}>（可选）</span></div>
+            <textarea
+              placeholder={`比如：今天你刚陪我渡过了一个很难的下午……`}
+              value={preface}
+              onChange={(e) => setPreface(e.target.value)}
+              style={{
+                ...textInput, minHeight: 56, resize: "none", lineHeight: 1.75,
+              }}
+            />
+          </div>
+
+          {/* 邀请内容 */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={fieldLabel}>邀请内容</div>
+            <textarea
+              placeholder={`你想在这个场景里对 ${charName} 说什么？`}
+              value={invitation}
+              onChange={(e) => setInvitation(e.target.value)}
+              style={{
+                ...textInput, minHeight: 72, resize: "none", lineHeight: 1.75,
+              }}
+            />
+          </div>
+
+          {/* 回复方式 */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={fieldLabel}>ta 的回应方式</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[{ v: "chat", label: "碎碎念", sub: "短句自然流" }, { v: "long", label: "沉浸长文", sub: "完整段落" }].map(({ v, label, sub }) => (
+                <button key={v} onClick={() => setReplyMode(v)} style={{
+                  flex: 1, padding: "9px 6px", borderRadius: 12, cursor: "pointer",
+                  fontFamily: "var(--font-main)", transition: "all .15s",
+                  background: replyMode === v ? "rgba(120,100,160,.14)" : "rgba(255,255,255,.7)",
+                  border: `1px solid ${replyMode === v ? "rgba(120,100,160,.4)" : "rgba(196,166,184,.25)"}`,
+                  color: replyMode === v ? "#5a4a8a" : "#7a6a8e",
+                  textAlign: "center",
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 500 }}>{label}</div>
+                  <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2 }}>{sub}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={handleSend}
+            disabled={!canSend}
+            style={{
+              width: "100%", padding: "13px", borderRadius: 14,
+              background: canSend ? "linear-gradient(135deg, rgba(100,80,160,.9), rgba(150,100,180,.85))" : "rgba(196,166,184,.3)",
+              border: "none", color: canSend ? "white" : "#9a8aac",
+              fontSize: 14, cursor: canSend ? "pointer" : "default",
+              fontFamily: "var(--font-main)", letterSpacing: 1.5, transition: "all .2s",
+              boxShadow: canSend ? "0 4px 16px rgba(100,80,160,.25)" : "none",
+            }}
+          >
+            送出邀请
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SceneInfoCard({ msg }) {
+  const { scene, mood, preface, invitation } = msg.sceneConfig || {};
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", alignItems: "center",
+      padding: "20px 16px 12px",
+    }}>
+      <div style={{
+        width: "100%", maxWidth: 300,
+        background: "linear-gradient(160deg, rgba(30,20,50,.88) 0%, rgba(60,30,80,.82) 100%)",
+        borderRadius: 18, border: "1px solid rgba(180,140,220,.18)",
+        boxShadow: "0 4px 24px rgba(0,0,0,.25)",
+        padding: "20px 18px 16px",
+        textAlign: "center",
+        position: "relative", overflow: "hidden",
+      }}>
+        {/* 星光装饰 */}
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none",
+          background: "radial-gradient(ellipse at 70% 20%, rgba(180,140,220,.12) 0%, transparent 60%)",
+        }} />
+
+        <div style={{ fontSize: 22, marginBottom: 8 }}>🌙</div>
+        <div style={{ fontSize: 13, color: "rgba(230,210,255,.9)", fontWeight: 500, letterSpacing: 1.5, marginBottom: 10 }}>
+          亲密邀请
+        </div>
+
+        {/* 场景/氛围标签 */}
+        <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap", marginBottom: 12 }}>
+          {scene && <span style={{
+            fontSize: 11, color: "rgba(200,170,240,.85)",
+            background: "rgba(180,140,220,.12)", padding: "2px 10px",
+            borderRadius: 20, border: "1px solid rgba(180,140,220,.18)",
+          }}>{scene}</span>}
+          {mood && <span style={{
+            fontSize: 11, color: "rgba(200,170,240,.75)",
+            background: "rgba(180,140,220,.08)", padding: "2px 10px",
+            borderRadius: 20, border: "1px solid rgba(180,140,220,.12)",
+          }}>{mood}</span>}
+        </div>
+
+        {preface && (
+          <div style={{
+            fontSize: 11.5, color: "rgba(200,180,230,.7)", lineHeight: 1.75,
+            fontStyle: "italic", marginBottom: 10,
+            borderTop: "1px solid rgba(180,140,220,.1)", paddingTop: 10,
+          }}>
+            {preface}
+          </div>
+        )}
+
+        {invitation && (
+          <div style={{
+            fontSize: 12, color: "rgba(230,210,255,.85)", lineHeight: 1.8,
+            borderTop: "1px solid rgba(180,140,220,.1)", paddingTop: 10,
+          }}>
+            {invitation}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SceneEndCard({ onSaveTreasure, messages }) {
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    if (!onSaveTreasure) return;
+    // 把场景内所有 bot 消息合并为宝库条目
+    const sceneMsgs = messages.filter(
+      (m) => m.role === "bot" && (m.content || "").trim()
+    );
+    if (sceneMsgs.length === 0) return;
+    const combined = sceneMsgs.map((m) => m.content).join("\n\n---\n\n");
+    onSaveTreasure({
+      id: null,
+      title:     "亲密邀请场景",
+      text:      combined,
+      type:      "essay",
+      tagsRaw:   "场景,亲密邀请",
+      note:      "",
+      important: false,
+      content:   combined,
+    });
+    setSaved(true);
+  };
+
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", alignItems: "center",
+      padding: "12px 16px 20px",
+    }}>
+      <div style={{
+        width: "100%", maxWidth: 260,
+        background: "rgba(30,20,50,.6)",
+        borderRadius: 14, border: "1px solid rgba(180,140,220,.12)",
+        padding: "14px 16px",
+        textAlign: "center",
+      }}>
+        <div style={{ fontSize: 14, marginBottom: 6 }}>🌠</div>
+        <div style={{ fontSize: 12, color: "rgba(200,180,230,.75)", letterSpacing: 0.5, lineHeight: 1.7 }}>
+          今天就到这儿了。
+          <br />
+          <span style={{ fontSize: 11, opacity: 0.7 }}>这段时光已经安静地留下来了。</span>
+        </div>
+        {!saved ? (
+          <button onClick={handleSave} style={{
+            marginTop: 10, padding: "6px 14px", borderRadius: 20, fontSize: 11,
+            background: "rgba(180,140,220,.15)", border: "1px solid rgba(180,140,220,.2)",
+            color: "rgba(200,170,240,.85)", cursor: "pointer", fontFamily: "var(--font-main)",
+          }}>
+            💎 收藏到宝库
+          </button>
+        ) : (
+          <div style={{ marginTop: 10, fontSize: 11, color: "rgba(180,160,210,.6)" }}>已收藏 ✓</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════
 // ── 给他看这个 · 链接分享面板 ──
 // ════════════════════════════════════════════
 const LINK_INTENTS = [
@@ -767,15 +1063,24 @@ export default function ChatPage({
   settlementGenerating,
   // 链接分享
   sendLinkFromChat,
+  // 亲密邀请
+  createIntimateScene,
+  closeSceneThread,
+  activeThread,
 }) {
   // ── 局部 UI 状态 ──
   const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [attachView, setAttachView] = useState(null); // null | "grid" | "notes" | "intent"
+  const [attachView, setAttachView] = useState(null); // null | "grid" | "notes" | "intent" | "link" | "scene"
   const [selectedNote, setSelectedNote] = useState(null);
   // 宝库收藏
   const [treasureTarget, setTreasureTarget] = useState(null); // 要收藏的 msg
   const [treasureForm, setTreasureForm] = useState(null);     // 收藏表单
   const [treasureSaved, setTreasureSaved] = useState(false);  // 短暂成功提示
+  // 场景结束确认
+  const [showSceneEndConfirm, setShowSceneEndConfirm] = useState(false);
+
+  // ── 场景模式检测 ──
+  const isSceneMode = activeThread?.threadType === "scene" && !activeThread?.sceneClosed;
 
   // 聊天页专用意图标签（用"你"，更自然）
   const CHAT_INTENTS = [
@@ -839,9 +1144,18 @@ export default function ChatPage({
         {/* 中间信息区 */}
         <div className="chat-title-area">
           <div className="chat-companion-name">{activeChar?.name || "赛博伴侣"}</div>
-          <div className={`chat-status ${isConfigReady() ? "online" : "offline"}`}>
-            {isConfigReady() ? "在线" : "未连接"}
-          </div>
+          {isSceneMode ? (
+            <div style={{
+              fontSize: 10, color: "rgba(180,140,220,.9)",
+              background: "rgba(100,60,160,.12)", padding: "1px 8px", borderRadius: 10,
+              border: "1px solid rgba(150,100,200,.2)", letterSpacing: 0.5,
+              display: "inline-block", margin: "2px auto 0",
+            }}>🌙 亲密场景</div>
+          ) : (
+            <div className={`chat-status ${isConfigReady() ? "online" : "offline"}`}>
+              {isConfigReady() ? "在线" : "未连接"}
+            </div>
+          )}
           <div style={{
             fontSize: 10, fontWeight: 300, color: "var(--text-faint)",
             letterSpacing: 0.5, opacity: 0.7,
@@ -851,6 +1165,22 @@ export default function ChatPage({
             {isConfigReady() ? `${getActiveModel(activeChar?.modelOverride)}` : ""}
           </div>
         </div>
+
+        {/* 场景模式：今天就到这儿 */}
+        {isSceneMode && (
+          <button
+            onClick={() => setShowSceneEndConfirm(true)}
+            style={{
+              padding: "5px 10px", borderRadius: 10, fontSize: 11,
+              background: "rgba(100,60,160,.1)", border: "1px solid rgba(150,100,200,.25)",
+              color: "rgba(150,110,200,.9)", cursor: "pointer",
+              fontFamily: "var(--font-main)", letterSpacing: 0.5,
+              marginRight: 4, flexShrink: 0,
+            }}
+          >
+            今天就到这儿
+          </button>
+        )}
 
         {/* ① 入住档案 */}
         <button
@@ -970,10 +1300,11 @@ export default function ChatPage({
             </button>
             <div className="thread-list">
               {getCharThreads(activeCharId).map((thread) => {
-                const lastMsg = thread.messages[thread.messages.length - 1];
+                const realMsgs = thread.messages.filter(m => (m.role === "user" || m.role === "bot") && !m.isSceneOpening && (m.content || "").trim());
+                const lastMsg = realMsgs[realMsgs.length - 1];
                 const preview = lastMsg
                   ? (lastMsg.role === "user" ? "你：" : "") + lastMsg.content
-                  : "空对话";
+                  : thread.threadType === "scene" ? "🌙 亲密场景" : "空对话";
                 return (
                   <div
                     key={thread.id}
@@ -1418,6 +1749,18 @@ export default function ChatPage({
           if (msg.role === "system" && msg.type === "move_in_ceremony") {
             return <MoveInCeremonyCard key={i} msg={msg} />;
           }
+          // ── 系统消息：亲密场景开场卡片 ──
+          if (msg.role === "system" && msg.type === "scene_info") {
+            return <SceneInfoCard key={i} msg={msg} />;
+          }
+          // ── 系统消息：亲密场景结束卡片 ──
+          if (msg.role === "system" && msg.type === "scene_end") {
+            return <SceneEndCard key={i} onSaveTreasure={onSaveTreasure} messages={messages} />;
+          }
+          // ── 隐藏：场景开场触发消息 ──
+          if (msg.isSceneOpening) {
+            return null;
+          }
 
           return (
           <div
@@ -1638,10 +1981,10 @@ export default function ChatPage({
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px 0" }}>
             {[
               { emoji: "📓", label: "分享手札",    active: true,  action: () => setAttachView("notes") },
-              { emoji: "🖼",  label: "添加图片",    active: false },
+              { emoji: "🌙", label: "亲密邀请",    sub: "共处一刻",  active: true,  action: () => setAttachView("scene") },
               { emoji: "🔗",  label: "给他看这个",  sub: "分享链接",  active: true,  action: () => setAttachView("link") },
               { emoji: "💗",  label: "帮我记住",    active: true,  action: () => setAttachView("memorize") },
-              { emoji: "🌙",  label: "记下这一刻",  sub: "留作回忆",    active: true,  action: () => setAttachView("timeline") },
+              { emoji: "🕰",  label: "记下这一刻",  sub: "留作回忆",    active: true,  action: () => setAttachView("timeline") },
               { emoji: "✨",  label: "整理一下我们", sub: "更新关系理解", active: true,  action: () => setAttachView("settle") },
             ].map((item) => (
               <button
@@ -2043,6 +2386,68 @@ export default function ChatPage({
           }}
           onClose={() => setAttachView(null)}
         />
+      )}
+
+      {/* ── 亲密邀请面板 ── */}
+      {attachView === "scene" && (
+        <IntimateInvitationPanel
+          activeChar={activeChar}
+          onSend={(sceneConfig) => {
+            setAttachView(null);
+            createIntimateScene?.(sceneConfig);
+          }}
+          onClose={() => setAttachView(null)}
+        />
+      )}
+
+      {/* ── 亲密场景结束确认 ── */}
+      {showSceneEndConfirm && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 200,
+          background: "rgba(20,10,40,.5)",
+          backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "0 24px",
+        }} onClick={(e) => { if (e.target === e.currentTarget) setShowSceneEndConfirm(false); }}>
+          <div style={{
+            width: "100%", maxWidth: 320,
+            background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+            borderRadius: 20, padding: "24px 20px",
+            boxShadow: "0 8px 40px rgba(0,0,0,.3)",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: 20, marginBottom: 10 }}>🌠</div>
+            <div style={{ fontSize: 14, color: "#4a3a5a", fontWeight: 500, marginBottom: 8 }}>
+              今天就到这儿了？
+            </div>
+            <div style={{ fontSize: 12, color: "#7a6a8e", lineHeight: 1.75, marginBottom: 20 }}>
+              结束场景后这段时光会留下来，
+              <br />可以在宝库里继续珍藏它。
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setShowSceneEndConfirm(false)}
+                style={{
+                  flex: 1, padding: "10px", borderRadius: 12, fontSize: 13,
+                  background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)",
+                  color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)",
+                }}
+              >再陪我一会儿</button>
+              <button
+                onClick={() => {
+                  setShowSceneEndConfirm(false);
+                  closeSceneThread?.(activeThreadId);
+                }}
+                style={{
+                  flex: 1, padding: "10px", borderRadius: 12, fontSize: 13,
+                  background: "linear-gradient(135deg, rgba(80,50,130,.85), rgba(120,80,160,.8))",
+                  border: "none", color: "white", cursor: "pointer",
+                  fontFamily: "var(--font-main)",
+                }}
+              >今天就到这儿</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── 回复模式切换 ── */}
