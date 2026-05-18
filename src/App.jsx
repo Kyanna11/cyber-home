@@ -1116,6 +1116,52 @@ ${chunksText}
       });
   };
 
+  // 链接分享：从聊天页内直接发送（不走导航）
+  const sendLinkFromChat = ({ url, title, note, intent, content }) => {
+    const timeStr = new Date().toTimeString().slice(0, 5);
+    const linkMsg = {
+      role:        "user",
+      content,
+      isLinkShare: true,
+      linkUrl:     url,
+      linkTitle:   title,
+      linkNote:    note,
+      linkIntent:  intent,
+      time:        timeStr,
+    };
+    const allMsgs = [...messages, linkMsg];
+    setMessages(allMsgs);
+
+    if (!isConfigReady()) {
+      setTimeout(() => {
+        showMessagesSequentially(
+          "她分享了一个链接……但我还没连上大脑。",
+          ["我看到你分享的链接了～", "不过我现在还没有连上大脑哦", "帮我在大脑连接里接通吧？"],
+          timeStr,
+        );
+      }, 800);
+      return;
+    }
+    setIsSending(true);
+    setIsTyping(true);
+    callLLM(allMsgs, replyMode)
+      .then((raw) => {
+        setIsTyping(false);
+        const cleanedRaw = extractAndSaveMemories(raw, activeCharId, allMemories, setAllMemories);
+        const { thought, parts } = parseResponse(cleanedRaw, replyMode);
+        showMessagesSequentially(thought, parts, timeStr, replyMode);
+        updateMemoryHeat(activeCharId, cleanedRaw);
+      })
+      .catch((err) => {
+        setIsTyping(false);
+        setIsSending(false);
+        setMessages((prev) => [
+          ...prev,
+          { role: "bot", thought: "呜……处理链接时出了点问题。", content: `出错了：${err.message}`, time: timeStr },
+        ]);
+      });
+  };
+
   const enterChat = (charId) => {
     setActiveCharId(charId);
     setShowCharSelect(false);
@@ -2087,6 +2133,8 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           ? `[晚声把她的一篇手札分享给了你${shareIntentHint(m.shareIntent)}，请以你的性格自然地回应]\n\n「${m.diaryDate || "某天"}${m.noteTitle ? " · " + m.noteTitle : ""}」\n${m.content}`
           : m.isTreasureContinue
           ? `[用户从宝库里拿出了一段珍藏的原文，希望你基于这段内容继续写、扩写或改写。请尊重原文的语气和氛围，不要把它当成普通聊天摘要。优先保留原文的情绪和风格。]\n\n${m.content}`
+          : m.isLinkShare
+          ? `[用户分享了一个外部链接给你。你可能无法直接访问链接内容。请基于用户提供的标题、备注和上下文回应；如果信息不足，可以温柔地请用户补充截图、正文摘要或说明。不要假装已经看过链接里的完整内容。]\n\n${m.content}`
           : m.content,
       }));
     const charMemories = activeChar ? getCharMemories(activeChar.id) : {};
@@ -2668,6 +2716,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           onOpenTimeline={openTimeline}
           onGenerateSettlementFromChat={generateSettlementFromChat}
           settlementGenerating={reflecting}
+          sendLinkFromChat={sendLinkFromChat}
         />
       )}
     </>

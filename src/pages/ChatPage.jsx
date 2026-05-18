@@ -446,6 +446,258 @@ function MoveInCeremonyCard({ msg }) {
   );
 }
 
+// ════════════════════════════════════════════
+// ── 给他看这个 · 链接分享面板 ──
+// ════════════════════════════════════════════
+const LINK_INTENTS = [
+  "陪我看看",
+  "帮我分析",
+  "我觉得像我们",
+  "存成灵感",
+  "我有点在意，陪我聊聊",
+  "只是给你看一眼",
+];
+
+function tryGetDomain(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
+}
+
+function LinkSharePanel({ activeChar, onSend, onClose }) {
+  const charName = activeChar?.name || "ta";
+  const [url,    setUrl]    = useState("");
+  const [title,  setTitle]  = useState("");
+  const [note,   setNote]   = useState("");
+  const [intent, setIntent] = useState("陪我看看");
+  const [urlError, setUrlError] = useState("");
+
+  const handleSend = () => {
+    const trimUrl = url.trim();
+    if (!trimUrl) { setUrlError("先贴一个链接给他看吧。"); return; }
+    setUrlError("");
+
+    const domain       = tryGetDomain(trimUrl);
+    const displayTitle = title.trim() || domain || trimUrl;
+
+    // content：LLM 能读到所有字段，即使结构化字段丢失也能理解
+    const lines = [
+      `链接：${trimUrl}`,
+      title.trim() ? `标题：${title.trim()}` : `来源：${domain || trimUrl}`,
+      note.trim()  ? `备注：${note.trim()}`  : null,
+      `分享意图：${intent}`,
+    ].filter(Boolean);
+
+    onSend({
+      url:     trimUrl,
+      title:   displayTitle,
+      note:    note.trim(),
+      intent,
+      content: lines.join("\n"),
+    });
+    onClose();
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "rgba(60,50,80,.35)",
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        width: "100%", maxWidth: 480,
+        background: "linear-gradient(160deg, #fffef8 0%, #f8f4ff 100%)",
+        borderRadius: "20px 20px 0 0",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.18)",
+        display: "flex", flexDirection: "column",
+        maxHeight: "88vh", overflow: "hidden",
+      }}>
+        {/* 顶栏 */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 18px 12px",
+          borderBottom: "1px solid rgba(196,166,184,.18)",
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>
+            🔗 给{charName}看这个
+          </span>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
+        </div>
+
+        <div style={{ flex: 1, overflow: "auto", padding: "16px 18px 32px" }}>
+
+          {/* URL */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>链接 URL</div>
+            <input
+              autoFocus
+              type="url"
+              placeholder="https://…"
+              value={url}
+              onChange={(e) => { setUrl(e.target.value); setUrlError(""); }}
+              style={{
+                width: "100%", boxSizing: "border-box",
+                padding: "9px 12px", borderRadius: 12, fontSize: 13, color: "#5a4a6a",
+                background: "rgba(255,255,255,.8)",
+                border: `1px solid ${urlError ? "rgba(180,80,80,.5)" : "rgba(196,166,184,.28)"}`,
+                fontFamily: "var(--font-main)", outline: "none",
+              }}
+            />
+            {urlError && (
+              <div style={{ fontSize: 11, color: "#9a5050", marginTop: 5, letterSpacing: 0.3 }}>
+                {urlError}
+              </div>
+            )}
+          </div>
+
+          {/* 标题 */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>
+              标题 <span style={{ opacity: 0.5 }}>（可选，没填就用域名）</span>
+            </div>
+            <input
+              type="text"
+              placeholder="这篇文章叫…"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              style={{
+                width: "100%", boxSizing: "border-box",
+                padding: "9px 12px", borderRadius: 12, fontSize: 13, color: "#5a4a6a",
+                background: "rgba(255,255,255,.8)",
+                border: "1px solid rgba(196,166,184,.28)",
+                fontFamily: "var(--font-main)", outline: "none",
+              }}
+            />
+          </div>
+
+          {/* 备注 */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>
+              我想说的 <span style={{ opacity: 0.5 }}>（可选）</span>
+            </div>
+            <textarea
+              placeholder="比如：这段让我想到了你，或者：我不太理解第三段…"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              style={{
+                width: "100%", boxSizing: "border-box",
+                minHeight: 68, padding: "9px 12px",
+                borderRadius: 12, fontSize: 13, color: "#5a4a6a",
+                background: "rgba(255,255,255,.8)",
+                border: "1px solid rgba(196,166,184,.28)",
+                fontFamily: "var(--font-main)", outline: "none",
+                resize: "none", lineHeight: 1.75,
+              }}
+            />
+          </div>
+
+          {/* 分享意图 */}
+          <div style={{ marginBottom: 22 }}>
+            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 9 }}>我想让你怎么看</div>
+            <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+              {LINK_INTENTS.map((i) => (
+                <button
+                  key={i}
+                  onClick={() => setIntent(i)}
+                  style={{
+                    padding: "6px 12px", borderRadius: 20, fontSize: 11,
+                    cursor: "pointer", fontFamily: "var(--font-main)", transition: "all .15s",
+                    background: intent === i ? "rgba(120,100,160,.15)" : "rgba(255,255,255,.8)",
+                    border: `1px solid ${intent === i ? "rgba(120,100,160,.45)" : "rgba(196,166,184,.25)"}`,
+                    color: intent === i ? "#5a4a8a" : "#7a6a8e",
+                  }}
+                >{i}</button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={handleSend}
+            style={{
+              width: "100%", padding: "12px", borderRadius: 14,
+              background: "rgba(120,100,160,.85)",
+              border: "none", color: "white",
+              fontSize: 14, cursor: "pointer",
+              fontFamily: "var(--font-main)", letterSpacing: 1,
+            }}
+          >发给{charName}看看</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 聊天区：链接卡片 ──
+function LinkShareCard({ msg }) {
+  const domain = tryGetDomain(msg.linkUrl || "");
+  const displayTitle = msg.linkTitle || domain || msg.linkUrl || "链接";
+
+  return (
+    <div style={{
+      background: "rgba(255,255,255,.75)",
+      border: "1px solid rgba(196,166,184,.22)",
+      borderRadius: 14,
+      overflow: "hidden",
+      maxWidth: "84%",
+      boxShadow: "0 2px 10px rgba(74,69,96,.07)",
+    }}>
+      {/* 顶部标题行 */}
+      <div style={{
+        display: "flex", alignItems: "flex-start", gap: 10,
+        padding: "12px 14px 10px",
+        borderBottom: "1px solid rgba(196,166,184,.12)",
+      }}>
+        <span style={{
+          fontSize: 18, lineHeight: 1.2, flexShrink: 0, marginTop: 1,
+        }}>🔗</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: 13, fontWeight: 500, color: "#4a3a5a",
+            lineHeight: 1.4, wordBreak: "break-all",
+          }}>{displayTitle}</div>
+          <div style={{
+            fontSize: 10, color: "var(--text-faint)", marginTop: 3,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
+            {(msg.linkUrl || "").length > 48
+              ? (msg.linkUrl || "").slice(0, 48) + "…"
+              : (msg.linkUrl || "")}
+          </div>
+        </div>
+      </div>
+
+      {/* 备注 */}
+      {msg.linkNote && (
+        <div style={{
+          padding: "8px 14px",
+          fontSize: 12, color: "#6a5a7a", lineHeight: 1.7,
+          borderBottom: "1px solid rgba(196,166,184,.1)",
+          wordBreak: "break-all",
+        }}>
+          {msg.linkNote}
+        </div>
+      )}
+
+      {/* 底部：意图 */}
+      <div style={{
+        padding: "7px 14px",
+        display: "flex", alignItems: "center", justifyContent: "flex-end",
+      }}>
+        <span style={{
+          fontSize: 10, color: "#8a6a9a",
+          background: "rgba(196,166,184,.14)",
+          padding: "2px 9px", borderRadius: 10,
+          border: "1px solid rgba(196,166,184,.2)",
+          letterSpacing: 0.3,
+        }}>{msg.linkIntent || "分享链接"}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function ChatPage({
   // 角色
   activeChar,
@@ -513,6 +765,8 @@ export default function ChatPage({
   // 关系沉淀
   onGenerateSettlementFromChat,
   settlementGenerating,
+  // 链接分享
+  sendLinkFromChat,
 }) {
   // ── 局部 UI 状态 ──
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -1177,8 +1431,10 @@ export default function ChatPage({
               </div>
             )}
 
-            {/* 手札分享卡片 */}
-            {(msg.isDiaryShare || msg.isNoteShare) ? (
+            {/* 链接分享卡片 */}
+            {msg.isLinkShare ? (
+              <LinkShareCard msg={msg} />
+            ) : /* 手札分享卡片 */ (msg.isDiaryShare || msg.isNoteShare) ? (
               <div className="diary-share-card">
                 <div className="diary-share-header">
                   <span className="diary-share-icon">
@@ -1383,7 +1639,7 @@ export default function ChatPage({
             {[
               { emoji: "📓", label: "分享手札",    active: true,  action: () => setAttachView("notes") },
               { emoji: "🖼",  label: "添加图片",    active: false },
-              { emoji: "📎",  label: "添加文件",    active: false },
+              { emoji: "🔗",  label: "给他看这个",  sub: "分享链接",  active: true,  action: () => setAttachView("link") },
               { emoji: "💗",  label: "帮我记住",    active: true,  action: () => setAttachView("memorize") },
               { emoji: "🌙",  label: "记下这一刻",  sub: "留作回忆",    active: true,  action: () => setAttachView("timeline") },
               { emoji: "✨",  label: "整理一下我们", sub: "更新关系理解", active: true,  action: () => setAttachView("settle") },
@@ -1776,6 +2032,18 @@ export default function ChatPage({
           </div>
         );
       })()}
+
+      {/* ── 给他看这个 · 链接分享面板 ── */}
+      {attachView === "link" && (
+        <LinkSharePanel
+          activeChar={activeChar}
+          onSend={(fields) => {
+            sendLinkFromChat?.(fields);
+            setAttachView(null);
+          }}
+          onClose={() => setAttachView(null)}
+        />
+      )}
 
       {/* ── 回复模式切换 ── */}
       <div style={{
