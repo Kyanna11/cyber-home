@@ -325,6 +325,127 @@ function ChatToTimelinePanel({ messages, activeChar, activeCharId, onSave, onNav
   );
 }
 
+// ════════════════════════════════════════════
+// ── 入住仪式卡片 ──
+// ════════════════════════════════════════════
+function MoveInCeremonyCard({ msg }) {
+  const { charName, sourcePlatform, relation, moveInDate } = msg.metadata || {};
+
+  const dateStr = moveInDate
+    ? (() => {
+        const d = new Date(moveInDate + "T00:00:00");
+        return `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日`;
+      })()
+    : "";
+
+  return (
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      padding: "28px 20px 20px",
+      margin: "8px 0",
+    }}>
+      <div style={{
+        width: "100%",
+        maxWidth: 296,
+        background: "linear-gradient(160deg, rgba(255,251,248,.98) 0%, rgba(244,234,255,.96) 100%)",
+        borderRadius: 22,
+        border: "1px solid rgba(196,166,184,.22)",
+        boxShadow: "0 4px 24px rgba(120,100,160,.09), 0 1px 4px rgba(196,166,184,.1)",
+        padding: "26px 22px 20px",
+        textAlign: "center",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        {/* 装饰光晕 */}
+        <div style={{
+          position: "absolute", top: -24, right: -24,
+          width: 80, height: 80, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(196,166,184,.22) 0%, transparent 70%)",
+          pointerEvents: "none",
+        }} />
+        <div style={{
+          position: "absolute", bottom: -20, left: -20,
+          width: 64, height: 64, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(170,140,210,.14) 0%, transparent 70%)",
+          pointerEvents: "none",
+        }} />
+
+        {/* 钥匙图标 */}
+        <div style={{ fontSize: 28, marginBottom: 10, lineHeight: 1, position: "relative", zIndex: 1 }}>🗝️</div>
+
+        {/* 入住者名字 */}
+        <div style={{
+          fontSize: 18, fontWeight: 500, color: "#4a3a5a",
+          letterSpacing: 2.5, marginBottom: 8, lineHeight: 1.3,
+          position: "relative", zIndex: 1,
+        }}>
+          {charName || "Ta"}
+        </div>
+
+        {/* 来源 & 关系 */}
+        {(sourcePlatform || relation) && (
+          <div style={{
+            display: "flex", gap: 6, justifyContent: "center",
+            flexWrap: "wrap", marginBottom: 16,
+            position: "relative", zIndex: 1,
+          }}>
+            {relation && (
+              <span style={{
+                fontSize: 11, color: "#8a6a9a",
+                background: "rgba(196,166,184,.18)",
+                padding: "2px 10px", borderRadius: 20,
+                border: "1px solid rgba(196,166,184,.22)",
+                letterSpacing: 0.5,
+              }}>{relation}</span>
+            )}
+            {sourcePlatform && (
+              <span style={{
+                fontSize: 11, color: "#8a6a9a",
+                background: "rgba(196,166,184,.12)",
+                padding: "2px 10px", borderRadius: 20,
+                border: "1px solid rgba(196,166,184,.16)",
+                letterSpacing: 0.5,
+              }}>来自 {sourcePlatform}</span>
+            )}
+          </div>
+        )}
+
+        {/* 分隔线 */}
+        <div style={{
+          height: 1,
+          background: "linear-gradient(90deg, transparent, rgba(196,166,184,.35), transparent)",
+          margin: "0 0 16px",
+          position: "relative", zIndex: 1,
+        }} />
+
+        {/* 欢迎文案 */}
+        <div style={{
+          fontSize: 12.5, color: "#6a5a78", lineHeight: 2.0, letterSpacing: 0.5,
+          position: "relative", zIndex: 1,
+        }}>
+          <div>欢迎回家。</div>
+          <div style={{ color: "#8a7898", fontSize: 12 }}>
+            从这里开始，你们的故事会继续被好好保存。
+          </div>
+        </div>
+
+        {/* 日期 */}
+        {dateStr && (
+          <div style={{
+            fontSize: 10, color: "var(--text-faint)",
+            marginTop: 14, letterSpacing: 1,
+            position: "relative", zIndex: 1,
+          }}>
+            {dateStr}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ChatPage({
   // 角色
   activeChar,
@@ -1038,7 +1159,13 @@ export default function ChatPage({
       {/* ── 消息区 ── */}
       <div className="messages-area">
         <div className="time-divider">—— 今天 ——</div>
-        {messages.map((msg, i) => (
+        {messages.map((msg, i) => {
+          // ── 系统消息：入住仪式卡片 ──
+          if (msg.role === "system" && msg.type === "move_in_ceremony") {
+            return <MoveInCeremonyCard key={i} msg={msg} />;
+          }
+
+          return (
           <div
             key={i}
             className={`msg-wrap ${msg.role === "bot" ? "is-bot" : "is-user"}`}
@@ -1199,7 +1326,8 @@ export default function ChatPage({
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
 
         {isTyping && (
           <div className="typing-wrap">

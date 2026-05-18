@@ -1078,13 +1078,49 @@ ${chunksText}
   const enterChat = (charId) => {
     setActiveCharId(charId);
     setShowCharSelect(false);
+    const char = characters.find((c) => c.id === charId);
     const threads = chatThreads[charId] || [];
+
+    // 获取初始消息列表（用于下面的仪式注入）
+    let initialMsgs;
     if (threads.length === 0) {
-      createThread(charId);
+      const thread = createThread(charId);
+      initialMsgs = thread.messages;
     } else {
       setActiveThreadId(threads[0].id);
-      setMessages([...threads[0].messages]);
+      initialMsgs = [...threads[0].messages];
+      setMessages(initialMsgs);
     }
+
+    // ── 入住仪式：首次进入时自动注入一条 system 消息 ──
+    if (char && !char.migration?.moveInCeremonyCreated) {
+      const now = Date.now();
+      const ceremonyMsg = {
+        id: `ceremony-${charId}-${now}`,
+        role: "system",
+        type: "move_in_ceremony",
+        charId,
+        content: `${char.name || "Ta"}已经住进小家了。`,
+        createdAt: now,
+        metadata: {
+          charName:       char.name || "",
+          sourcePlatform: char.migration?.sourcePlatform || "",
+          relation:       char.relation || "",
+          moveInDate:     new Date(now).toISOString().split("T")[0],
+        },
+      };
+      // 将仪式消息置于最前（useEffect 会同步写回 thread）
+      setMessages([ceremonyMsg, ...initialMsgs]);
+      // 标记已生成，防止重复
+      setCharacters((prev) =>
+        prev.map((c) =>
+          c.id === charId
+            ? { ...c, migration: { ...(c.migration || {}), moveInCeremonyCreated: true } }
+            : c
+        )
+      );
+    }
+
     setPage("chat");
   };
 
