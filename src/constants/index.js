@@ -28,6 +28,7 @@ export const MEMORY_CHUNKS_STORAGE_KEY = "cyber-home-memory-chunks";
 export const MIGRATION_DRAFTS_STORAGE_KEY = "cyber-home-migration-drafts";
 export const TIMELINE_EVENTS_STORAGE_KEY = "cyber-home-timeline-events";
 export const SETTLEMENT_DRAFTS_STORAGE_KEY = "cyber-home-settlement-drafts";
+export const STICKY_NOTES_STORAGE_KEY = "cyber-home-sticky-notes";
 
 // 消息分隔符（AI 回复中用来拆成多条消息）
 export const MSG_DELIMITER = "|||";

@@ -22,6 +22,7 @@ import {
   loadProfileDrafts, saveProfileDrafts,
   loadHomeMemory, saveHomeMemory,
   loadTreasures, saveTreasures,
+  loadStickyNotes, saveStickyNotes,
 } from "./utils/storage";
 import { genId, estimateTokens } from "./utils/helpers";
 import { splitRawTextToChunks } from "./utils/chunker";
@@ -50,6 +51,7 @@ import TimelinePage from "./pages/TimelinePage";
 import ProfileHomePage from "./pages/ProfileHomePage";
 import ConfigPage from "./pages/ConfigPage";
 import TreasurePage from "./pages/TreasurePage";
+import StickyNotesPage from "./pages/StickyNotesPage";
 
 // MSG_DELIMITER is used internally by parseResponse in utils/prompt.js
 
@@ -206,6 +208,9 @@ export default function App() {
   // ─── 宝库 ───
   const [treasures, setTreasures] = useState(() => loadTreasures());
 
+  // ─── 便签墙 ───
+  const [stickyNotes, setStickyNotes] = useState(() => loadStickyNotes());
+
   // ─── API 配置 ───
   const [config, setConfig] = useState(loadConfig);
   const [ctxConfig, setCtxConfig] = useState(loadCtxConfig);
@@ -243,6 +248,7 @@ export default function App() {
   useEffect(() => { saveHomeMemory(homeMemory); }, [homeMemory]);
   useEffect(() => { saveProfileDrafts(profileDrafts); }, [profileDrafts]);
   useEffect(() => { saveThreads(chatThreads); }, [chatThreads]);
+  useEffect(() => { saveStickyNotes(stickyNotes); }, [stickyNotes]);
   useEffect(() => { localStorage.setItem("worldViews", JSON.stringify(worldViews)); }, [worldViews]);
   useEffect(() => { localStorage.setItem("reflectSettings", JSON.stringify(reflectSettings)); }, [reflectSettings]);
   useEffect(() => { localStorage.setItem("userProfile", JSON.stringify(userProfile)); }, [userProfile]);
@@ -947,6 +953,41 @@ ${chunksText}
     const updated = treasures.filter((t) => t.id !== id);
     setTreasures(updated);
     saveTreasures(updated);
+  };
+
+  // ── 便签墙 CRUD ──
+  const addStickyNote = (fields) => {
+    const now = Date.now();
+    const note = {
+      id: `sticky-${now}-${Math.random().toString(36).slice(2, 6)}`,
+      authorType:   fields.authorType   || "user",
+      authorId:     fields.authorId     || null,
+      authorName:   fields.authorName   || "我",
+      targetType:   fields.targetType   || "all",
+      targetCharId: fields.targetCharId || null,
+      targetName:   fields.targetName   || "全家",
+      content:      fields.content      || "",
+      createdAt:    now,
+      read:         false,
+      pinned:       fields.pinned       || false,
+    };
+    setStickyNotes((prev) => [note, ...prev]);
+  };
+
+  const markStickyNoteRead = (noteId) => {
+    setStickyNotes((prev) =>
+      prev.map((n) => n.id === noteId ? { ...n, read: true } : n)
+    );
+  };
+
+  const toggleStickyNotePin = (noteId) => {
+    setStickyNotes((prev) =>
+      prev.map((n) => n.id === noteId ? { ...n, pinned: !n.pinned } : n)
+    );
+  };
+
+  const deleteStickyNote = (noteId) => {
+    setStickyNotes((prev) => prev.filter((n) => n.id !== noteId));
   };
 
   // 从宝库「写进手札」：创建手札草稿并跳转到手札页打开编辑器
@@ -2497,6 +2538,21 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           setShowCharSelect={setShowCharSelect}
           characters={characters}
           enterChat={enterChat}
+          stickyNotes={stickyNotes}
+        />
+      )}
+
+      {/* 便签墙 */}
+      {page === "stickyNotes" && (
+        <StickyNotesPage
+          navigateTo={navigateTo}
+          stickyNotes={stickyNotes}
+          characters={characters}
+          userProfile={userProfile}
+          onAddNote={addStickyNote}
+          onMarkRead={markStickyNoteRead}
+          onTogglePin={toggleStickyNotePin}
+          onDeleteNote={deleteStickyNote}
         />
       )}
 

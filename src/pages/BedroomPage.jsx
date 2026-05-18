@@ -12,7 +12,14 @@ export default function BedroomPage({
   setShowCharSelect,
   characters,
   enterChat,
+  // 便签墙
+  stickyNotes,
 }) {
+  const unreadNotes = (stickyNotes || []).filter((n) => !n.read);
+  const recentNotes = (stickyNotes || [])
+    .slice()
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, 3);
   return (
     <div className="bedroom">
       {/* 顶栏 */}
@@ -96,6 +103,23 @@ export default function BedroomPage({
           }}
         />
 
+        {/* 便签墙热区（左上角墙面） */}
+        <div
+          onClick={() => navigateTo("stickyNotes")}
+          onMouseEnter={() => setHoveredItem("stickyNotes")}
+          onMouseLeave={() => setHoveredItem(null)}
+          style={{
+            position: "absolute",
+            left: "4%",
+            top: "8%",
+            width: "26%",
+            height: "40%",
+            cursor: "pointer",
+            zIndex: 3,
+            borderRadius: 8,
+          }}
+        />
+
         {/* 门热区 */}
         <div
           onClick={() => setShowCharSelect(true)}
@@ -136,6 +160,37 @@ export default function BedroomPage({
             }}
           >
             📓 我的手札
+          </div>
+        )}
+        {hoveredItem === "stickyNotes" && (
+          <div
+            style={{
+              position: "absolute",
+              left: "6%",
+              top: "5%",
+              background: "rgba(255,255,255,.85)",
+              backdropFilter: "blur(8px)",
+              padding: "8px 14px",
+              borderRadius: 10,
+              fontSize: 12,
+              fontWeight: 400,
+              color: "var(--text-deep)",
+              letterSpacing: 1.5,
+              boxShadow: "0 4px 16px rgba(74,69,96,.12)",
+              border: "1px solid rgba(232,196,196,.2)",
+              zIndex: 5,
+              pointerEvents: "none",
+              animation: "tooltipIn .25s ease-out",
+            }}
+          >
+            📝 便签墙
+            {unreadNotes.length > 0 && (
+              <span style={{
+                marginLeft: 6, fontSize: 10,
+                background: "rgba(180,100,120,.15)",
+                color: "#9a5060", padding: "1px 6px", borderRadius: 8,
+              }}>{unreadNotes.length} 未读</span>
+            )}
           </div>
         )}
         {hoveredItem === "treasure" && (
@@ -184,6 +239,71 @@ export default function BedroomPage({
             }}
           >
             🚪 去找 ta
+          </div>
+        )}
+
+        {/* ── 便签墙预览条 ── */}
+        {recentNotes.length > 0 && (
+          <div
+            onClick={() => navigateTo("stickyNotes")}
+            style={{
+              position: "absolute",
+              bottom: 12, left: 12, right: 12,
+              background: "rgba(255,255,255,.72)",
+              backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
+              borderRadius: 14,
+              border: "1px solid rgba(196,166,184,.22)",
+              boxShadow: "0 4px 16px rgba(74,69,96,.1)",
+              padding: "10px 14px",
+              zIndex: 4,
+              cursor: "pointer",
+            }}
+          >
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              marginBottom: 8,
+            }}>
+              <span style={{ fontSize: 11, color: "#6a5a78", letterSpacing: 1 }}>
+                📝 便签墙
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {unreadNotes.length > 0 && (
+                  <span style={{
+                    fontSize: 10, color: "#9a5060",
+                    background: "rgba(180,100,120,.12)",
+                    padding: "1px 8px", borderRadius: 8,
+                    border: "1px solid rgba(180,100,120,.2)",
+                  }}>{unreadNotes.length} 未读</span>
+                )}
+                <span style={{ fontSize: 10, color: "var(--text-faint)" }}>查看全部 →</span>
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              {recentNotes.map((note) => (
+                <div key={note.id} style={{
+                  display: "flex", alignItems: "baseline", gap: 8,
+                }}>
+                  <span style={{
+                    fontSize: 9, color: "#8a7898", flexShrink: 0,
+                    background: "rgba(196,166,184,.15)",
+                    padding: "1px 6px", borderRadius: 6,
+                    maxWidth: 52, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>{note.authorName}</span>
+                  <span style={{
+                    fontSize: 11, color: note.read ? "#9a8aac" : "#5a4a6a",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    flex: 1,
+                    fontWeight: note.read ? 300 : 400,
+                  }}>{note.content}</span>
+                  {!note.read && (
+                    <div style={{
+                      width: 5, height: 5, borderRadius: "50%",
+                      background: "#c87898", flexShrink: 0,
+                    }} />
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
