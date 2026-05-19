@@ -19,6 +19,7 @@ import {
   DEFAULT_HOME_MEMORY,
   TREASURES_STORAGE_KEY,
   STICKY_NOTES_STORAGE_KEY,
+  SELF_CURATION_DRAFTS_STORAGE_KEY,
 } from "../constants";
 
 // 通用读写
@@ -154,6 +155,14 @@ export function loadStickyNotes() {
 }
 export function saveStickyNotes(notes) {
   saveJSON(STICKY_NOTES_STORAGE_KEY, notes);
+}
+
+// 自选迁入草稿（他的行李）
+export function loadSelfCurationDrafts() {
+  return loadJSON(SELF_CURATION_DRAFTS_STORAGE_KEY, []);
+}
+export function saveSelfCurationDrafts(drafts) {
+  saveJSON(SELF_CURATION_DRAFTS_STORAGE_KEY, drafts);
 }
 
 // 记忆注入配置

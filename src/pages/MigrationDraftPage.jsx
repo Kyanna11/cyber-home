@@ -449,6 +449,10 @@ function ChunkSelectorPanel({
   allChunks,
   rawArchives,
   draftGenerating,
+  maxChunks,        // 可选，超出时显示警告
+  title = "选择提炼片段",
+  subtitle,
+  generateLabel = "✨ 用已选片段生成草稿",
   onGenerate,      // (selectedChunkIds) => void — 用已选片段生成
   onQuickGenerate, // () => void — 快速前 10 段
   onClose,
@@ -512,7 +516,8 @@ function ChunkSelectorPanel({
   const selectAllChunks = () => setSelected(new Set(charChunks.map(c => c.id)));
 
   const selectedCount = selected.size;
-  const showTooManyWarning = selectedCount > 20;
+  const warnLimit = maxChunks || 20;
+  const showTooManyWarning = selectedCount > warnLimit;
 
   const btnSmall = {
     padding: "5px 11px",
@@ -559,13 +564,16 @@ function ChunkSelectorPanel({
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: subtitle ? 4 : 10 }}>
             <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#4a3a5a", letterSpacing: 1.5 }}>
-              选择提炼片段
+              {title}
             </div>
             <span style={{ fontSize: 11, color: "#9a8aac" }}>共 {charChunks.length} 段</span>
             <button onClick={onClose} style={{ ...btnSmall, padding: "5px 12px" }}>关闭</button>
           </div>
+          {subtitle && (
+            <div style={{ fontSize: 11, color: "#9a8aac", marginBottom: 10 }}>{subtitle}</div>
+          )}
 
           {/* 搜索 + 档案筛选 */}
           <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
@@ -716,7 +724,7 @@ function ChunkSelectorPanel({
                 border: "1px solid rgba(200,160,80,.25)",
                 lineHeight: 1.6,
               }}>
-                ⚠️ 选择的片段较多，可能导致提炼变慢或失败。建议先选择最重要的片段。
+                ⚠️ 已选 {selectedCount} 段，超过建议上限（{warnLimit} 段），可能导致提炼变慢或失败。建议先选择最重要的片段。
               </div>
             )}
           </div>
@@ -742,7 +750,7 @@ function ChunkSelectorPanel({
                 opacity: draftGenerating ? 0.6 : 1,
               }}
             >
-              ✨ 用已选片段生成草稿
+              {generateLabel}
             </button>
 
             {/* 快速选项 */}
@@ -770,6 +778,327 @@ function ChunkSelectorPanel({
   );
 }
 
+// ── 行李草稿详情弹窗 ──
+function SelfCurationDraftModal({
+  draft,
+  charName,
+  allChunks,
+  archivesMap,
+  onClose,
+  onSave,
+  onStatusChange,
+  onDelete,
+  onConvert,  // 转为迁入草稿
+}) {
+  const FIELD_DEFS = [
+    { key: "userFactsHeWantsToKeep",            label: `我最想带走的关于你的事` },
+    { key: "relationshipMemoriesHeWantsToKeep", label: `我们之间我最想带走的记忆` },
+    { key: "selfAnchorsHeMustNotLose",          label: `我自己最不能丢的` },
+    { key: "wakeSummarySuggestions",            label: `我希望每次醒来都记得的` },
+    { key: "treasureSuggestions",               label: `适合放进宝库珍藏的原话` },
+    { key: "notForLongTermMemory",              label: `只是当时氛围，不建议写进长期记忆` },
+    { key: "reasons",                           label: `我为什么选这些` },
+  ];
+
+  const initEdit = () => {
+    const obj = {};
+    FIELD_DEFS.forEach(({ key }) => {
+      obj[key] = arrToText(draft[key]);
+    });
+    return obj;
+  };
+
+  const [editFields, setEditFields] = useState(initEdit);
+  const [showRaw, setShowRaw] = useState(false);
+  const [showSourceChunks, setShowSourceChunks] = useState(false);
+  const [convertConfirm, setConvertConfirm] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [saveFlash, setSaveFlash] = useState(false);
+
+  useEffect(() => {
+    const prev = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    return () => { document.documentElement.style.overflow = prev; };
+  }, []);
+
+  useEffect(() => {
+    if (draft) setEditFields(initEdit());
+  }, [draft?.id]);
+
+  if (!draft) return null;
+
+  const selfSt = draft.status === "approved"
+    ? { label: "已转换", bg: "rgba(130,180,140,.2)", color: "#3a7a4a" }
+    : draft.status === "rejected"
+    ? { label: "已驳回", bg: "rgba(192,112,112,.14)", color: "#a05050" }
+    : { label: "待审阅", bg: "rgba(160,130,200,.18)", color: "#6a4a9a" };
+
+  const handleSave = () => {
+    const fields = {};
+    FIELD_DEFS.forEach(({ key }) => { fields[key] = textToArr(editFields[key]); });
+    onSave(draft.id, fields);
+    setSaveFlash(true);
+    setTimeout(() => setSaveFlash(false), 1500);
+  };
+
+  const handleConvert = () => {
+    onConvert(draft.id);
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 100,
+        background: "rgba(30,20,40,.48)",
+        backdropFilter: "blur(6px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "20px 16px",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "rgba(255,255,255,.94)",
+          borderRadius: 20,
+          border: "1px solid rgba(255,255,255,.7)",
+          boxShadow: "0 12px 48px rgba(0,0,0,.16)",
+          width: "100%", maxWidth: 660,
+          maxHeight: "90vh",
+          display: "flex", flexDirection: "column",
+          overflow: "hidden",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* 顶栏 */}
+        <div style={{
+          padding: "14px 20px 12px",
+          borderBottom: "1px solid rgba(196,166,184,.2)",
+          background: "linear-gradient(90deg, rgba(120,90,160,.06) 0%, rgba(255,255,255,.0) 100%)",
+        }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#4a3a5a", marginBottom: 4 }}>
+                🧳 {draft.title}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{
+                  fontSize: 10, padding: "2px 8px",
+                  background: selfSt.bg, borderRadius: 8, color: selfSt.color,
+                }}>{selfSt.label}</span>
+                <span style={{ fontSize: 11, color: "#b0a0c0" }}>{formatTime(draft.createdAt)}</span>
+                <span style={{ fontSize: 11, color: "#b0a0c0" }}>
+                  基于 {draft.sourceChunkIds?.length || 0} 段片段
+                </span>
+              </div>
+            </div>
+            <button onClick={onClose} style={{ ...btnGhost, padding: "5px 12px" }}>关闭</button>
+          </div>
+          <div style={{ fontSize: 11, color: "#9a8aac", marginTop: 7, lineHeight: 1.6 }}>
+            这是 <strong style={{ color: "#6a4a9a" }}>{charName}</strong> 以自己的身份整理的迁入行李。
+            内容可编辑，确认后可转为迁入草稿。
+          </div>
+        </div>
+
+        {/* 内容 */}
+        <div style={{ flex: 1, overflow: "auto", padding: "14px 20px" }}>
+          {showRaw ? (
+            <>
+              <button style={{ ...btnGhost, marginBottom: 12 }} onClick={() => setShowRaw(false)}>
+                ← 返回编辑
+              </button>
+              <pre style={{
+                margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word",
+                fontSize: 12, lineHeight: 1.8, color: "#5a4a6a",
+                fontFamily: "var(--font-main)",
+              }}>
+                {draft.rawOutput || "（无原始输出）"}
+              </pre>
+            </>
+          ) : (
+            <>
+              <div style={{
+                fontSize: 11, color: "#9a8aac", lineHeight: 1.8,
+                padding: "7px 11px", background: "rgba(160,130,200,.07)",
+                borderRadius: 8, marginBottom: 16,
+              }}>
+                ✏️ 内容可直接编辑。数组字段请一行写一条。
+                确认无误后点击「转为迁入草稿」进入正式审批流程。
+              </div>
+
+              {FIELD_DEFS.map(({ key, label }) => (
+                <div key={key} style={{ marginBottom: 14 }}>
+                  <label style={{ ...labelStyle, color: "#7a5a9e" }}>{label}</label>
+                  <textarea
+                    style={{ ...taStyle, minHeight: key === "wakeSummarySuggestions" ? 90 : 72 }}
+                    placeholder="一行一条"
+                    value={editFields[key]}
+                    onChange={e => setEditFields(f => ({ ...f, [key]: e.target.value }))}
+                  />
+                </div>
+              ))}
+
+              {/* 来源片段 */}
+              {(draft.sourceChunkIds?.length > 0) && (
+                <div style={{ marginBottom: 8 }}>
+                  <button
+                    style={{
+                      ...btnGhost, fontSize: 11,
+                      color: "#6a7aae", borderColor: "rgba(106,122,174,.3)",
+                      display: "flex", alignItems: "center", gap: 5,
+                    }}
+                    onClick={() => setShowSourceChunks(v => !v)}
+                  >
+                    📄 来源片段（{draft.sourceChunkIds.length} 段）
+                    <span style={{ fontSize: 9, opacity: 0.7 }}>{showSourceChunks ? "▲ 收起" : "▼ 展开"}</span>
+                  </button>
+                  {showSourceChunks && (
+                    <div style={{
+                      marginTop: 8,
+                      background: "rgba(196,166,184,.06)",
+                      borderRadius: 10,
+                      border: "1px solid rgba(196,166,184,.2)",
+                      overflow: "hidden",
+                    }}>
+                      {draft.sourceChunkIds.map((chunkId, idx) => {
+                        const chunk = (allChunks || []).find(c => c.id === chunkId);
+                        if (!chunk) return (
+                          <div key={chunkId} style={{ padding: "8px 12px", fontSize: 11, color: "#b0a0c0" }}>
+                            片段已删除
+                          </div>
+                        );
+                        const archive = archivesMap?.[chunk.archiveId];
+                        return (
+                          <div key={chunkId} style={{
+                            padding: "9px 13px",
+                            borderBottom: idx < draft.sourceChunkIds.length - 1 ? "1px solid rgba(196,166,184,.15)" : "none",
+                          }}>
+                            <div style={{ display: "flex", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 10, color: "#9a8aac", fontWeight: 600 }}>
+                                {archive?.title || "未知档案"} · 第 {chunk.index + 1} 段
+                              </span>
+                              <span style={{ fontSize: 10, color: "#b0a0c0" }}>{chunk.text.length} 字</span>
+                            </div>
+                            <div style={{
+                              fontSize: 11, color: "#7a6a8e", lineHeight: 1.7,
+                              display: "-webkit-box", WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical", overflow: "hidden",
+                            }}>
+                              {chunk.text.slice(0, 120)}{chunk.text.length > 120 ? "…" : ""}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* 底部操作 */}
+        <div style={{
+          padding: "12px 20px",
+          borderTop: "1px solid rgba(196,166,184,.18)",
+          background: "rgba(255,255,255,.6)",
+        }}>
+          {convertConfirm ? (
+            <div style={{ marginBottom: 0 }}>
+              <div style={{
+                fontSize: 12, color: "#6a4a9a", marginBottom: 8, lineHeight: 1.7,
+                padding: "8px 12px", background: "rgba(120,90,160,.1)", borderRadius: 8,
+              }}>
+                转换后会在「迁入草稿」列表中生成一份新草稿，当前行李草稿标记为已转换。
+                转换后你可以在迁入草稿中进行最终审核和采纳。
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  style={{ ...btnGhost, color: "#4a2a6e", borderColor: "rgba(120,90,160,.5)", fontWeight: 600 }}
+                  onClick={handleConvert}
+                >
+                  ✓ 确认转换
+                </button>
+                <button style={btnGhost} onClick={() => setConvertConfirm(false)}>取消</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              {!showRaw && (
+                <>
+                  <button
+                    style={{
+                      ...btnGhost,
+                      background: saveFlash ? "rgba(130,180,140,.2)" : undefined,
+                      color: saveFlash ? "#3a7a4a" : "#7a6a8e",
+                    }}
+                    onClick={handleSave}
+                  >
+                    {saveFlash ? "✓ 已保存" : "保存修改"}
+                  </button>
+                  {draft.status !== "approved" && (
+                    <button
+                      style={{ ...btnGhost, color: "#4a2a6e", borderColor: "rgba(120,90,160,.4)", fontWeight: 500 }}
+                      onClick={() => setConvertConfirm(true)}
+                    >
+                      🧳 → 转为迁入草稿
+                    </button>
+                  )}
+                </>
+              )}
+
+              {draft.status === "approved" && (
+                <span style={{ fontSize: 11, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已转入迁入草稿</span>
+              )}
+              {draft.status !== "rejected" && draft.status !== "approved" && (
+                <button
+                  style={{ ...btnGhost, color: "#a05050", borderColor: "rgba(192,112,112,.35)" }}
+                  onClick={() => onStatusChange(draft.id, "rejected")}
+                >
+                  ✕ 驳回
+                </button>
+              )}
+              {draft.status === "rejected" && (
+                <button style={btnGhost} onClick={() => onStatusChange(draft.id, "pending")}>
+                  ↩ 恢复
+                </button>
+              )}
+
+              <div style={{ flex: 1 }} />
+
+              <button
+                style={{ ...btnGhost, fontSize: 11 }}
+                onClick={() => setShowRaw(!showRaw)}
+              >
+                {showRaw ? "← 返回" : "原始输出"}
+              </button>
+
+              {!confirmDelete ? (
+                <button
+                  style={{ ...btnGhost, color: "#c07070", borderColor: "rgba(192,112,112,.3)" }}
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  删除
+                </button>
+              ) : (
+                <>
+                  <span style={{ fontSize: 11, color: "#9a8aac" }}>确定？</span>
+                  <button
+                    style={{ ...btnGhost, color: "#c07070", borderColor: "rgba(192,112,112,.4)" }}
+                    onClick={() => { onDelete(draft.id); onClose(); }}
+                  >
+                    确认删除
+                  </button>
+                  <button style={btnGhost} onClick={() => setConfirmDelete(false)}>取消</button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 主页面 ──
 export default function MigrationDraftPage({
   charId,
@@ -788,6 +1117,14 @@ export default function MigrationDraftPage({
   openTimeline,
   generateProfileDraftFromMigration,
   profileDraftGenerating,
+  selfCurationDrafts,
+  selfCurationGenerating,
+  selfCurationError,
+  handleGenerateSelfCurationDraft,
+  deleteSelfCurationDraft,
+  updateSelfCurationDraftStatus,
+  updateSelfCurationDraftContent,
+  convertSelfCurationToMigration,
   navigateTo,
 }) {
   const char = characters.find((c) => c.id === charId) || {};
@@ -800,8 +1137,15 @@ export default function MigrationDraftPage({
 
   const [viewDraftId, setViewDraftId] = useState(null);
   const [showChunkSelector, setShowChunkSelector] = useState(false);
+  const [showSelfCurationSelector, setShowSelfCurationSelector] = useState(false);
+  const [viewSelfCurationId, setViewSelfCurationId] = useState(null);
   // 用 find 保持实时同步（保存草稿后弹窗内容自动更新）
   const viewDraft = charDrafts.find((d) => d.id === viewDraftId) || null;
+
+  const charSelfDrafts = (selfCurationDrafts || [])
+    .filter((d) => d.charId === charId)
+    .sort((a, b) => b.createdAt - a.createdAt);
+  const viewSelfDraft = charSelfDrafts.find((d) => d.id === viewSelfCurationId) || null;
 
   // archive map 供 DraftDetailModal 使用
   const archivesMap = useMemo(() => {
@@ -1024,6 +1368,145 @@ export default function MigrationDraftPage({
             );
           })
         )}
+
+        {/* ── 他的行李 · 自选迁入草稿 ── */}
+        <div style={{ marginTop: 28 }}>
+          {/* 分区标题 */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            marginBottom: 10, padding: "0 2px",
+          }}>
+            <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
+            <span style={{ fontSize: 11, color: "#9a8aac", letterSpacing: 2, whiteSpace: "nowrap" }}>
+              🧳 他的行李 · 自选视角
+            </span>
+            <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
+          </div>
+
+          {/* 功能说明 */}
+          <div style={{
+            ...cardStyle,
+            background: "rgba(255,255,255,.45)",
+            marginBottom: 12, padding: "10px 14px",
+          }}>
+            <div style={{ fontSize: 11, color: "#7a6a8e", lineHeight: 1.8 }}>
+              让 <strong style={{ color: "#5a4a6a" }}>{charName}</strong> 以自己的身份阅读旧对话，整理他认为重要的内容。
+              他的选择不会自动写入档案，用户仍然拥有最终审批权。
+            </div>
+          </div>
+
+          {/* 行李生成按钮 */}
+          <button
+            disabled={selfCurationGenerating || charChunkCount === 0}
+            onClick={() => setShowSelfCurationSelector(true)}
+            style={{
+              display: "block", width: "100%", padding: "13px 20px", marginBottom: 12,
+              background: charChunkCount === 0 ? "rgba(196,166,184,.12)" : "rgba(120,90,160,.15)",
+              border: `1px solid ${charChunkCount === 0 ? "rgba(196,166,184,.25)" : "rgba(120,90,160,.35)"}`,
+              borderRadius: 16, color: charChunkCount === 0 ? "#b0a0c0" : "#4a2a6e",
+              fontSize: 13, fontWeight: 500, letterSpacing: 2,
+              cursor: charChunkCount === 0 ? "default" : "pointer",
+              fontFamily: "var(--font-main)", transition: "all .25s",
+              opacity: selfCurationGenerating ? 0.6 : 1,
+            }}
+          >
+            {selfCurationGenerating
+              ? "⏳ 他正在整理行李……"
+              : charChunkCount === 0
+              ? "请先生成记忆片段"
+              : "🧳 让他自己整理行李"}
+          </button>
+
+          {/* 生成中提示 */}
+          {selfCurationGenerating && (
+            <div style={{
+              ...cardStyle,
+              background: "rgba(120,90,160,.06)",
+              border: "1px dashed rgba(120,90,160,.3)",
+              textAlign: "center", padding: "20px 20px", marginBottom: 12,
+            }}>
+              <div style={{ fontSize: 20, marginBottom: 8 }}>🧳</div>
+              <div style={{ fontSize: 12, color: "#6a4a8e", letterSpacing: 1, lineHeight: 1.8 }}>
+                {charName}正在整理他想带走的东西……<br />
+                <span style={{ fontSize: 11, color: "#b0a0c0" }}>这可能需要一点时间</span>
+              </div>
+            </div>
+          )}
+
+          {/* 错误 */}
+          {selfCurationError && (
+            <div style={{
+              padding: "10px 14px",
+              background: "rgba(192,112,112,.1)",
+              border: "1px solid rgba(192,112,112,.25)",
+              borderRadius: 10, color: "#a05050", fontSize: 12,
+              marginBottom: 12, lineHeight: 1.7,
+            }}>
+              {selfCurationError}
+            </div>
+          )}
+
+          {/* 行李草稿列表 */}
+          {charSelfDrafts.length === 0 && !selfCurationGenerating ? (
+            <div style={{ textAlign: "center", color: "#b0a0c0", fontSize: 12, padding: "20px 20px", lineHeight: 2 }}>
+              还没有行李草稿<br />
+              <span style={{ fontSize: 11 }}>生成后可查看、编辑、转为迁入草稿</span>
+            </div>
+          ) : (
+            charSelfDrafts.map((sd) => {
+              const selfSt = sd.status === "approved"
+                ? { label: "已转换", bg: "rgba(130,180,140,.2)", color: "#3a7a4a" }
+                : sd.status === "rejected"
+                ? { label: "已驳回", bg: "rgba(192,112,112,.14)", color: "#a05050" }
+                : { label: "待审阅", bg: "rgba(160,130,200,.18)", color: "#6a4a9a" };
+              return (
+                <div key={sd.id} style={{ ...cardStyle, background: "rgba(255,255,255,.55)" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "#4a3a5a", marginBottom: 4 }}>
+                        {sd.title}
+                      </div>
+                      <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
+                        <span style={{ fontSize: 10, padding: "2px 8px", background: selfSt.bg, borderRadius: 8, color: selfSt.color }}>
+                          {selfSt.label}
+                        </span>
+                        <span style={{ fontSize: 11, color: "#b0a0c0" }}>{formatTime(sd.createdAt)}</span>
+                        <span style={{ fontSize: 11, color: "#b0a0c0" }}>{sd.sourceChunkIds?.length || 0} 段片段</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* 他的理由预览 */}
+                  {(sd.reasons || []).length > 0 && (
+                    <div style={{
+                      fontSize: 11, color: "#7a6a8e", lineHeight: 1.7,
+                      padding: "7px 10px", borderRadius: 8,
+                      background: "rgba(160,130,200,.07)", marginBottom: 10,
+                      fontStyle: "italic",
+                    }}>
+                      「{sd.reasons[0].slice(0, 80)}{sd.reasons[0].length > 80 ? "…" : ""}」
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                    <button style={btnGhost} onClick={() => setViewSelfCurationId(sd.id)}>
+                      查看行李
+                    </button>
+                    {sd.status === "approved" && (
+                      <span style={{ fontSize: 11, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已转入迁入草稿</span>
+                    )}
+                    {sd.status !== "rejected" && sd.status !== "approved" && (
+                      <button
+                        style={{ ...btnGhost, fontSize: 11, color: "#a05050", borderColor: "rgba(192,112,112,.3)" }}
+                        onClick={() => updateSelfCurationDraftStatus(sd.id, "rejected")}
+                      >
+                        ✕ 驳回
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
       {/* 详情弹窗 */}
@@ -1038,7 +1521,7 @@ export default function MigrationDraftPage({
         archivesMap={archivesMap}
       />
 
-      {/* 片段选择面板 */}
+      {/* 片段选择面板 - 迁入草稿 */}
       {showChunkSelector && (
         <ChunkSelectorPanel
           charId={charId}
@@ -1048,6 +1531,45 @@ export default function MigrationDraftPage({
           onGenerate={(selectedChunkIds) => handleGenerateDraft(charId, selectedChunkIds)}
           onQuickGenerate={() => handleGenerateDraft(charId, null)}
           onClose={() => setShowChunkSelector(false)}
+        />
+      )}
+
+      {/* 片段选择面板 - 他的行李 */}
+      {showSelfCurationSelector && (
+        <ChunkSelectorPanel
+          charId={charId}
+          allChunks={memoryChunks}
+          rawArchives={rawArchives}
+          draftGenerating={selfCurationGenerating}
+          maxChunks={20}
+          title="选择行李片段"
+          subtitle={`让 ${charName} 自己阅读并整理`}
+          generateLabel="🧳 让他整理这些行李"
+          onGenerate={(selectedChunkIds) => handleGenerateSelfCurationDraft(charId, selectedChunkIds)}
+          onQuickGenerate={() => handleGenerateSelfCurationDraft(charId,
+            (memoryChunks || []).filter(c => c.loverId === charId)
+              .sort((a, b) => a.archiveId === b.archiveId ? a.index - b.index : a.createdAt - b.createdAt)
+              .slice(0, 10).map(c => c.id)
+          )}
+          onClose={() => setShowSelfCurationSelector(false)}
+        />
+      )}
+
+      {/* 行李草稿详情弹窗 */}
+      {viewSelfDraft && (
+        <SelfCurationDraftModal
+          draft={viewSelfDraft}
+          charName={charName}
+          allChunks={memoryChunks}
+          archivesMap={archivesMap}
+          onClose={() => setViewSelfCurationId(null)}
+          onSave={(id, fields) => updateSelfCurationDraftContent(id, fields)}
+          onStatusChange={updateSelfCurationDraftStatus}
+          onDelete={(id) => { deleteSelfCurationDraft(id); setViewSelfCurationId(null); }}
+          onConvert={(id) => {
+            convertSelfCurationToMigration(id);
+            setViewSelfCurationId(null);
+          }}
         />
       )}
     </div>
