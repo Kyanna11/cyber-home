@@ -1393,6 +1393,67 @@ ${chunksText}
       });
   };
 
+  // ── 音乐卡片 ──
+  const sendMusicFromChat = ({ title, artist, url, note, content }) => {
+    const timeStr = new Date().toTimeString().slice(0, 5);
+    const musicMsg = {
+      role: "user",
+      content,
+      isMusicShare: true,
+      musicTitle: title,
+      musicArtist: artist,
+      musicUrl: url,
+      musicNote: note,
+      time: timeStr,
+    };
+    const allMsgs = [...messages, musicMsg];
+    setMessages(allMsgs);
+    if (!isConfigReady()) {
+      setTimeout(() => {
+        showMessagesSequentially(
+          "她分享了一首歌……但我还没连上大脑。",
+          ["我看到你分享的歌了～", "不过我现在还没有连上大脑哦", "帮我在大脑连接里接通吧？"],
+          timeStr,
+        );
+      }, 800);
+      return;
+    }
+    setIsSending(true);
+    setIsTyping(true);
+    callLLM(allMsgs, replyMode)
+      .then((raw) => {
+        setIsTyping(false);
+        const cleanedRaw = extractAndSaveMemories(raw, activeCharId, allMemories, setAllMemories);
+        const { thought, parts } = parseResponse(cleanedRaw, replyMode);
+        showMessagesSequentially(thought, parts, timeStr, replyMode);
+        updateMemoryHeat(activeCharId, cleanedRaw);
+      })
+      .catch((err) => {
+        setIsTyping(false);
+        setIsSending(false);
+        setMessages((prev) => [
+          ...prev,
+          { role: "bot", thought: "呜……出了点问题。", content: `出错了：${err.message}`, time: timeStr },
+        ]);
+      });
+  };
+
+  // ── 图片卡片（不触发 LLM，仅本地展示）──
+  const sendImageFromChat = ({ imageData, imageName, note }) => {
+    const timeStr = new Date().toTimeString().slice(0, 5);
+    const imageMsg = {
+      role: "user",
+      content: note?.trim() ? `[图片] ${note.trim()}` : "[图片]",
+      isImageShare: true,
+      imageData,
+      imageName: imageName || "图片",
+      imageNote: note?.trim() || "",
+      time: timeStr,
+    };
+    setMessages((prev) => [...prev, imageMsg]);
+    // 图片不发给 LLM（当前版本模型无法识别图片内容）
+  };
+
   // ── 亲密邀请：创建场景线程并触发入住者先开口 ──
   const createIntimateScene = (sceneConfig) => {
     if (!activeCharId) return;
@@ -3071,6 +3132,8 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           onGenerateSettlementFromChat={generateSettlementFromChat}
           settlementGenerating={reflecting}
           sendLinkFromChat={sendLinkFromChat}
+          sendMusicFromChat={sendMusicFromChat}
+          sendImageFromChat={sendImageFromChat}
           createIntimateScene={createIntimateScene}
           closeSceneThread={closeSceneThread}
           activeThread={chatThreads[activeCharId]?.find(t => t.id === activeThreadId) || null}

@@ -767,6 +767,271 @@ function tryGetDomain(url) {
   try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
 }
 
+// ── 图片压缩工具 ──
+function compressImage(file, maxWidth = 800) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const blobUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      const ratio = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement("canvas");
+      canvas.width  = Math.round(img.width  * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(blobUrl);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(null); };
+    img.src = blobUrl;
+  });
+}
+
+// ── 图片选择面板 ──
+function ImagePickerPanel({ onSend, onClose }) {
+  const [imageData, setImageData] = useState(null);
+  const [imageName, setImageName] = useState("");
+  const [note,      setNote]      = useState("");
+  const [loading,   setLoading]   = useState(false);
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+    setLoading(true);
+    const compressed = await compressImage(file);
+    setImageData(compressed);
+    setImageName(file.name);
+    setLoading(false);
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "rgba(60,50,80,.35)",
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        width: "100%", maxWidth: 480,
+        background: "linear-gradient(160deg, #fffef8 0%, #f8f4ff 100%)",
+        borderRadius: "20px 20px 0 0",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.18)",
+        display: "flex", flexDirection: "column",
+        maxHeight: "88vh", overflow: "hidden",
+      }}>
+        {/* 顶栏 */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 18px 12px",
+          borderBottom: "1px solid rgba(196,166,184,.18)",
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>🖼 添加图片</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
+        </div>
+
+        <div style={{ flex: 1, overflow: "auto", padding: "16px 18px 32px" }}>
+          {/* 图片选择区 */}
+          <label style={{
+            display: "block",
+            border: "1.5px dashed rgba(196,166,184,.5)",
+            borderRadius: 14,
+            padding: "28px 20px",
+            textAlign: "center",
+            cursor: "pointer",
+            background: "rgba(255,255,255,.5)",
+            marginBottom: 16,
+            transition: "all .2s",
+          }}>
+            {loading ? (
+              <div style={{ fontSize: 13, color: "#9a8aac" }}>⏳ 压缩中……</div>
+            ) : imageData ? (
+              <img
+                src={imageData}
+                alt="preview"
+                style={{ maxWidth: "100%", maxHeight: 220, borderRadius: 10, display: "block", margin: "0 auto" }}
+              />
+            ) : (
+              <>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>🖼</div>
+                <div style={{ fontSize: 13, color: "#9a8aac" }}>点击选择图片</div>
+                <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 4 }}>JPG / PNG / GIF · 宽度超过 800px 将自动压缩</div>
+              </>
+            )}
+            <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
+          </label>
+
+          {/* 备注 */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>备注（可选）</div>
+            <input
+              type="text"
+              placeholder="给这张图片加一句话……"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              style={{
+                width: "100%", boxSizing: "border-box",
+                padding: "9px 12px", borderRadius: 12, fontSize: 13, color: "#5a4a6a",
+                background: "rgba(255,255,255,.8)",
+                border: "1px solid rgba(196,166,184,.28)",
+                fontFamily: "var(--font-main)", outline: "none",
+              }}
+            />
+          </div>
+
+          <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.7 }}>
+            💡 当前版本图片只在聊天界面显示，不会发送给模型识别。后续会接入「我们的照片回忆」。
+          </div>
+        </div>
+
+        {/* 发送 */}
+        <div style={{ padding: "12px 18px 28px", flexShrink: 0, borderTop: "1px solid rgba(196,166,184,.12)" }}>
+          <button
+            disabled={!imageData || loading}
+            onClick={() => { onSend({ imageData, imageName, note }); onClose(); }}
+            style={{
+              width: "100%", padding: "12px",
+              background: !imageData ? "rgba(196,166,184,.15)" : "rgba(140,110,180,.22)",
+              border: `1px solid ${!imageData ? "rgba(196,166,184,.3)" : "rgba(140,110,180,.4)"}`,
+              borderRadius: 14,
+              color: !imageData ? "#b0a0c0" : "#5a3a7e",
+              fontSize: 14, fontWeight: 500, letterSpacing: 2,
+              cursor: !imageData ? "default" : "pointer",
+              fontFamily: "var(--font-main)",
+            }}
+          >
+            发给他看
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 音乐分享面板 ──
+function MusicSharePanel({ activeChar, onSend, onClose }) {
+  const charName = activeChar?.name || "ta";
+  const [title,  setTitle]  = useState("");
+  const [artist, setArtist] = useState("");
+  const [url,    setUrl]    = useState("");
+  const [note,   setNote]   = useState("");
+  const [error,  setError]  = useState("");
+
+  const handleSend = () => {
+    if (!title.trim()) { setError("先告诉我歌名吧～"); return; }
+    setError("");
+    const lines = [
+      "[用户分享了一首歌给你]",
+      `歌名：${title.trim()}`,
+      artist.trim() ? `歌手：${artist.trim()}` : null,
+      url.trim()    ? `链接：${url.trim()}`    : null,
+      note.trim()   ? `想说的话：${note.trim()}` : null,
+    ].filter(Boolean);
+    onSend({ title: title.trim(), artist: artist.trim(), url: url.trim(), note: note.trim(), content: lines.join("\n") });
+    onClose();
+  };
+
+  const fieldStyle = {
+    width: "100%", boxSizing: "border-box",
+    padding: "9px 12px", borderRadius: 12, fontSize: 13, color: "#5a4a6a",
+    background: "rgba(255,255,255,.8)",
+    border: "1px solid rgba(196,166,184,.28)",
+    fontFamily: "var(--font-main)", outline: "none",
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "rgba(60,50,80,.35)",
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        width: "100%", maxWidth: 480,
+        background: "linear-gradient(160deg, #fffef8 0%, #f8f4ff 100%)",
+        borderRadius: "20px 20px 0 0",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.18)",
+        display: "flex", flexDirection: "column",
+        maxHeight: "88vh", overflow: "hidden",
+      }}>
+        {/* 顶栏 */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 18px 12px",
+          borderBottom: "1px solid rgba(196,166,184,.18)",
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>🎵 分享音乐给{charName}</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
+        </div>
+
+        <div style={{ flex: 1, overflow: "auto", padding: "16px 18px 32px" }}>
+          {/* 歌名 */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>歌名 *</div>
+            <input
+              autoFocus
+              type="text"
+              placeholder="叫什么歌……"
+              value={title}
+              onChange={(e) => { setTitle(e.target.value); setError(""); }}
+              style={{ ...fieldStyle, border: `1px solid ${error ? "rgba(180,80,80,.5)" : "rgba(196,166,184,.28)"}` }}
+            />
+            {error && <div style={{ fontSize: 11, color: "#9a5050", marginTop: 5 }}>{error}</div>}
+          </div>
+
+          {/* 歌手 */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>歌手（可选）</div>
+            <input type="text" placeholder="谁唱的……" value={artist} onChange={(e) => setArtist(e.target.value)} style={fieldStyle} />
+          </div>
+
+          {/* 链接 */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>链接（可选）</div>
+            <input type="url" placeholder="网易云 / Spotify / YouTube…" value={url} onChange={(e) => setUrl(e.target.value)} style={fieldStyle} />
+          </div>
+
+          {/* 想说的话 */}
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>想说的话（可选）</div>
+            <textarea
+              placeholder="为什么想分享这首歌……"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={3}
+              style={{ ...fieldStyle, resize: "none", lineHeight: 1.6 }}
+            />
+          </div>
+        </div>
+
+        {/* 发送 */}
+        <div style={{ padding: "12px 18px 28px", flexShrink: 0, borderTop: "1px solid rgba(196,166,184,.12)" }}>
+          <button
+            onClick={handleSend}
+            style={{
+              width: "100%", padding: "12px",
+              background: "rgba(140,110,180,.22)",
+              border: "1px solid rgba(140,110,180,.4)",
+              borderRadius: 14, color: "#5a3a7e",
+              fontSize: 14, fontWeight: 500, letterSpacing: 2,
+              cursor: "pointer", fontFamily: "var(--font-main)",
+            }}
+          >
+            🎵 分享给{charName}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LinkSharePanel({ activeChar, onSend, onClose }) {
   const charName = activeChar?.name || "ta";
   const [url,    setUrl]    = useState("");
@@ -1003,6 +1268,108 @@ function LinkShareCard({ msg }) {
   );
 }
 
+// ── 聊天区：音乐卡片 ──
+function MusicShareCard({ msg }) {
+  return (
+    <div style={{
+      background: "rgba(255,255,255,.78)",
+      border: "1px solid rgba(196,166,184,.22)",
+      borderRadius: 14,
+      overflow: "hidden",
+      maxWidth: "84%",
+      boxShadow: "0 2px 10px rgba(74,69,96,.07)",
+    }}>
+      {/* 标题行 */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "12px 14px 10px",
+        borderBottom: "1px solid rgba(196,166,184,.1)",
+        background: "linear-gradient(135deg, rgba(180,140,220,.08), rgba(160,120,200,.06))",
+      }}>
+        <span style={{ fontSize: 20, flexShrink: 0 }}>🎵</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#4a3a5a", lineHeight: 1.3 }}>
+            {msg.musicTitle || "分享了一首歌"}
+          </div>
+          {msg.musicArtist && (
+            <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>
+              {msg.musicArtist}
+            </div>
+          )}
+        </div>
+      </div>
+      {/* 备注 */}
+      {msg.musicNote && (
+        <div style={{
+          padding: "8px 14px",
+          fontSize: 12, color: "#6a5a7a", lineHeight: 1.7,
+          borderBottom: msg.musicUrl ? "1px solid rgba(196,166,184,.1)" : "none",
+          wordBreak: "break-all",
+        }}>
+          {msg.musicNote}
+        </div>
+      )}
+      {/* 链接 */}
+      {msg.musicUrl && (
+        <div style={{ padding: "7px 14px" }}>
+          <a
+            href={msg.musicUrl}
+            target="_blank"
+            rel="noreferrer"
+            style={{ fontSize: 11, color: "#8a6a9a", wordBreak: "break-all", textDecoration: "none" }}
+          >
+            🔗 {msg.musicUrl.length > 40 ? msg.musicUrl.slice(0, 40) + "…" : msg.musicUrl}
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── 聊天区：图片卡片 ──
+function ImageCard({ msg }) {
+  return (
+    <div style={{
+      background: "rgba(255,255,255,.78)",
+      border: "1px solid rgba(196,166,184,.22)",
+      borderRadius: 14,
+      overflow: "hidden",
+      maxWidth: "72%",
+      boxShadow: "0 2px 10px rgba(74,69,96,.07)",
+    }}>
+      {/* 图片 */}
+      {msg.imageData && (
+        <img
+          src={msg.imageData}
+          alt={msg.imageName || "图片"}
+          style={{
+            display: "block", width: "100%", maxHeight: 260,
+            objectFit: "cover",
+          }}
+        />
+      )}
+      {/* 备注 */}
+      {msg.imageNote && (
+        <div style={{
+          padding: "8px 12px",
+          fontSize: 12, color: "#6a5a7a", lineHeight: 1.7,
+          wordBreak: "break-all",
+        }}>
+          {msg.imageNote}
+        </div>
+      )}
+      {/* 提示 */}
+      <div style={{ padding: "5px 12px 8px" }}>
+        <span style={{
+          fontSize: 10, color: "var(--text-faint)",
+          background: "rgba(196,166,184,.1)",
+          padding: "1px 7px", borderRadius: 8,
+        }}>仅在聊天中可见</span>
+      </div>
+    </div>
+  );
+}
+
 export default function ChatPage({
   // 角色
   activeChar,
@@ -1072,6 +1439,9 @@ export default function ChatPage({
   settlementGenerating,
   // 链接分享
   sendLinkFromChat,
+  // 音乐 / 图片分享
+  sendMusicFromChat,
+  sendImageFromChat,
   // 亲密邀请
   createIntimateScene,
   closeSceneThread,
@@ -1079,7 +1449,9 @@ export default function ChatPage({
 }) {
   // ── 局部 UI 状态 ──
   const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [attachView, setAttachView] = useState(null); // null | "grid" | "notes" | "intent" | "link" | "scene"
+  const [attachView, setAttachView] = useState(null); // null | "grid" | "notes" | "intent" | "link" | "scene" | "music" | "image"
+  const [attachPage, setAttachPage] = useState(1); // 加号面板页码 1 or 2
+  const [comingSoonMsg, setComingSoonMsg] = useState(""); // coming-soon 提示文字
   const [selectedNote, setSelectedNote] = useState(null);
   // 宝库收藏
   const [treasureTarget, setTreasureTarget] = useState(null); // 要收藏的 msg
@@ -1881,9 +2253,13 @@ export default function ChatPage({
               </div>
             )}
 
-            {/* 链接分享卡片 */}
+            {/* 链接 / 音乐 / 图片 分享卡片 */}
             {msg.isLinkShare ? (
               <LinkShareCard msg={msg} />
+            ) : msg.isMusicShare ? (
+              <MusicShareCard msg={msg} />
+            ) : msg.isImageShare ? (
+              <ImageCard msg={msg} />
             ) : /* 手札分享卡片 */ (msg.isDiaryShare || msg.isNoteShare) ? (
               <div className="diary-share-card">
                 <div className="diary-share-header">
@@ -2092,57 +2468,110 @@ export default function ChatPage({
         ↓
       </button>
 
-      {/* ── 加号面板（WeChat 风格）── */}
-      {attachView === "grid" && (
-        <div style={{
-          background: "rgba(248,244,252,.97)",
-          borderTop: "1px solid rgba(196,166,184,.18)",
-          padding: "20px 24px 24px",
-          flexShrink: 0,
-        }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px 0" }}>
-            {[
-              { emoji: "📓", label: "分享手札",    active: true,  action: () => setAttachView("notes") },
-              { emoji: "🌙", label: "亲密邀请",    sub: "共处一刻",  active: true,  action: () => setAttachView("scene") },
-              { emoji: "🔗",  label: "给他看这个",  sub: "分享链接",  active: true,  action: () => setAttachView("link") },
-              { emoji: "💗",  label: "帮我记住",    active: true,  action: () => setAttachView("memorize") },
-              { emoji: "🕰",  label: "记下这一刻",  sub: "留作回忆",    active: true,  action: () => setAttachView("timeline") },
-              { emoji: "✨",  label: "整理一下我们", sub: "更新关系理解", active: true,  action: () => setAttachView("settle") },
-            ].map((item) => (
-              <button
-                key={item.label}
-                onClick={item.active ? item.action : undefined}
-                style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-                  background: "none", border: "none",
-                  cursor: item.active ? "pointer" : "default",
-                  fontFamily: "var(--font-main)",
-                  opacity: item.active ? 1 : 0.32,
-                }}
-              >
-                <div style={{
-                  width: 52, height: 52, borderRadius: 14,
-                  background: "rgba(255,255,255,.9)",
-                  border: "1px solid rgba(196,166,184,.2)",
-                  boxShadow: item.active ? "0 2px 8px rgba(74,69,96,.08)" : "none",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 24,
-                }}>
-                  {item.emoji}
-                </div>
-                <div style={{
-                  fontSize: 11, color: item.active ? "#5a4a6a" : "#9a8aac",
-                  letterSpacing: 0.5, lineHeight: 1.2, textAlign: "center",
-                }}>
-                  {item.label}
-                  {item.sub && <div style={{ fontSize: 9, color: "var(--text-faint)", marginTop: 1, opacity: 0.85 }}>{item.sub}</div>}
-                  {!item.active && <div style={{ fontSize: 9, opacity: 0.7 }}>稍后开放</div>}
-                </div>
-              </button>
-            ))}
+      {/* ── 加号面板（两页，Page 1 = 关系工具, Page 2 = 素材/共享）── */}
+      {attachView === "grid" && (() => {
+        const PAGE1 = [
+          { emoji: "📓", label: "分享手札",    active: true,  action: () => setAttachView("notes") },
+          { emoji: "🌙", label: "亲密邀请",    sub: "共处一刻",  active: true,  action: () => setAttachView("scene") },
+          { emoji: "🔗",  label: "给他看这个",  sub: "分享链接",  active: true,  action: () => setAttachView("link") },
+          { emoji: "💗",  label: "帮我记住",    active: true,  action: () => setAttachView("memorize") },
+          { emoji: "🕰",  label: "记下这一刻",  sub: "留作回忆",    active: true,  action: () => setAttachView("timeline") },
+          { emoji: "✨",  label: "整理一下我们", sub: "更新关系理解", active: true,  action: () => setAttachView("settle") },
+        ];
+        const PAGE2 = [
+          { emoji: "🖼",  label: "发张图给他",  sub: "图片",     active: true,  action: () => setAttachView("image") },
+          { emoji: "📎",  label: "发个文件",    sub: "文件",     active: false, comingSoon: true },
+          { emoji: "😂",  label: "表情包",      sub: "梗图",     active: false, comingSoon: true },
+          { emoji: "🎵",  label: "分享音乐",    sub: "一起听",   active: true,  action: () => setAttachView("music") },
+          { emoji: "🌐",  label: "小网页",      sub: "共同收藏", active: false, comingSoon: true },
+          { emoji: "📤",  label: "共享",        sub: "导出 / 分享", active: false, comingSoon: true },
+        ];
+        const items = attachPage === 1 ? PAGE1 : PAGE2;
+        const handleComingSoon = (label) => {
+          setComingSoonMsg(`「${label}」功能还在建设中，敬请期待～`);
+          setTimeout(() => setComingSoonMsg(""), 2500);
+        };
+        return (
+          <div style={{
+            background: "rgba(248,244,252,.97)",
+            borderTop: "1px solid rgba(196,166,184,.18)",
+            padding: "20px 24px 16px",
+            flexShrink: 0,
+          }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px 0" }}>
+              {items.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => {
+                    if (item.active) { item.action(); }
+                    else if (item.comingSoon) { handleComingSoon(item.label); }
+                  }}
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                    background: "none", border: "none",
+                    cursor: (item.active || item.comingSoon) ? "pointer" : "default",
+                    fontFamily: "var(--font-main)",
+                    opacity: item.active ? 1 : 0.4,
+                  }}
+                >
+                  <div style={{
+                    width: 52, height: 52, borderRadius: 14,
+                    background: "rgba(255,255,255,.9)",
+                    border: "1px solid rgba(196,166,184,.2)",
+                    boxShadow: item.active ? "0 2px 8px rgba(74,69,96,.08)" : "none",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 24,
+                  }}>
+                    {item.emoji}
+                  </div>
+                  <div style={{
+                    fontSize: 11, color: item.active ? "#5a4a6a" : "#9a8aac",
+                    letterSpacing: 0.5, lineHeight: 1.2, textAlign: "center",
+                  }}>
+                    {item.label}
+                    {item.sub && <div style={{ fontSize: 9, color: "var(--text-faint)", marginTop: 1, opacity: 0.85 }}>{item.sub}</div>}
+                    {item.comingSoon && <div style={{ fontSize: 9, opacity: 0.65, marginTop: 1 }}>稍后开放</div>}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* coming-soon toast */}
+            {comingSoonMsg && (
+              <div style={{
+                marginTop: 12, padding: "7px 12px", borderRadius: 10,
+                background: "rgba(196,166,184,.16)", border: "1px solid rgba(196,166,184,.22)",
+                fontSize: 11, color: "#7a6a8e", textAlign: "center", letterSpacing: 0.3,
+              }}>
+                {comingSoonMsg}
+              </div>
+            )}
+
+            {/* 分页指示器 */}
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              gap: 8, marginTop: 14,
+            }}>
+              {[1, 2].map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setAttachPage(p)}
+                  style={{
+                    width: attachPage === p ? 18 : 7,
+                    height: 7,
+                    borderRadius: 4,
+                    border: "none",
+                    background: attachPage === p ? "rgba(120,100,160,.55)" : "rgba(196,166,184,.38)",
+                    cursor: "pointer",
+                    padding: 0,
+                    transition: "all .2s",
+                  }}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── 手札选择 ── */}
       {attachView === "notes" && (
@@ -2504,6 +2933,29 @@ export default function ChatPage({
           activeChar={activeChar}
           onSend={(fields) => {
             sendLinkFromChat?.(fields);
+            setAttachView(null);
+          }}
+          onClose={() => setAttachView(null)}
+        />
+      )}
+
+      {/* ── 音乐分享面板 ── */}
+      {attachView === "music" && (
+        <MusicSharePanel
+          activeChar={activeChar}
+          onSend={(fields) => {
+            sendMusicFromChat?.(fields);
+            setAttachView(null);
+          }}
+          onClose={() => setAttachView(null)}
+        />
+      )}
+
+      {/* ── 图片发送面板 ── */}
+      {attachView === "image" && (
+        <ImagePickerPanel
+          onSend={(fields) => {
+            sendImageFromChat?.(fields);
             setAttachView(null);
           }}
           onClose={() => setAttachView(null)}
