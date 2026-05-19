@@ -1745,13 +1745,13 @@ export default function ChatPage({
   // 聊天背景设置面板
   const [showChatBgPanel, setShowChatBgPanel] = useState(false);
 
+  // ── 场景模式检测 ──（必须在 chatBgStyle 之前）
+  const isSceneMode = activeThread?.threadType === "scene" && !activeThread?.sceneClosed;
+
   // 计算背景样式（scene 模式下不用，scene 有自己的 S.pageBg）
   const chatBgStyle = (!isSceneMode && activeChar?.uiSettings)
     ? computeChatBgStyle(activeChar.uiSettings)
     : null;
-
-  // ── 场景模式检测 ──
-  const isSceneMode = activeThread?.threadType === "scene" && !activeThread?.sceneClosed;
 
   // 聊天页专用意图标签（用"你"，更自然）
   const CHAT_INTENTS = [
