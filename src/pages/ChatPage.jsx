@@ -1457,8 +1457,9 @@ export default function ChatPage({
   const [treasureTarget, setTreasureTarget] = useState(null); // 要收藏的 msg
   const [treasureForm, setTreasureForm] = useState(null);     // 收藏表单
   const [treasureSaved, setTreasureSaved] = useState(false);  // 短暂成功提示
-  // 场景结束确认
-  const [showSceneEndConfirm, setShowSceneEndConfirm] = useState(false);
+  // 场景结束面板
+  // null | "choose" | "treasure_done" | "timeline_done"
+  const [sceneEndStep, setSceneEndStep] = useState(null);
 
   // ── 场景模式检测 ──
   const isSceneMode = activeThread?.threadType === "scene" && !activeThread?.sceneClosed;
@@ -1562,7 +1563,7 @@ export default function ChatPage({
               {activeChar?.name || "ta"}
             </div>
             <button
-              onClick={() => setShowSceneEndConfirm(true)}
+              onClick={() => setSceneEndStep("choose")}
               style={{
                 padding: "5px 12px", borderRadius: 14, fontSize: 11,
                 background: "rgba(90,55,170,.18)", border: "1px solid rgba(130,90,220,.22)",
@@ -1635,7 +1636,7 @@ export default function ChatPage({
         {/* 场景模式：今天就到这儿 */}
         {isSceneMode && (
           <button
-            onClick={() => setShowSceneEndConfirm(true)}
+            onClick={() => setSceneEndStep("choose")}
             style={{
               padding: "5px 10px", borderRadius: 10, fontSize: 11,
               background: "rgba(100,60,160,.1)", border: "1px solid rgba(150,100,200,.25)",
@@ -2975,57 +2976,237 @@ export default function ChatPage({
       )}
 
       {/* ── 亲密场景结束确认 ── */}
-      {showSceneEndConfirm && (
-        <div style={{
-          position: "fixed", inset: 0, zIndex: 200,
-          background: "rgba(6,3,15,.65)",
-          backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "0 24px",
-        }} onClick={(e) => { if (e.target === e.currentTarget) setShowSceneEndConfirm(false); }}>
-          <div style={{
-            width: "100%", maxWidth: 300,
-            background: "linear-gradient(160deg, rgba(22,14,40,.97) 0%, rgba(18,12,34,.96) 100%)",
-            borderRadius: 20, padding: "28px 22px",
-            boxShadow: "0 12px 48px rgba(0,0,0,.5)",
-            textAlign: "center",
-            border: "1px solid rgba(120,80,200,.18)",
-          }}>
-            <div style={{ fontSize: 18, marginBottom: 12, opacity: 0.6 }}>🌠</div>
-            <div style={{ fontSize: 14, color: "rgba(220,200,255,.85)", fontWeight: 400, marginBottom: 10, letterSpacing: 1 }}>
-              今天就到这儿了？
-            </div>
-            <div style={{ fontSize: 12, color: "rgba(170,145,220,.5)", lineHeight: 1.85, marginBottom: 22 }}>
-              结束之后这段时光会静静地留在这里，
-              <br />随时可以回来珍藏它。
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={() => setShowSceneEndConfirm(false)}
-                style={{
-                  flex: 1, padding: "10px", borderRadius: 12, fontSize: 12,
-                  background: "rgba(255,255,255,.04)", border: "1px solid rgba(150,120,220,.2)",
-                  color: "rgba(180,155,230,.65)", cursor: "pointer", fontFamily: "var(--font-main)",
-                  letterSpacing: 0.5,
-                }}
-              >再陪我一会儿</button>
-              <button
-                onClick={() => {
-                  setShowSceneEndConfirm(false);
-                  closeSceneThread?.(activeThreadId);
-                }}
-                style={{
-                  flex: 1, padding: "10px", borderRadius: 12, fontSize: 12,
-                  background: "linear-gradient(135deg, rgba(80,50,150,.75), rgba(100,65,170,.7))",
-                  border: "1px solid rgba(130,90,220,.3)",
-                  color: "rgba(220,200,255,.9)", cursor: "pointer",
-                  fontFamily: "var(--font-main)", letterSpacing: 0.5,
-                }}
-              >今天就到这儿</button>
+      {/* ── 场景结束面板（多步骤）── */}
+      {sceneEndStep && (() => {
+        const charName  = activeChar?.name || "ta";
+        const cfg       = activeThread?.sceneConfig || {};
+        const today     = new Date().toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" }).replace(/\//g, "/");
+        const dateLabel = new Date().toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "/");
+
+        // ── 关闭 scene（先执行，防止重复触发）──
+        const doClose = () => {
+          closeSceneThread?.(activeThreadId);
+        };
+
+        // ── 构建宝库 markdown 内容 ──
+        const buildTreasureContent = () => {
+          const title = `和${charName}的${cfg.scene || "亲密邀请"} · ${dateLabel}`;
+          const convoLines = messages
+            .filter((m) => !m.isSceneOpening && (m.role === "user" || m.role === "bot") && (m.content || "").trim())
+            .map((m) => {
+              const who = m.role === "user" ? "声声" : charName;
+              return `${who}：${m.content}`;
+            });
+          const parts = [
+            `# ${title}`,
+            "",
+            cfg.scene      ? `【场景】\n${cfg.scene}` : null,
+            cfg.mood       ? `【氛围】\n${cfg.mood}` : null,
+            cfg.preface    ? `【前情提要】\n${cfg.preface}` : null,
+            cfg.invitation ? `【邀请内容】\n${cfg.invitation}` : null,
+            convoLines.length ? `【完整对话】\n${convoLines.join("\n")}` : null,
+          ].filter(Boolean);
+          return { title, markdown: parts.join("\n\n") };
+        };
+
+        // ── 构建时间线默认字段 ──
+        const buildTimelineFields = () => ({
+          loverId:     activeCharId,
+          title:       `和${charName}的${cfg.scene || "亲密邀请"}`,
+          description: `来自一次亲密邀请。${cfg.scene ? `\n\n场景：${cfg.scene}` : ""}${cfg.mood ? `\n氛围：${cfg.mood}` : ""}`,
+          eventType:   "heart_moment",
+          occurredAt:  new Date().toISOString().split("T")[0],
+          source:      "scene",
+          sourceIds:   activeThreadId ? [activeThreadId] : [],
+          importance:  3,
+          pinned:      false,
+        });
+
+        // ── 共用外层 overlay ──
+        return (
+          <div
+            style={{
+              position: "fixed", inset: 0, zIndex: 200,
+              background: "rgba(6,3,15,.65)",
+              backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
+              display: "flex", alignItems: "flex-end", justifyContent: "center",
+            }}
+            onClick={(e) => { if (e.target === e.currentTarget) setSceneEndStep(null); }}
+          >
+            <div style={{
+              width: "100%", maxWidth: 480,
+              background: "linear-gradient(160deg, rgba(20,12,38,.98) 0%, rgba(14,9,28,.97) 100%)",
+              borderRadius: "22px 22px 0 0",
+              padding: "28px 24px calc(28px + env(safe-area-inset-bottom, 0px))",
+              boxShadow: "0 -12px 48px rgba(0,0,0,.55)",
+              border: "1px solid rgba(120,80,200,.15)",
+              borderBottom: "none",
+            }}>
+
+              {/* ── 步骤：choose ── */}
+              {sceneEndStep === "choose" && (
+                <>
+                  <div style={{ textAlign: "center", marginBottom: 22 }}>
+                    <div style={{ fontSize: 22, marginBottom: 10, opacity: 0.55 }}>🌠</div>
+                    <div style={{ fontSize: 15, color: "rgba(230,210,255,.88)", fontWeight: 400, letterSpacing: 1, marginBottom: 8 }}>
+                      今晚先到这里吗？
+                    </div>
+                    <div style={{ fontSize: 12, color: "rgba(165,140,215,.5)", lineHeight: 1.9 }}>
+                      要把这次邀请怎么收好？
+                    </div>
+                  </div>
+
+                  {/* 收藏到宝库 */}
+                  <button
+                    onClick={() => {
+                      const now = Date.now();
+                      const { title, markdown } = buildTreasureContent();
+                      onSaveTreasure?.({
+                        id:               `treasure-${now}-${Math.random().toString(36).slice(2, 6)}`,
+                        title,
+                        content:          markdown,
+                        type:             "scene",
+                        tagsRaw:          "亲密邀请,场景",
+                        note:             "",
+                        important:        false,
+                        canUseForMemory:  false,
+                        sourceCharId:     activeCharId,
+                        sourceCharName:   charName,
+                        sourceThreadId:   activeThreadId,
+                        sourceMessageId:  null,
+                        createdAt:        now,
+                      });
+                      doClose();
+                      setSceneEndStep("treasure_done");
+                    }}
+                    style={{
+                      width: "100%", padding: "13px", marginBottom: 10, borderRadius: 14,
+                      background: "rgba(110,70,200,.18)", border: "1px solid rgba(140,100,230,.28)",
+                      color: "rgba(210,185,255,.9)", fontSize: 14, cursor: "pointer",
+                      fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                    }}
+                  >
+                    <span>💎</span>
+                    <span>收藏整段到宝库</span>
+                  </button>
+
+                  {/* 记下这一刻 */}
+                  <button
+                    onClick={() => {
+                      onAddChatToTimeline?.(buildTimelineFields());
+                      doClose();
+                      setSceneEndStep("timeline_done");
+                    }}
+                    style={{
+                      width: "100%", padding: "13px", marginBottom: 10, borderRadius: 14,
+                      background: "rgba(80,55,150,.16)", border: "1px solid rgba(120,90,200,.22)",
+                      color: "rgba(190,165,240,.85)", fontSize: 14, cursor: "pointer",
+                      fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                    }}
+                  >
+                    <span>🕰</span>
+                    <span>记下这一刻</span>
+                  </button>
+
+                  {/* 只结束 */}
+                  <button
+                    onClick={() => {
+                      doClose();
+                      setSceneEndStep(null);
+                    }}
+                    style={{
+                      width: "100%", padding: "11px", marginBottom: 10, borderRadius: 14,
+                      background: "rgba(255,255,255,.03)", border: "1px solid rgba(150,120,220,.15)",
+                      color: "rgba(165,140,210,.6)", fontSize: 13, cursor: "pointer",
+                      fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                    }}
+                  >只结束，不收藏</button>
+
+                  {/* 取消 */}
+                  <button
+                    onClick={() => setSceneEndStep(null)}
+                    style={{
+                      width: "100%", padding: "9px", borderRadius: 12,
+                      background: "none", border: "none",
+                      color: "rgba(130,100,190,.45)", fontSize: 12, cursor: "pointer",
+                      fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                    }}
+                  >取消，再陪我一会儿</button>
+                </>
+              )}
+
+              {/* ── 步骤：treasure_done ── */}
+              {sceneEndStep === "treasure_done" && (
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 22, marginBottom: 12, opacity: 0.7 }}>💎</div>
+                  <div style={{ fontSize: 14, color: "rgba(220,200,255,.85)", letterSpacing: 1, marginBottom: 8 }}>
+                    已经把这次邀请收藏进宝库了。
+                  </div>
+                  <div style={{ fontSize: 11, color: "rgba(155,130,210,.5)", lineHeight: 1.9, marginBottom: 24 }}>
+                    随时可以在宝库里找到它。
+                  </div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button
+                      onClick={() => { setSceneEndStep(null); navigateTo("treasure"); }}
+                      style={{
+                        flex: 1, padding: "11px", borderRadius: 12, fontSize: 12,
+                        background: "rgba(110,70,200,.2)", border: "1px solid rgba(140,100,230,.28)",
+                        color: "rgba(210,185,255,.85)", cursor: "pointer",
+                        fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                      }}
+                    >去宝库看看</button>
+                    <button
+                      onClick={() => setSceneEndStep(null)}
+                      style={{
+                        flex: 1, padding: "11px", borderRadius: 12, fontSize: 12,
+                        background: "rgba(255,255,255,.04)", border: "1px solid rgba(150,120,220,.15)",
+                        color: "rgba(165,140,210,.6)", cursor: "pointer",
+                        fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                      }}
+                    >留在这里</button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── 步骤：timeline_done ── */}
+              {sceneEndStep === "timeline_done" && (
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 22, marginBottom: 12, opacity: 0.7 }}>🕰</div>
+                  <div style={{ fontSize: 14, color: "rgba(220,200,255,.85)", letterSpacing: 1, marginBottom: 8 }}>
+                    已经把这一刻放进回忆里了。
+                  </div>
+                  <div style={{ fontSize: 11, color: "rgba(155,130,210,.5)", lineHeight: 1.9, marginBottom: 24 }}>
+                    在关系时间线里可以找到它。
+                  </div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button
+                      onClick={() => { setSceneEndStep(null); navigateTo("timeline"); }}
+                      style={{
+                        flex: 1, padding: "11px", borderRadius: 12, fontSize: 12,
+                        background: "rgba(80,55,150,.22)", border: "1px solid rgba(120,90,200,.25)",
+                        color: "rgba(190,165,240,.85)", cursor: "pointer",
+                        fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                      }}
+                    >去时间线看看</button>
+                    <button
+                      onClick={() => setSceneEndStep(null)}
+                      style={{
+                        flex: 1, padding: "11px", borderRadius: 12, fontSize: 12,
+                        background: "rgba(255,255,255,.04)", border: "1px solid rgba(150,120,220,.15)",
+                        color: "rgba(165,140,210,.6)", cursor: "pointer",
+                        fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                      }}
+                    >留在这里</button>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── 回复模式切换 ── */}
       <div style={{
