@@ -435,6 +435,17 @@ export default function App() {
     setDeleteConfirmId(null);
   };
 
+  // ── 更新入住者 UI 设置（聊天背景等）──
+  const updateCharUiSettings = (charId, uiSettings) => {
+    setCharacters((prev) =>
+      prev.map((c) =>
+        c.id === charId
+          ? { ...c, uiSettings: { ...(c.uiSettings || {}), ...uiSettings } }
+          : c
+      )
+    );
+  };
+
   const openProfileEdit = (char) => {
     setEditingChar(JSON.parse(JSON.stringify(char)));
     setEditSection("basic");
@@ -3137,6 +3148,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           createIntimateScene={createIntimateScene}
           closeSceneThread={closeSceneThread}
           activeThread={chatThreads[activeCharId]?.find(t => t.id === activeThreadId) || null}
+          updateCharUiSettings={updateCharUiSettings}
         />
       )}
     </>

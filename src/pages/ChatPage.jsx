@@ -1279,6 +1279,275 @@ function LinkShareCard({ msg }) {
   );
 }
 
+// ════════════════════════════════════════════
+// ── 聊天背景设置 ──
+// ════════════════════════════════════════════
+
+const CHAT_BG_PRESETS = [
+  {
+    key: "night",
+    label: "夜色紫",
+    grad: "linear-gradient(160deg,#2c1f45 0%,#1e1535 50%,#160e2a 100%)",
+    preview: "linear-gradient(135deg,#2c1f45,#160e2a)",
+  },
+  {
+    key: "warm",
+    label: "暖灯",
+    grad: "linear-gradient(160deg,#3a2210 0%,#2e1a0a 50%,#261208 100%)",
+    preview: "linear-gradient(135deg,#3a2210,#261208)",
+  },
+  {
+    key: "rain",
+    label: "雨天窗边",
+    grad: "linear-gradient(160deg,#1a2b38 0%,#14202e 50%,#0d1825 100%)",
+    preview: "linear-gradient(135deg,#1a2b38,#0d1825)",
+  },
+  {
+    key: "dark",
+    label: "纯色深色",
+    grad: "#161218",
+    preview: "#161218",
+    isSolid: true,
+  },
+  {
+    key: "rosy",
+    label: "淡雾玫瑰",
+    grad: "linear-gradient(160deg,#3d2535 0%,#2e1c28 50%,#261422 100%)",
+    preview: "linear-gradient(135deg,#3d2535,#261422)",
+  },
+];
+
+const DIM_LEVELS = [
+  { key: "none",   label: "无",  val: 0 },
+  { key: "low",    label: "低",  val: 0.18 },
+  { key: "medium", label: "中",  val: 0.38 },
+  { key: "high",   label: "高",  val: 0.60 },
+];
+
+// 计算最终背景 CSS（注入 chat-scene 外层 div style）
+function computeChatBgStyle(uiSettings) {
+  const s = uiSettings || {};
+  const type = s.chatBgType || "default";
+  if (type === "default") return null;
+
+  const dimVal = DIM_LEVELS.find((d) => d.key === s.chatBgDim)?.val ?? 0;
+  const dimLayer = `rgba(0,0,0,${dimVal})`;
+
+  if (type === "preset") {
+    const p = CHAT_BG_PRESETS.find((x) => x.key === s.chatBgPreset);
+    if (!p) return null;
+    if (p.isSolid) {
+      return dimVal > 0
+        ? { background: `linear-gradient(${dimLayer},${dimLayer}), linear-gradient(${p.grad},${p.grad})` }
+        : { background: p.grad };
+    }
+    return dimVal > 0
+      ? { background: `linear-gradient(${dimLayer},${dimLayer}), ${p.grad}` }
+      : { background: p.grad };
+  }
+
+  if (type === "url" && s.chatBgUrl?.trim()) {
+    return {
+      backgroundImage: dimVal > 0
+        ? `linear-gradient(${dimLayer},${dimLayer}), url(${s.chatBgUrl.trim()})`
+        : `url(${s.chatBgUrl.trim()})`,
+      backgroundSize:     "cover",
+      backgroundPosition: "center",
+      backgroundRepeat:   "no-repeat",
+      backgroundColor:    "#1a1520",  // fallback if image fails
+    };
+  }
+
+  return null;
+}
+
+function ChatBgPanel({ activeChar, onSave, onClose }) {
+  const ui = activeChar?.uiSettings || {};
+  const charName = activeChar?.name || "ta";
+  const [type,   setType]   = useState(ui.chatBgType   || "default");
+  const [preset, setPreset] = useState(ui.chatBgPreset || "");
+  const [url,    setUrl]    = useState(ui.chatBgUrl    || "");
+  const [dim,    setDim]    = useState(ui.chatBgDim    || "none");
+
+  const handleSave = () => {
+    onSave({ chatBgType: type, chatBgPreset: preset, chatBgUrl: url.trim(), chatBgDim: dim });
+    onClose();
+  };
+
+  const fieldStyle = {
+    width: "100%", boxSizing: "border-box",
+    padding: "9px 12px", borderRadius: 12, fontSize: 13, color: "#5a4a6a",
+    background: "rgba(255,255,255,.8)", border: "1px solid rgba(196,166,184,.28)",
+    fontFamily: "var(--font-main)", outline: "none",
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "rgba(60,50,80,.35)",
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        width: "100%", maxWidth: 480,
+        background: "linear-gradient(160deg,#faf7fd 0%,#f4f0fa 100%)",
+        borderRadius: "20px 20px 0 0",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.18)",
+        maxHeight: "88vh", overflow: "hidden",
+        display: "flex", flexDirection: "column",
+      }}>
+        {/* 顶栏 */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 18px 12px",
+          borderBottom: "1px solid rgba(196,166,184,.18)", flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>
+            🖼 {charName}的聊天背景
+          </span>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
+        </div>
+
+        <div style={{ flex: 1, overflow: "auto", padding: "16px 18px 8px" }}>
+
+          {/* ── 背景类型 ── */}
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 10 }}>背景类型</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[
+                { value: "default", label: "默认" },
+                { value: "preset",  label: "预设背景" },
+                { value: "url",     label: "图片 URL" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setType(opt.value)}
+                  style={{
+                    padding: "6px 14px", borderRadius: 20, fontSize: 12,
+                    background: type === opt.value ? "rgba(140,110,180,.85)" : "rgba(255,255,255,.75)",
+                    border: `1px solid ${type === opt.value ? "rgba(140,110,180,.8)" : "rgba(196,166,184,.3)"}`,
+                    color: type === opt.value ? "#fff" : "#7a6a8a",
+                    cursor: "pointer", fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                    transition: "all .15s",
+                  }}
+                >{opt.label}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── 预设背景网格 ── */}
+          {type === "preset" && (
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 10 }}>选择预设</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8 }}>
+                {CHAT_BG_PRESETS.map((p) => (
+                  <button
+                    key={p.key}
+                    onClick={() => setPreset(p.key)}
+                    style={{
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
+                      background: "none", border: "none", cursor: "pointer", padding: 0,
+                      fontFamily: "var(--font-main)",
+                    }}
+                  >
+                    <div style={{
+                      width: 48, height: 48, borderRadius: 12,
+                      background: p.preview,
+                      border: preset === p.key
+                        ? "2px solid rgba(140,110,180,.85)"
+                        : "2px solid rgba(196,166,184,.2)",
+                      boxShadow: preset === p.key
+                        ? "0 2px 10px rgba(140,110,180,.3)"
+                        : "0 1px 4px rgba(74,69,96,.08)",
+                      transition: "all .15s",
+                    }} />
+                    <span style={{
+                      fontSize: 10, color: preset === p.key ? "#6a3a9a" : "var(--text-faint)",
+                      lineHeight: 1.3, textAlign: "center",
+                    }}>{p.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── 自定义 URL ── */}
+          {type === "url" && (
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 8 }}>图片 URL</div>
+              <input
+                type="url"
+                placeholder="https://…（图片直链）"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                style={fieldStyle}
+              />
+              <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 6, lineHeight: 1.6 }}>
+                暂不支持本地上传。建议使用图床或直链图片地址。
+                加载失败时会自动回退到默认背景。
+              </div>
+            </div>
+          )}
+
+          {/* ── 遮罩透明度 ── */}
+          {type !== "default" && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 10 }}>背景遮罩</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {DIM_LEVELS.map((d) => (
+                  <button
+                    key={d.key}
+                    onClick={() => setDim(d.key)}
+                    style={{
+                      padding: "6px 16px", borderRadius: 20, fontSize: 12,
+                      background: dim === d.key ? "rgba(140,110,180,.82)" : "rgba(255,255,255,.75)",
+                      border: `1px solid ${dim === d.key ? "rgba(140,110,180,.75)" : "rgba(196,166,184,.3)"}`,
+                      color: dim === d.key ? "#fff" : "#7a6a8a",
+                      cursor: "pointer", fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                      transition: "all .15s",
+                    }}
+                  >{d.label}</button>
+                ))}
+              </div>
+              <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 6, lineHeight: 1.6 }}>
+                遮罩可以降低背景亮度，保证聊天文字可读。
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 底部按钮 */}
+        <div style={{
+          padding: "12px 18px calc(20px + env(safe-area-inset-bottom, 0px))",
+          borderTop: "1px solid rgba(196,166,184,.12)", flexShrink: 0,
+          display: "flex", gap: 10,
+        }}>
+          <button
+            onClick={onClose}
+            style={{
+              flex: 1, padding: "11px", borderRadius: 12, fontSize: 13,
+              background: "transparent", border: "1px solid rgba(196,166,184,.3)",
+              color: "#9a8aac", cursor: "pointer", fontFamily: "var(--font-main)",
+            }}
+          >取消</button>
+          <button
+            onClick={handleSave}
+            style={{
+              flex: 2, padding: "11px", borderRadius: 12, fontSize: 13,
+              background: "rgba(140,110,180,.85)", border: "none",
+              color: "white", cursor: "pointer", fontFamily: "var(--font-main)",
+              letterSpacing: 0.5,
+            }}
+          >保存</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 聊天区：音乐卡片 ──
 function MusicShareCard({ msg }) {
   return (
@@ -1457,6 +1726,8 @@ export default function ChatPage({
   createIntimateScene,
   closeSceneThread,
   activeThread,
+  // UI 设置
+  updateCharUiSettings,
 }) {
   // ── 局部 UI 状态 ──
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -1471,6 +1742,13 @@ export default function ChatPage({
   // 场景结束面板
   // null | "choose" | "treasure_done" | "timeline_done"
   const [sceneEndStep, setSceneEndStep] = useState(null);
+  // 聊天背景设置面板
+  const [showChatBgPanel, setShowChatBgPanel] = useState(false);
+
+  // 计算背景样式（scene 模式下不用，scene 有自己的 S.pageBg）
+  const chatBgStyle = (!isSceneMode && activeChar?.uiSettings)
+    ? computeChatBgStyle(activeChar.uiSettings)
+    : null;
 
   // ── 场景模式检测 ──
   const isSceneMode = activeThread?.threadType === "scene" && !activeThread?.sceneClosed;
@@ -1554,7 +1832,7 @@ export default function ChatPage({
   return (
     <div
       className="chat-scene"
-      style={S ? { background: S.pageBg } : undefined}
+      style={S ? { background: S.pageBg } : (chatBgStyle || undefined)}
     >
       {/* ── 顶栏（场景模式：精简两行） ── */}
       {isSceneMode ? (
@@ -1732,12 +2010,13 @@ export default function ChatPage({
                 minWidth: 164, zIndex: 10, overflow: "hidden",
               }}>
                 {[
-                  { label: "唤醒预览",  emoji: "🌙", action: () => { activeChar && openWakePreview?.(activeChar.id); setShowMoreMenu(false); } },
-                  { label: "记忆注入",  emoji: "🧠", action: () => { setShowMemoryControl(true); setShowMoreMenu(false); } },
+                  { label: "唤醒预览",    emoji: "🌙", action: () => { activeChar && openWakePreview?.(activeChar.id); setShowMoreMenu(false); } },
+                  { label: "记忆注入",    emoji: "🧠", action: () => { setShowMemoryControl(true); setShowMoreMenu(false); } },
+                  { label: "聊天背景",    emoji: "🖼", action: () => { setShowChatBgPanel(true); setShowMoreMenu(false); } },
                   null, // divider
-                  { label: "API 设置",  emoji: "⚙️", action: () => { navigateTo("config"); setShowMoreMenu(false); } },
-                  { label: "导出聊天",  emoji: "📥", action: () => { handleExportChat(); setShowMoreMenu(false); } },
-                  { label: "清空聊天",  emoji: "🗑", action: () => { setShowClearConfirm(true); setShowMoreMenu(false); }, danger: true },
+                  { label: "API 设置",    emoji: "⚙️", action: () => { navigateTo("config"); setShowMoreMenu(false); } },
+                  { label: "导出聊天",    emoji: "📥", action: () => { handleExportChat(); setShowMoreMenu(false); } },
+                  { label: "清空聊天",    emoji: "🗑", action: () => { setShowClearConfirm(true); setShowMoreMenu(false); }, danger: true },
                 ].map((item, i) =>
                   item === null ? (
                     <div key={i} style={{ height: 1, background: "rgba(196,166,184,.18)", margin: "2px 0" }} />
@@ -3233,6 +3512,15 @@ export default function ChatPage({
           </div>
         );
       })()}
+
+      {/* ── 聊天背景设置面板 ── */}
+      {showChatBgPanel && (
+        <ChatBgPanel
+          activeChar={activeChar}
+          onSave={(settings) => updateCharUiSettings?.(activeCharId, settings)}
+          onClose={() => setShowChatBgPanel(false)}
+        />
+      )}
 
       {/* ── 回复模式切换 ── */}
       <div style={{

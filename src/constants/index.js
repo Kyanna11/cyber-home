@@ -128,6 +128,13 @@ export const DEFAULT_CHAR = {
   },
   worldview: { world: "", values: "", love: "", life: "", growth: "" },
   systemPromptExtra: "",
+  // ── 普通聊天 UI 设置（不影响亲密邀请场景）──
+  uiSettings: {
+    chatBgType:   "default",  // "default" | "preset" | "url"
+    chatBgPreset: "",         // 预设 key：night / warm / rain / dark / rosy
+    chatBgUrl:    "",         // 自定义图片 URL
+    chatBgDim:    "none",     // 遮罩透明度："none" | "low" | "medium" | "high"
+  },
 };
 
 // 声声档案存储键
