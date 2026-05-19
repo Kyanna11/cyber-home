@@ -5,6 +5,25 @@ export function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
+/**
+ * 构建统一来源引用对象
+ * sourceType: "chat" | "treasure" | "note" | "scene" | "timeline" |
+ *             "memory" | "profile" | "archive" | "chunk"
+ */
+export function buildSourceRef({
+  sourceType,
+  sourceId   = "",
+  sourceTitle = "",
+  excerpt    = "",
+} = {}) {
+  return {
+    sourceType: sourceType || "chat",
+    sourceId:   String(sourceId   || ""),
+    sourceTitle: String(sourceTitle || ""),
+    excerpt:    String(excerpt    || "").slice(0, 80),
+  };
+}
+
 // 粗略估算文本的 token 数
 // 中文字按 1.5 个 token，英文字符按 0.25 个 token
 export function estimateTokens(text) {

@@ -1052,8 +1052,14 @@ export default function DiaryPage({
           onSave={(fields) => {
             onAddNoteToTimeline?.({
               ...fields,
-              source: "note",
+              source:    "note",
               sourceIds: [timelineEntry.id],
+              sourceRefs: [{
+                sourceType:  "note",
+                sourceId:    timelineEntry.id,
+                sourceTitle: timelineEntry.title || "手札",
+                excerpt:     (timelineEntry.text || "").slice(0, 80),
+              }],
             });
           }}
           onNavigateTimeline={(loverId) => {

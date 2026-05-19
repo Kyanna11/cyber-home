@@ -25,7 +25,7 @@ import {
   loadStickyNotes, saveStickyNotes,
   loadSelfCurationDrafts, saveSelfCurationDrafts,
 } from "./utils/storage";
-import { genId, estimateTokens } from "./utils/helpers";
+import { genId, estimateTokens, buildSourceRef } from "./utils/helpers";
 import { splitRawTextToChunks } from "./utils/chunker";
 import { extractAndSaveMemories, getTopMemories } from "./utils/memory";
 import {
@@ -610,6 +610,8 @@ export default function App() {
       createdAt: now,
       source: fields.source || "manual",
       sourceIds: fields.sourceIds || [],
+      // 统一来源引用（新写入附带，旧数据不影响）
+      sourceRefs: fields.sourceRefs || [],
       emotion: fields.emotion || "",
       importance: fields.importance ?? 3,
       pinned: fields.pinned ?? false,
@@ -1183,9 +1185,24 @@ ${chunksText}
     const now = Date.now();
     let updated;
     if (item.id && treasures.some((t) => t.id === item.id)) {
+      // 更新已有条目
       updated = treasures.map((t) => t.id === item.id ? { ...item, updatedAt: now } : t);
     } else {
-      updated = [{ ...item, createdAt: item.createdAt || now, updatedAt: now }, ...treasures];
+      // 轻量重复提示：同一 sourceThreadId 已有宝库条目，添加 _dupHint 标记（不阻止写入）
+      const dupHint = item.sourceThreadId
+        ? treasures.some(
+            (t) => t.sourceThreadId === item.sourceThreadId && t.id !== item.id
+          )
+        : false;
+      updated = [{
+        ...item,
+        createdAt:  item.createdAt  || now,
+        updatedAt:  now,
+        // 统一来源引用（新写入附带，旧数据为空数组）
+        sourceRefs: item.sourceRefs || [],
+        // 轻量重复标记（仅同 thread 已有条目时为 true）
+        _dupHint:   dupHint,
+      }, ...treasures];
     }
     setTreasures(updated);
     saveTreasures(updated);
@@ -1618,7 +1635,7 @@ ${chunksText}
   const getCharMemories = (charId) =>
     allMemories[charId] || { fact: [], emotion: [], insight: [], summaries: [] };
 
-  const addMemory = (charId, type, text) => {
+  const addMemory = (charId, type, text, opts = {}) => {
     if (!text.trim()) return;
     const mem = getCharMemories(charId);
     const entry = {
@@ -1634,7 +1651,9 @@ ${chunksText}
       pinned:     false,
       injectable: true,
       priority:   0,
-      source:     "manual",
+      source:     opts.source || "manual",
+      // 统一来源引用
+      sourceRefs: opts.sourceRefs || [],
     };
     mem[type] = [entry, ...(mem[type] || [])];
     setAllMemories((prev) => ({ ...prev, [charId]: mem }));
@@ -1770,6 +1789,7 @@ ${chunksText}
     sourceCharId = null,
     sourceCharName = "",
     sourceIds = [],
+    sourceRefs = [],
   }) => {
     if (!config.apiUrl?.trim() || !config.apiKey?.trim()) {
       setProfileDraftNotice("请先在聊天页配置 API 地址和密钥。");
@@ -1853,6 +1873,8 @@ ${sourceText.slice(0, 3000)}
         sourceCharId,
         sourceCharName,
         sourceIds,
+        // 统一来源引用（新格式，兼容旧 sourceIds）
+        sourceRefs,
         status: "pending",
         appliedSections: [],
         createdAt: now,
@@ -1881,6 +1903,14 @@ ${sourceText.slice(0, 3000)}
       sourceIds:      [entry.id],
       sourceCharId:   null,
       sourceCharName: "我的手札",
+      sourceRefs: [
+        buildSourceRef({
+          sourceType:  "note",
+          sourceId:    entry.id,
+          sourceTitle: entry.title || "手札",
+          excerpt:     (entry.text || "").slice(0, 80),
+        }),
+      ],
     });
     if (draftId) {
       // 更新手札：标记已提炼，记录 draftId
@@ -1908,6 +1938,12 @@ ${sourceText.slice(0, 3000)}
       sourceCharId:   activeCharId,
       sourceCharName: charName,
       sourceIds:      recentMsgs.map((m, i) => m.id || `msg-idx-${i}`),
+      sourceRefs: recentMsgs.map((m, i) => buildSourceRef({
+        sourceType:  "chat",
+        sourceId:    m.id || `msg-idx-${i}`,
+        sourceTitle: charName,
+        excerpt:     (m.content || "").slice(0, 80),
+      })),
     });
     if (draftId) {
       setShowMyProfile(true);
@@ -1944,6 +1980,14 @@ ${sourceText.slice(0, 3000)}
       sourceCharId:   mDraft.loverId,
       sourceCharName: charName,
       sourceIds:      [migrationDraftId],
+      sourceRefs: [
+        buildSourceRef({
+          sourceType:  "archive",
+          sourceId:    migrationDraftId,
+          sourceTitle: mDraft.title || charName + " 迁入草稿",
+          excerpt:     (mDraft.wakeSummary || "").slice(0, 80),
+        }),
+      ],
     });
 
     if (newDraftId) {
@@ -2270,6 +2314,14 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
       const sourceIds = validMsgs.map((m, i) =>
         m.id || `chat-${activeCharId}-idx${i}-${m.timestamp || m.createdAt || now}`
       );
+      const sourceRefs = validMsgs.map((m, i) =>
+        buildSourceRef({
+          sourceType:  "chat",
+          sourceId:    m.id || `chat-${activeCharId}-idx${i}`,
+          sourceTitle: charName,
+          excerpt:     (m.content || "").slice(0, 80),
+        })
+      );
       const draft = {
         id: genId(),
         loverId: activeCharId,
@@ -2277,6 +2329,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
         status: "pending",
         source: "chat",
         sourceIds,
+        sourceRefs,
         createdAt: now,
         rawOutput,
         ...parsed,

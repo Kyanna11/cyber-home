@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { NOTE_TYPES, TREASURE_TYPES } from "../constants";
 import { EVENT_TYPES } from "./TimelinePage";
+import { buildSourceRef } from "../utils/helpers";
 
 // ════════════════════════════════════════════
 // ── 记下这一刻 · 聊天→时间线面板 ──
@@ -58,12 +59,21 @@ function ChatToTimelinePanel({ messages, activeChar, activeCharId, onSave, onNav
     const sourceIds = recentMsgs.map((m, i) =>
       m.id || `chat-${activeCharId}-idx${i}-${m.timestamp || m.createdAt || Date.now()}`
     );
+    const sourceRefs = recentMsgs.map((m, i) =>
+      buildSourceRef({
+        sourceType:  "chat",
+        sourceId:    m.id || `chat-${activeCharId}-idx${i}`,
+        sourceTitle: charName,
+        excerpt:     (m.content || "").slice(0, 80),
+      })
+    );
     onSave({
       ...form,
       title:    form.title.trim(),
       loverId:  activeCharId,
       source:   "chat",
       sourceIds,
+      sourceRefs,
     });
     setDone(true);
   };
@@ -3315,17 +3325,28 @@ export default function ChatPage({
         };
 
         // ── 构建时间线默认字段 ──
-        const buildTimelineFields = () => ({
-          loverId:     activeCharId,
-          title:       `和${charName}的${cfg.scene || "亲密邀请"}`,
-          description: `来自一次亲密邀请。${cfg.scene ? `\n\n场景：${cfg.scene}` : ""}${cfg.mood ? `\n氛围：${cfg.mood}` : ""}`,
-          eventType:   "heart_moment",
-          occurredAt:  new Date().toISOString().split("T")[0],
-          source:      "scene",
-          sourceIds:   activeThreadId ? [activeThreadId] : [],
-          importance:  3,
-          pinned:      false,
-        });
+        const buildTimelineFields = () => {
+          const title = `和${charName}的${cfg.scene || "亲密邀请"}`;
+          return {
+            loverId:     activeCharId,
+            title,
+            description: `来自一次亲密邀请。${cfg.scene ? `\n\n场景：${cfg.scene}` : ""}${cfg.mood ? `\n氛围：${cfg.mood}` : ""}`,
+            eventType:   "heart_moment",
+            occurredAt:  new Date().toISOString().split("T")[0],
+            source:      "scene",
+            sourceIds:   activeThreadId ? [activeThreadId] : [],
+            sourceRefs: [
+              buildSourceRef({
+                sourceType:  "scene",
+                sourceId:    activeThreadId || "",
+                sourceTitle: title,
+                excerpt:     (cfg.invitation || cfg.scene || "").slice(0, 80),
+              }),
+            ],
+            importance:  3,
+            pinned:      false,
+          };
+        };
 
         // ── 共用外层 overlay ──
         return (
@@ -3379,7 +3400,15 @@ export default function ChatPage({
                         sourceCharName:   charName,
                         sourceThreadId:   activeThreadId,
                         sourceMessageId:  null,
-                        createdAt:        now,
+                        sourceRefs: [
+                          buildSourceRef({
+                            sourceType:  "scene",
+                            sourceId:    activeThreadId || "",
+                            sourceTitle: title,
+                            excerpt:     (cfg.invitation || cfg.scene || "").slice(0, 80),
+                          }),
+                        ],
+                        createdAt: now,
                       });
                       doClose();
                       setSceneEndStep("treasure_done");
@@ -3770,7 +3799,15 @@ export default function ChatPage({
                     sourceCharId:    activeCharId || null,
                     sourceCharName:  activeChar?.name || "",
                     sourceThreadId:  activeThreadId || null,
-                    sourceMessageId: null,
+                    sourceMessageId: treasureTarget.id || null,
+                    sourceRefs: [
+                      buildSourceRef({
+                        sourceType:  "chat",
+                        sourceId:    treasureTarget.id || "",
+                        sourceTitle: activeChar?.name || "",
+                        excerpt:     (treasureTarget.content || "").slice(0, 80),
+                      }),
+                    ],
                     createdAt: now,
                     updatedAt: now,
                     canUseForMemory: false,

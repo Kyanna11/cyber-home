@@ -386,7 +386,18 @@ function TreasureToTimelinePanel({ treasure, characters, activeCharId, onSave, o
 
   const handleConfirm = () => {
     if (!canConfirm) return;
-    onSave({ ...form, title: form.title.trim() });
+    onSave({
+      ...form,
+      title:    form.title.trim(),
+      source:   "treasure",
+      sourceIds: treasure.id ? [treasure.id] : [],
+      sourceRefs: treasure.id ? [{
+        sourceType:  "treasure",
+        sourceId:    treasure.id,
+        sourceTitle: treasure.title || "",
+        excerpt:     (treasure.content || "").slice(0, 80),
+      }] : [],
+    });
     setDone(true);
   };
 
@@ -713,6 +724,13 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromT
               {treasure.important && (
                 <span style={{ fontSize: 10, color: "#c08030" }}>★ 重要</span>
               )}
+              {treasure._dupHint && (
+                <span title="同一来源已有其他宝库条目，可能重复" style={{
+                  fontSize: 9, padding: "1px 6px", borderRadius: 6,
+                  background: "rgba(180,140,60,.12)", color: "#a07828",
+                  border: "1px solid rgba(180,140,60,.22)",
+                }}>同源</span>
+              )}
             </div>
           </div>
           {/* 右侧操作 */}
@@ -1029,6 +1047,13 @@ export default function TreasurePage({
                   <span style={{ fontSize: 14 }}>{ti.emoji}</span>
                   <span style={{ fontSize: 10, color: "var(--text-faint)", background: "rgba(196,166,184,.12)", padding: "1px 7px", borderRadius: 8 }}>{ti.label}</span>
                   {charName && <span style={{ fontSize: 10, color: "var(--text-faint)" }}>{charName}</span>}
+                  {item._dupHint && (
+                    <span title="同一来源已有其他宝库条目" style={{
+                      fontSize: 9, padding: "1px 6px", borderRadius: 6,
+                      background: "rgba(180,140,60,.12)", color: "#a07828",
+                      border: "1px solid rgba(180,140,60,.22)", letterSpacing: 0.3,
+                    }}>同源重复</span>
+                  )}
                   {item.important && <span style={{ fontSize: 11, color: "#c08030", marginLeft: "auto" }}>★</span>}
                   {!item.important && <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--text-faint)" }}>{fmtDate(item.createdAt)}</span>}
                   {item.important && <span style={{ fontSize: 10, color: "var(--text-faint)" }}>{fmtDate(item.createdAt)}</span>}
