@@ -2,7 +2,7 @@
 // 基于入住者的 MemoryChunk，通过 LLM 生成结构化迁入草稿
 // 支持编辑草稿内容、采纳（写入 migration 字段 + 记忆宫殿）、驳回
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import BackButton from "../components/BackButton";
 
 // ── 工具 ──
@@ -79,6 +79,8 @@ function DraftDetailModal({
   onAdopt,      // 采纳（写入档案）
   onStatusChange,
   onDelete,
+  allChunks,    // 全部 MemoryChunk，用于展示来源片段
+  archivesMap,  // { archiveId -> archive }
 }) {
   const [editFields, setEditFields] = useState({
     userFacts: "",
@@ -91,6 +93,7 @@ function DraftDetailModal({
   const [adoptConfirm, setAdoptConfirm] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [saveFlash, setSaveFlash] = useState(false);
+  const [showSourceChunks, setShowSourceChunks] = useState(false);
 
   // 弹窗打开时锁住背景滚动，防止弹回顶部
   useEffect(() => {
@@ -264,6 +267,67 @@ function DraftDetailModal({
                   onChange={(e) => setEditFields((f) => ({ ...f, wakeSummary: e.target.value }))}
                 />
               </div>
+
+              {/* 来源片段 */}
+              {(draft.sourceChunkIds?.length > 0) && (
+                <div style={{ marginBottom: 8 }}>
+                  <button
+                    style={{
+                      ...btnGhost, fontSize: 11,
+                      color: "#6a7aae", borderColor: "rgba(106,122,174,.3)",
+                      display: "flex", alignItems: "center", gap: 5,
+                    }}
+                    onClick={() => setShowSourceChunks(v => !v)}
+                  >
+                    📄 来源片段（{draft.sourceChunkIds.length} 段）
+                    <span style={{ fontSize: 9, opacity: 0.7 }}>{showSourceChunks ? "▲ 收起" : "▼ 展开"}</span>
+                  </button>
+                  {showSourceChunks && (
+                    <div style={{
+                      marginTop: 8,
+                      background: "rgba(196,166,184,.06)",
+                      borderRadius: 10,
+                      border: "1px solid rgba(196,166,184,.2)",
+                      overflow: "hidden",
+                    }}>
+                      {draft.sourceChunkIds.map((chunkId, idx) => {
+                        const chunk = (allChunks || []).find(c => c.id === chunkId);
+                        if (!chunk) return (
+                          <div key={chunkId} style={{ padding: "8px 12px", fontSize: 11, color: "#b0a0c0", borderBottom: idx < draft.sourceChunkIds.length - 1 ? "1px solid rgba(196,166,184,.15)" : "none" }}>
+                            片段已删除
+                          </div>
+                        );
+                        const archive = archivesMap?.[chunk.archiveId];
+                        return (
+                          <div key={chunkId} style={{
+                            padding: "10px 14px",
+                            borderBottom: idx < draft.sourceChunkIds.length - 1 ? "1px solid rgba(196,166,184,.15)" : "none",
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 10, color: "#9a8aac", fontWeight: 600 }}>
+                                {archive?.title || "未知档案"} · 第 {chunk.index + 1} 段
+                              </span>
+                              <span style={{ fontSize: 10, color: "#b0a0c0" }}>
+                                {chunk.text.length} 字
+                              </span>
+                              {chunk.sourcePlatform && (
+                                <span style={{ fontSize: 10, color: "#b0a0c0" }}>{chunk.sourcePlatform}</span>
+                              )}
+                            </div>
+                            <div style={{
+                              fontSize: 11, color: "#7a6a8e", lineHeight: 1.7,
+                              display: "-webkit-box", WebkitLineClamp: 3,
+                              WebkitBoxOrient: "vertical", overflow: "hidden",
+                            }}>
+                              {chunk.text.slice(0, 150)}{chunk.text.length > 150 ? "…" : ""}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
@@ -379,11 +443,339 @@ function DraftDetailModal({
   );
 }
 
+// ── 片段选择面板 ──
+function ChunkSelectorPanel({
+  charId,
+  allChunks,
+  rawArchives,
+  draftGenerating,
+  onGenerate,      // (selectedChunkIds) => void — 用已选片段生成
+  onQuickGenerate, // () => void — 快速前 10 段
+  onClose,
+}) {
+  // 当前入住者的全部片段，按 archive + index 排序
+  const charChunks = useMemo(() =>
+    (allChunks || [])
+      .filter(c => c.loverId === charId)
+      .sort((a, b) => a.archiveId === b.archiveId ? a.index - b.index : a.createdAt - b.createdAt),
+    [allChunks, charId]
+  );
+
+  // archive id → archive 对象
+  const archivesMap = useMemo(() => {
+    const m = {};
+    (rawArchives || []).forEach(a => { m[a.id] = a; });
+    return m;
+  }, [rawArchives]);
+
+  // 当前入住者涉及的 archive 列表（用于筛选）
+  const archiveOptions = useMemo(() => {
+    const seen = new Set();
+    const opts = [];
+    charChunks.forEach(c => {
+      if (!seen.has(c.archiveId)) {
+        seen.add(c.archiveId);
+        opts.push({ id: c.archiveId, title: archivesMap[c.archiveId]?.title || "未知档案" });
+      }
+    });
+    return opts;
+  }, [charChunks, archivesMap]);
+
+  const [selected, setSelected] = useState(new Set());
+  const [filterArchive, setFilterArchive] = useState("all");
+  const [keyword, setKeyword] = useState("");
+  const [onlySelected, setOnlySelected] = useState(false);
+
+  // 经过筛选的片段列表
+  const filtered = useMemo(() => {
+    return charChunks.filter(c => {
+      if (filterArchive !== "all" && c.archiveId !== filterArchive) return false;
+      if (onlySelected && !selected.has(c.id)) return false;
+      if (keyword && !c.text.includes(keyword)) return false;
+      return true;
+    });
+  }, [charChunks, filterArchive, keyword, onlySelected, selected]);
+
+  // 已选总字数
+  const totalSelectedChars = useMemo(() =>
+    charChunks.filter(c => selected.has(c.id)).reduce((sum, c) => sum + c.text.length, 0),
+    [charChunks, selected]
+  );
+
+  const toggleChunk = id => {
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+
+  const selectAllFiltered = () => setSelected(prev => new Set([...prev, ...filtered.map(c => c.id)]));
+  const deselectAllFiltered = () => setSelected(prev => { const n = new Set(prev); filtered.forEach(c => n.delete(c.id)); return n; });
+  const selectFirst10 = () => setSelected(new Set(charChunks.slice(0, 10).map(c => c.id)));
+  const selectAllChunks = () => setSelected(new Set(charChunks.map(c => c.id)));
+
+  const selectedCount = selected.size;
+  const showTooManyWarning = selectedCount > 20;
+
+  const btnSmall = {
+    padding: "5px 11px",
+    background: "rgba(255,255,255,.45)",
+    border: "1px solid rgba(196,166,184,.3)",
+    borderRadius: 10,
+    color: "#7a6a8e",
+    fontSize: 11,
+    cursor: "pointer",
+    fontFamily: "var(--font-main)",
+    letterSpacing: 0.5,
+    whiteSpace: "nowrap",
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "rgba(30,20,40,.52)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "flex-end",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          width: "100%", maxWidth: 680,
+          height: "92vh",
+          background: "rgba(248,244,252,.97)",
+          borderRadius: "20px 20px 0 0",
+          display: "flex", flexDirection: "column",
+          overflow: "hidden",
+          boxShadow: "0 -8px 40px rgba(0,0,0,.15)",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* 顶栏 */}
+        <div style={{
+          padding: "14px 18px 10px",
+          borderBottom: "1px solid rgba(196,166,184,.2)",
+          background: "rgba(255,255,255,.6)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#4a3a5a", letterSpacing: 1.5 }}>
+              选择提炼片段
+            </div>
+            <span style={{ fontSize: 11, color: "#9a8aac" }}>共 {charChunks.length} 段</span>
+            <button onClick={onClose} style={{ ...btnSmall, padding: "5px 12px" }}>关闭</button>
+          </div>
+
+          {/* 搜索 + 档案筛选 */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+            <input
+              type="text"
+              placeholder="搜索片段内容……"
+              value={keyword}
+              onChange={e => setKeyword(e.target.value)}
+              style={{
+                flex: 1, minWidth: 120,
+                padding: "7px 12px",
+                borderRadius: 10,
+                border: "1px solid rgba(196,166,184,.35)",
+                background: "rgba(255,255,255,.7)",
+                fontSize: 12, color: "#4a3a5a",
+                fontFamily: "var(--font-main)",
+                outline: "none",
+              }}
+            />
+            {archiveOptions.length > 1 && (
+              <select
+                value={filterArchive}
+                onChange={e => setFilterArchive(e.target.value)}
+                style={{
+                  padding: "7px 10px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(196,166,184,.35)",
+                  background: "rgba(255,255,255,.7)",
+                  fontSize: 12, color: "#4a3a5a",
+                  fontFamily: "var(--font-main)",
+                  outline: "none", cursor: "pointer",
+                  maxWidth: 160,
+                }}
+              >
+                <option value="all">全部档案</option>
+                {archiveOptions.map(a => (
+                  <option key={a.id} value={a.id}>{a.title}</option>
+                ))}
+              </select>
+            )}
+            <button
+              style={{
+                ...btnSmall,
+                background: onlySelected ? "rgba(140,110,180,.18)" : undefined,
+                color: onlySelected ? "#5a3a8e" : undefined,
+                borderColor: onlySelected ? "rgba(140,110,180,.4)" : undefined,
+              }}
+              onClick={() => setOnlySelected(v => !v)}
+            >
+              {onlySelected ? "✓ 只看已选" : "只看已选"}
+            </button>
+          </div>
+
+          {/* 批量操作 */}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <button style={btnSmall} onClick={selectAllFiltered}>全选当前结果</button>
+            <button style={btnSmall} onClick={deselectAllFiltered}>取消全选</button>
+            <button style={btnSmall} onClick={selectFirst10}>选前 10 段</button>
+            <button style={btnSmall} onClick={selectAllChunks}>选全部 {charChunks.length} 段</button>
+          </div>
+        </div>
+
+        {/* 片段列表 */}
+        <div style={{ flex: 1, overflow: "auto", padding: "8px 14px 4px" }}>
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: "center", color: "#b0a0c0", fontSize: 13, padding: "40px 20px" }}>
+              {keyword || filterArchive !== "all" ? "没有符合条件的片段" : "没有记忆片段"}
+            </div>
+          ) : (
+            filtered.map(chunk => {
+              const isSelected = selected.has(chunk.id);
+              const archive = archivesMap[chunk.archiveId];
+              return (
+                <div
+                  key={chunk.id}
+                  onClick={() => toggleChunk(chunk.id)}
+                  style={{
+                    display: "flex", gap: 10, alignItems: "flex-start",
+                    padding: "11px 12px", marginBottom: 6,
+                    borderRadius: 12,
+                    background: isSelected ? "rgba(140,110,180,.12)" : "rgba(255,255,255,.62)",
+                    border: `1px solid ${isSelected ? "rgba(140,110,180,.35)" : "rgba(196,166,184,.25)"}`,
+                    cursor: "pointer",
+                    transition: "all .15s",
+                  }}
+                >
+                  {/* 勾选框 */}
+                  <div style={{
+                    width: 18, height: 18, flexShrink: 0,
+                    borderRadius: 5,
+                    border: `1.5px solid ${isSelected ? "rgba(140,110,180,.8)" : "rgba(196,166,184,.5)"}`,
+                    background: isSelected ? "rgba(140,110,180,.75)" : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    marginTop: 1,
+                  }}>
+                    {isSelected && <span style={{ color: "#fff", fontSize: 11, lineHeight: 1 }}>✓</span>}
+                  </div>
+
+                  {/* 内容 */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "#5a4a7a" }}>
+                        {archive?.title || "未知档案"} · 第 {chunk.index + 1} 段
+                      </span>
+                      <span style={{ fontSize: 10, color: "#b0a0c0" }}>{chunk.text.length} 字</span>
+                      {chunk.sourcePlatform && (
+                        <span style={{ fontSize: 10, color: "#b0a0c0" }}>{chunk.sourcePlatform}</span>
+                      )}
+                    </div>
+                    <div style={{
+                      fontSize: 11, color: "#6a5a7a", lineHeight: 1.7,
+                      display: "-webkit-box", WebkitLineClamp: 3,
+                      WebkitBoxOrient: "vertical", overflow: "hidden",
+                    }}>
+                      {chunk.text.slice(0, 150)}{chunk.text.length > 150 ? "…" : ""}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* 底部操作栏 */}
+        <div style={{
+          padding: "12px 16px",
+          borderTop: "1px solid rgba(196,166,184,.2)",
+          background: "rgba(255,255,255,.6)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+        }}>
+          {/* 数量 + 警告 */}
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 12, color: selectedCount === 0 ? "#b0a0c0" : "#5a4a7a", marginBottom: 3 }}>
+              已选择 <strong>{selectedCount}</strong> 段
+              {selectedCount > 0 && (
+                <span style={{ color: "#9a8aac", marginLeft: 6 }}>· 约 {totalSelectedChars.toLocaleString()} 字</span>
+              )}
+            </div>
+            {selectedCount === 0 && (
+              <div style={{ fontSize: 11, color: "#c09090" }}>请先选择至少一段记忆片段。</div>
+            )}
+            {showTooManyWarning && (
+              <div style={{
+                fontSize: 11, color: "#9a7040",
+                padding: "6px 10px", borderRadius: 8,
+                background: "rgba(200,160,80,.1)",
+                border: "1px solid rgba(200,160,80,.25)",
+                lineHeight: 1.6,
+              }}>
+                ⚠️ 选择的片段较多，可能导致提炼变慢或失败。建议先选择最重要的片段。
+              </div>
+            )}
+          </div>
+
+          {/* 按钮行 */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <button
+              disabled={selectedCount === 0 || draftGenerating}
+              onClick={() => {
+                if (selectedCount === 0) return;
+                onGenerate([...selected]);
+                onClose();
+              }}
+              style={{
+                flex: 1, padding: "11px 16px",
+                background: selectedCount === 0 ? "rgba(196,166,184,.15)" : "rgba(140,110,180,.22)",
+                border: `1px solid ${selectedCount === 0 ? "rgba(196,166,184,.3)" : "rgba(140,110,180,.4)"}`,
+                borderRadius: 14,
+                color: selectedCount === 0 ? "#b0a0c0" : "#5a3a7e",
+                fontSize: 13, fontWeight: 500, letterSpacing: 1.5,
+                cursor: selectedCount === 0 ? "default" : "pointer",
+                fontFamily: "var(--font-main)",
+                opacity: draftGenerating ? 0.6 : 1,
+              }}
+            >
+              ✨ 用已选片段生成草稿
+            </button>
+
+            {/* 快速选项 */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+              <button
+                disabled={draftGenerating}
+                onClick={() => { onQuickGenerate(); onClose(); }}
+                style={{
+                  ...btnSmall, fontSize: 11,
+                  padding: "9px 14px",
+                  color: "#7a6a8e",
+                  opacity: draftGenerating ? 0.6 : 1,
+                }}
+              >
+                ⚡ 快速使用前 10 段
+              </button>
+              <span style={{ fontSize: 9, color: "#b0a0c0", textAlign: "center" }}>
+                适合测试，真实迁入建议手动选择
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 主页面 ──
 export default function MigrationDraftPage({
   charId,
   characters,
   memoryChunks,
+  rawArchives,
   migrationDrafts,
   draftGenerating,
   draftError,
@@ -407,8 +799,16 @@ export default function MigrationDraftPage({
     .sort((a, b) => b.createdAt - a.createdAt);
 
   const [viewDraftId, setViewDraftId] = useState(null);
+  const [showChunkSelector, setShowChunkSelector] = useState(false);
   // 用 find 保持实时同步（保存草稿后弹窗内容自动更新）
   const viewDraft = charDrafts.find((d) => d.id === viewDraftId) || null;
+
+  // archive map 供 DraftDetailModal 使用
+  const archivesMap = useMemo(() => {
+    const m = {};
+    (rawArchives || []).forEach(a => { m[a.id] = a; });
+    return m;
+  }, [rawArchives]);
 
   return (
     <div className="page-fade" style={{
@@ -452,7 +852,7 @@ export default function MigrationDraftPage({
           marginBottom: 16, padding: "12px 16px",
         }}>
           <div style={{ fontSize: 12, color: "#7a6a8e", lineHeight: 1.9 }}>
-            基于 <strong style={{ color: "#5a4a6a" }}>{charChunkCount} 个记忆片段</strong> 生成草稿，最多取 10 段。
+            共有 <strong style={{ color: "#5a4a6a" }}>{charChunkCount} 个记忆片段</strong>，点击下方按钮可手动选择用于提炼的片段。
             草稿可编辑后采纳，采纳内容会<strong style={{ color: "#5a4a6a" }}>追加</strong>到入住档案，不覆盖手写内容。
           </div>
         </div>
@@ -460,7 +860,7 @@ export default function MigrationDraftPage({
         {/* 生成按钮 */}
         <button
           disabled={draftGenerating || charChunkCount === 0}
-          onClick={() => handleGenerateDraft(charId)}
+          onClick={() => setShowChunkSelector(true)}
           style={{
             display: "block", width: "100%", padding: "14px 20px", marginBottom: 16,
             background: charChunkCount === 0 ? "rgba(196,166,184,.15)" : "rgba(140,110,180,.2)",
@@ -476,7 +876,7 @@ export default function MigrationDraftPage({
             ? "⏳ 正在从过去里整理他……"
             : charChunkCount === 0
             ? "请先在原始档案馆生成记忆片段"
-            : "✨ 从记忆片段生成迁入草稿"}
+            : "✨ 选择片段 · 生成迁入草稿"}
         </button>
 
         {/* 生成中提示 */}
@@ -634,7 +1034,22 @@ export default function MigrationDraftPage({
         onAdopt={(draftId, fields) => adoptDraft(draftId, fields, charId)}
         onStatusChange={updateDraftStatus}
         onDelete={(id) => { deleteMigrationDraft(id); setViewDraftId(null); }}
+        allChunks={memoryChunks}
+        archivesMap={archivesMap}
       />
+
+      {/* 片段选择面板 */}
+      {showChunkSelector && (
+        <ChunkSelectorPanel
+          charId={charId}
+          allChunks={memoryChunks}
+          rawArchives={rawArchives}
+          draftGenerating={draftGenerating}
+          onGenerate={(selectedChunkIds) => handleGenerateDraft(charId, selectedChunkIds)}
+          onQuickGenerate={() => handleGenerateDraft(charId, null)}
+          onClose={() => setShowChunkSelector(false)}
+        />
+      )}
     </div>
   );
 }

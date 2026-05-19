@@ -613,7 +613,7 @@ export default function App() {
     return newEvents.length;
   };
 
-  const handleGenerateDraft = async (charId) => {
+  const handleGenerateDraft = async (charId, selectedChunkIds = null) => {
     if (!config.apiUrl?.trim() || !config.apiKey?.trim()) {
       setDraftError("请先在聊天页配置 API 地址和密钥");
       return;
@@ -627,12 +627,20 @@ export default function App() {
       return;
     }
 
-    const charChunks = memoryChunks
+    const allCharChunks = memoryChunks
       .filter((c) => c.loverId === charId)
       .sort((a, b) =>
         a.archiveId === b.archiveId ? a.index - b.index : a.createdAt - b.createdAt
-      )
-      .slice(0, 10);
+      );
+
+    let charChunks;
+    if (selectedChunkIds !== null && selectedChunkIds !== undefined) {
+      const selectedSet = new Set(selectedChunkIds);
+      charChunks = allCharChunks.filter((c) => selectedSet.has(c.id));
+    } else {
+      // 快速模式：取前 10 段
+      charChunks = allCharChunks.slice(0, 10);
+    }
 
     if (charChunks.length === 0) {
       setDraftError("没有可用的记忆片段，请先在原始档案馆整理记忆片段");
@@ -2576,6 +2584,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           charId={migrationDraftCharId}
           characters={characters}
           memoryChunks={memoryChunks}
+          rawArchives={rawArchives}
           migrationDrafts={migrationDrafts}
           draftGenerating={draftGenerating}
           draftError={draftError}
