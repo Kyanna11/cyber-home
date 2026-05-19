@@ -622,69 +622,80 @@ function IntimateInvitationPanel({ activeChar, onSend, onClose }) {
 
 function SceneInfoCard({ msg }) {
   const { scene, mood, preface, invitation } = msg.sceneConfig || {};
+  const sceneLabel = [scene, mood].filter(Boolean).join("  ·  ");
   return (
-    <div style={{
-      padding: "28px 20px 16px",
-      textAlign: "center",
-      position: "relative",
-    }}>
-      {/* 顶部微光 */}
+    <div style={{ margin: "28px 18px 12px", userSelect: "none" }}>
+      {/* ── 窗框卡片 ── */}
       <div style={{
-        position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
-        width: 120, height: 80,
-        background: "radial-gradient(ellipse at center, rgba(140,90,220,.18) 0%, transparent 70%)",
+        borderRadius: 18,
+        background: "rgba(255,235,252,.055)",
+        border: "1px solid rgba(210,168,248,.14)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+        overflow: "hidden",
+        boxShadow: [
+          "0 6px 40px rgba(90,40,160,.18)",
+          "inset 0 1px 0 rgba(255,255,255,.07)",
+          "inset 0 -1px 0 rgba(100,50,180,.1)",
+        ].join(", "),
+      }}>
+
+        {/* 窗口标题栏 */}
+        <div style={{
+          padding: "10px 16px 9px",
+          borderBottom: "1px solid rgba(210,168,248,.1)",
+          background: "rgba(255,255,255,.03)",
+          display: "flex", alignItems: "center", gap: 7,
+        }}>
+          <span style={{ fontSize: 12, opacity: 0.65, lineHeight: 1 }}>🌙</span>
+          <span style={{
+            fontSize: 11, color: "rgba(205,172,245,.72)",
+            letterSpacing: 2.5, fontWeight: 400,
+          }}>
+            {sceneLabel || "亲密场景"}
+          </span>
+        </div>
+
+        {/* 窗口正文 */}
+        <div style={{ padding: preface || invitation ? "16px 18px 18px" : "0" }}>
+
+          {/* 前情提要 */}
+          {preface && (
+            <div style={{
+              fontSize: 12, color: "rgba(205,180,245,.52)",
+              lineHeight: 1.95, letterSpacing: 0.4,
+              fontStyle: "italic",
+              marginBottom: invitation ? 14 : 0,
+            }}>
+              {preface}
+            </div>
+          )}
+
+          {/* 前情 / 邀请 分隔线 */}
+          {preface && invitation && (
+            <div style={{
+              height: 1, marginBottom: 14,
+              background: "linear-gradient(90deg, rgba(210,168,248,.12), rgba(210,168,248,.06))",
+            }} />
+          )}
+
+          {/* 邀请内容 */}
+          {invitation && (
+            <div style={{
+              fontSize: 13.5, color: "rgba(238,215,255,.76)",
+              lineHeight: 2, letterSpacing: 0.5,
+            }}>
+              {invitation}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 窗框下方淡出渐变 */}
+      <div style={{
+        height: 28, marginTop: -1,
+        background: "linear-gradient(to bottom, rgba(44,28,62,.0), rgba(44,28,62,.0))",
         pointerEvents: "none",
-      }} />
-
-      {/* 月亮图标 */}
-      <div style={{ fontSize: 18, marginBottom: 14, opacity: 0.75 }}>🌙</div>
-
-      {/* 场景 · 氛围 */}
-      {(scene || mood) && (
-        <div style={{
-          fontSize: 11, color: "rgba(155,120,210,.6)",
-          letterSpacing: 2, marginBottom: 16,
-          textTransform: "none",
-        }}>
-          {[scene, mood].filter(Boolean).join("  ·  ")}
-        </div>
-      )}
-
-      {/* 分隔 */}
-      <div style={{
-        width: 40, height: 1, margin: "0 auto 16px",
-        background: "linear-gradient(90deg, transparent, rgba(140,90,220,.25), transparent)",
-      }} />
-
-      {/* 前情提要 */}
-      {preface && (
-        <div style={{
-          fontSize: 12, color: "rgba(190,165,230,.55)",
-          lineHeight: 1.9, letterSpacing: 0.3,
-          marginBottom: 14, fontStyle: "italic",
-          maxWidth: 280, margin: "0 auto 14px",
-        }}>
-          {preface}
-        </div>
-      )}
-
-      {/* 邀请内容 */}
-      {invitation && (
-        <div style={{
-          fontSize: 13.5, color: "rgba(215,195,255,.72)",
-          lineHeight: 2, letterSpacing: 0.5,
-          maxWidth: 280, margin: "0 auto",
-          paddingTop: preface ? 12 : 0,
-          borderTop: preface ? "1px solid rgba(140,90,220,.1)" : "none",
-        }}>
-          {invitation}
-        </div>
-      )}
-
-      {/* 底部分隔 */}
-      <div style={{
-        width: 40, height: 1, margin: "20px auto 0",
-        background: "linear-gradient(90deg, transparent, rgba(140,90,220,.15), transparent)",
       }} />
     </div>
   );
@@ -1499,30 +1510,45 @@ export default function ChatPage({
     return entry.date || "";
   };
 
-  // ── 场景模式颜色常量 ──
+  // ── 场景模式颜色常量（灰紫色调，不过深）──
   const S = isSceneMode ? {
-    pageBg:       "linear-gradient(180deg,#0e0a1c 0%,#150f2a 25%,#110d22 60%,#0b0816 100%)",
-    barBg:        "rgba(10,7,20,.92)",
-    barBorder:    "rgba(120,80,200,.1)",
-    msgAreaBg:    "transparent",
-    botBubbleBg:  "rgba(255,255,255,.04)",
-    botBubbleBd:  "rgba(160,120,220,.14)",
-    botBubbleTxt: "rgba(220,200,255,.85)",
-    userBubbleBg: "linear-gradient(135deg,rgba(90,55,150,.72),rgba(70,40,120,.65))",
-    userBubbleTxt:"rgba(220,200,255,.9)",
-    timeTxt:      "rgba(140,110,200,.35)",
-    inputBarBg:   "rgba(10,7,22,.9)",
-    inputBarBd:   "rgba(120,80,200,.1)",
-    inputFieldBg: "rgba(30,18,50,.55)",
-    inputFieldBd: "rgba(120,80,200,.18)",
-    inputTxt:     "rgba(210,190,255,.88)",
-    inputPH:      "rgba(140,110,200,.4)",
-    sendBtnBg:    "linear-gradient(135deg,rgba(100,60,180,.8),rgba(80,50,150,.75))",
-    scrollBtnBg:  "rgba(20,14,38,.8)",
-    scrollBtnBd:  "rgba(120,80,200,.2)",
-    typingDot:    "rgba(160,120,220,.55)",
-    typingBg:     "rgba(255,255,255,.03)",
-    typingBd:     "rgba(160,120,220,.12)",
+    // 背景：中深灰紫，不是纯黑
+    pageBg:        "linear-gradient(180deg,#342448 0%,#2b1c3e 45%,#221530 100%)",
+    // 顶栏
+    barBg:         "rgba(44,28,62,.9)",
+    barBorder:     "rgba(190,150,240,.1)",
+    msgAreaBg:     "transparent",
+    // bot 气泡：毛玻璃淡粉
+    botBubbleBg:   "rgba(255,230,248,.07)",
+    botBubbleBd:   "rgba(255,185,230,.17)",
+    botBubbleTxt:  "rgba(245,225,255,.9)",
+    // user 气泡：柔和紫
+    userBubbleBg:  "linear-gradient(135deg,rgba(140,85,210,.52),rgba(105,62,172,.48))",
+    userBubbleTxt: "rgba(242,222,255,.93)",
+    // 时间戳
+    timeTxt:       "rgba(195,158,238,.32)",
+    // 输入栏
+    inputBarBg:    "rgba(38,24,54,.93)",
+    inputBarBd:    "rgba(185,140,235,.12)",
+    inputFieldBg:  "rgba(255,255,255,.08)",
+    inputFieldBd:  "rgba(205,158,240,.2)",
+    inputTxt:      "rgba(238,218,255,.9)",
+    inputPH:       "rgba(178,140,218,.42)",
+    sendBtnBg:     "linear-gradient(135deg,rgba(140,82,210,.72),rgba(108,62,182,.68))",
+    // 滚动按钮
+    scrollBtnBg:   "rgba(55,38,78,.82)",
+    scrollBtnBd:   "rgba(190,148,240,.18)",
+    // 打字指示
+    typingDot:     "rgba(210,165,245,.55)",
+    typingBg:      "rgba(255,230,248,.06)",
+    typingBd:      "rgba(255,185,230,.15)",
+    // 回复模式切换条（统一到同一背景，不再突兀白色）
+    replyBarBg:    "rgba(35,22,50,.95)",
+    replyBarBd:    "rgba(180,140,230,.09)",
+    replyPillBg:   "rgba(255,255,255,.06)",
+    replyActiveBg: "rgba(255,255,255,.13)",
+    replyTxt:      "rgba(195,160,235,.55)",
+    replyActiveTxt:"rgba(238,218,255,.9)",
   } : null;
 
   return (
@@ -3212,13 +3238,17 @@ export default function ChatPage({
       <div style={{
         display: "flex", justifyContent: "center",
         padding: "5px 16px 2px",
-        background: "rgba(248,244,252,.95)",
-        borderTop: attachView === "grid" ? "none" : "1px solid rgba(196,166,184,.1)",
+        background: S ? S.replyBarBg : "rgba(248,244,252,.95)",
+        borderTop: S
+          ? `1px solid ${S.replyBarBd}`
+          : (attachView === "grid" ? "none" : "1px solid rgba(196,166,184,.1)"),
         flexShrink: 0,
+        backdropFilter: S ? "blur(16px)" : undefined,
+        WebkitBackdropFilter: S ? "blur(16px)" : undefined,
       }}>
         <div style={{
           display: "inline-flex",
-          background: "rgba(196,166,184,.15)",
+          background: S ? "rgba(255,255,255,.06)" : "rgba(196,166,184,.15)",
           borderRadius: 20,
           padding: 2,
         }}>
@@ -3233,15 +3263,19 @@ export default function ChatPage({
                 padding: "3px 13px",
                 borderRadius: 18,
                 border: "none",
-                background: replyMode === m.value ? "rgba(255,255,255,.92)" : "transparent",
-                color: replyMode === m.value ? "#5a4a6a" : "#9a8aac",
+                background: replyMode === m.value
+                  ? (S ? S.replyActiveBg : "rgba(255,255,255,.92)")
+                  : "transparent",
+                color: replyMode === m.value
+                  ? (S ? S.replyActiveTxt : "#5a4a6a")
+                  : (S ? S.replyTxt : "#9a8aac"),
                 fontSize: 11,
                 fontWeight: replyMode === m.value ? 500 : 400,
                 cursor: "pointer",
                 fontFamily: "var(--font-main)",
                 letterSpacing: 0.5,
                 transition: "all .2s",
-                boxShadow: replyMode === m.value ? "0 1px 4px rgba(74,69,96,.1)" : "none",
+                boxShadow: (replyMode === m.value && !S) ? "0 1px 4px rgba(74,69,96,.1)" : "none",
                 whiteSpace: "nowrap",
               }}
             >
