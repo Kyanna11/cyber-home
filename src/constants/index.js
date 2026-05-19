@@ -30,6 +30,8 @@ export const TIMELINE_EVENTS_STORAGE_KEY = "cyber-home-timeline-events";
 export const SETTLEMENT_DRAFTS_STORAGE_KEY = "cyber-home-settlement-drafts";
 export const STICKY_NOTES_STORAGE_KEY = "cyber-home-sticky-notes";
 export const SELF_CURATION_DRAFTS_STORAGE_KEY = "cyber-home-self-curation-drafts";
+export const GROUP_CHATS_STORAGE_KEY = "cyber-home-group-chats";
+export const GROUP_THREADS_STORAGE_KEY = "cyber-home-group-threads";
 
 // 消息分隔符（AI 回复中用来拆成多条消息）
 export const MSG_DELIMITER = "|||";

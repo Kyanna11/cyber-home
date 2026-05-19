@@ -20,6 +20,8 @@ import {
   TREASURES_STORAGE_KEY,
   STICKY_NOTES_STORAGE_KEY,
   SELF_CURATION_DRAFTS_STORAGE_KEY,
+  GROUP_CHATS_STORAGE_KEY,
+  GROUP_THREADS_STORAGE_KEY,
 } from "../constants";
 
 // 通用读写
@@ -163,6 +165,22 @@ export function loadSelfCurationDrafts() {
 }
 export function saveSelfCurationDrafts(drafts) {
   saveJSON(SELF_CURATION_DRAFTS_STORAGE_KEY, drafts);
+}
+
+// 群聊 (GroupChat 元数据)
+export function loadGroupChats() {
+  return loadJSON(GROUP_CHATS_STORAGE_KEY, []);
+}
+export function saveGroupChats(chats) {
+  saveJSON(GROUP_CHATS_STORAGE_KEY, chats);
+}
+
+// 群聊线程 (GroupThread，包含 messages)
+export function loadGroupThreads() {
+  return loadJSON(GROUP_THREADS_STORAGE_KEY, []);
+}
+export function saveGroupThreads(threads) {
+  saveJSON(GROUP_THREADS_STORAGE_KEY, threads);
 }
 
 // 记忆注入配置

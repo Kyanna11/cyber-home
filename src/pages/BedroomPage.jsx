@@ -14,6 +14,9 @@ export default function BedroomPage({
   enterChat,
   // 便签墙
   stickyNotes,
+  // 群聊
+  onOpenGroupChat,
+  groupChats,
 }) {
   const unreadNotes = (stickyNotes || []).filter((n) => !n.read);
   const recentNotes = (stickyNotes || [])
@@ -35,7 +38,7 @@ export default function BedroomPage({
           backdropFilter: "blur(6px)",
         }}
       >
-        <BackButton onClick={() => setPage("entrance")} label="首页" />
+        <BackButton onClick={() => navigateTo("entrance")} label="首页" />
         <div
           style={{
             fontSize: 15,
@@ -50,20 +53,31 @@ export default function BedroomPage({
         >
           我的小房间
         </div>
-        <button
-          onClick={() => navigateTo("profiles")}
-          style={{
-            background: "none",
-            border: "none",
-            fontSize: 18,
-            cursor: "pointer",
-            padding: 6,
-            borderRadius: 8,
-            lineHeight: 1,
-          }}
-        >
-          📋
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {onOpenGroupChat && characters.length >= 2 && (
+            <button
+              onClick={() => onOpenGroupChat(null)}
+              title="小家客厅"
+              style={{
+                background: "none", border: "none",
+                fontSize: 18, cursor: "pointer",
+                padding: 6, borderRadius: 8, lineHeight: 1,
+              }}
+            >
+              ☕
+            </button>
+          )}
+          <button
+            onClick={() => navigateTo("profiles")}
+            style={{
+              background: "none", border: "none",
+              fontSize: 18, cursor: "pointer",
+              padding: 6, borderRadius: 8, lineHeight: 1,
+            }}
+          >
+            📋
+          </button>
+        </div>
       </div>
 
       {/* 房间场景 - 背景图 + 热区 */}
@@ -345,6 +359,31 @@ export default function BedroomPage({
                 </div>
               </div>
             ))}
+            {/* 客厅入口 */}
+            {onOpenGroupChat && characters.length >= 2 && (
+              <div
+                onClick={() => { setShowCharSelect(false); onOpenGroupChat(null); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "11px 14px", margin: "8px 0 4px",
+                  borderRadius: 14, cursor: "pointer",
+                  background: "rgba(120,100,160,.07)",
+                  border: "1px dashed rgba(120,100,160,.22)",
+                  transition: "all .15s",
+                }}
+              >
+                <span style={{ fontSize: 22 }}>☕</span>
+                <div>
+                  <div style={{ fontSize: 13, color: "#5a4a6a", fontWeight: 500 }}>小家客厅</div>
+                  <div style={{ fontSize: 11, color: "var(--text-faint)" }}>
+                    {groupChats?.length > 0
+                      ? `${groupChats.length} 个客厅`
+                      : "邀请大家一起聊"}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <button
               className="char-close"
               onClick={() => setShowCharSelect(false)}

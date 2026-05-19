@@ -24,6 +24,8 @@ import {
   loadTreasures, saveTreasures,
   loadStickyNotes, saveStickyNotes,
   loadSelfCurationDrafts, saveSelfCurationDrafts,
+  loadGroupChats, saveGroupChats,
+  loadGroupThreads, saveGroupThreads,
 } from "./utils/storage";
 import { genId, estimateTokens, buildSourceRef } from "./utils/helpers";
 import { splitRawTextToChunks } from "./utils/chunker";
@@ -53,6 +55,7 @@ import ProfileHomePage from "./pages/ProfileHomePage";
 import ConfigPage from "./pages/ConfigPage";
 import TreasurePage from "./pages/TreasurePage";
 import StickyNotesPage from "./pages/StickyNotesPage";
+import GroupChatPage from "./pages/GroupChatPage";
 
 // MSG_DELIMITER is used internally by parseResponse in utils/prompt.js
 
@@ -217,6 +220,11 @@ export default function App() {
   // ─── 便签墙 ───
   const [stickyNotes, setStickyNotes] = useState(() => loadStickyNotes());
 
+  // ─── 群聊 ───
+  const [groupChats, setGroupChats]     = useState(() => loadGroupChats());
+  const [groupThreads, setGroupThreads] = useState(() => loadGroupThreads());
+  const [activeGroupId, setActiveGroupId] = useState(null);
+
   // ─── API 配置 ───
   const [config, setConfig] = useState(loadConfig);
   const [ctxConfig, setCtxConfig] = useState(loadCtxConfig);
@@ -256,6 +264,8 @@ export default function App() {
   useEffect(() => { saveProfileDrafts(profileDrafts); }, [profileDrafts]);
   useEffect(() => { saveThreads(chatThreads); }, [chatThreads]);
   useEffect(() => { saveStickyNotes(stickyNotes); }, [stickyNotes]);
+  useEffect(() => { saveGroupChats(groupChats); }, [groupChats]);
+  useEffect(() => { saveGroupThreads(groupThreads); }, [groupThreads]);
   useEffect(() => { localStorage.setItem("worldViews", JSON.stringify(worldViews)); }, [worldViews]);
   useEffect(() => { localStorage.setItem("reflectSettings", JSON.stringify(reflectSettings)); }, [reflectSettings]);
   useEffect(() => { localStorage.setItem("userProfile", JSON.stringify(userProfile)); }, [userProfile]);
@@ -590,6 +600,11 @@ export default function App() {
   const openWakePreview = (charId) => {
     setWakePreviewCharId(charId);
     navigateTo("wakePreview");
+  };
+
+  const openGroupChat = (groupId) => {
+    if (groupId) setActiveGroupId(groupId);
+    navigateTo("groupChat");
   };
 
   const openTimeline = (charId) => {
@@ -3066,6 +3081,28 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           characters={characters}
           enterChat={enterChat}
           stickyNotes={stickyNotes}
+          onOpenGroupChat={openGroupChat}
+          groupChats={groupChats}
+        />
+      )}
+
+      {/* 小家客厅 */}
+      {page === "groupChat" && (
+        <GroupChatPage
+          navigateTo={navigateTo}
+          characters={characters}
+          allMemories={allMemories}
+          userProfile={userProfile}
+          homeMemory={homeMemory}
+          config={config}
+          ctxConfig={ctxConfig}
+          groupChats={groupChats}
+          groupThreads={groupThreads}
+          activeGroupId={activeGroupId}
+          setGroupChats={setGroupChats}
+          setGroupThreads={setGroupThreads}
+          onCreateGroup={() => {}}
+          onSelectGroup={(gId) => setActiveGroupId(gId)}
         />
       )}
 
