@@ -54,7 +54,7 @@ export default function BedroomPage({
           我的小房间
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          {onOpenGroupChat && characters.length >= 2 && (
+          {onOpenGroupChat && (
             <button
               onClick={() => onOpenGroupChat(null)}
               title="小家客厅"
@@ -360,7 +360,7 @@ export default function BedroomPage({
               </div>
             ))}
             {/* 客厅入口 */}
-            {onOpenGroupChat && characters.length >= 2 && (
+            {onOpenGroupChat && (
               <div
                 onClick={() => { setShowCharSelect(false); onOpenGroupChat(null); }}
                 style={{

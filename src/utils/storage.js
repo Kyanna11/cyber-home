@@ -22,6 +22,7 @@ import {
   SELF_CURATION_DRAFTS_STORAGE_KEY,
   GROUP_CHATS_STORAGE_KEY,
   GROUP_THREADS_STORAGE_KEY,
+  CHAR_TREASURES_STORAGE_KEY,
 } from "../constants";
 
 // 通用读写
@@ -181,6 +182,17 @@ export function loadGroupThreads() {
 }
 export function saveGroupThreads(threads) {
   saveJSON(GROUP_THREADS_STORAGE_KEY, threads);
+}
+
+// 他的宝库（入住者珍藏用户的话）
+export function loadCharTreasures() {
+  return loadJSON(CHAR_TREASURES_STORAGE_KEY, []);
+}
+export function saveCharTreasures(items) {
+  saveJSON(CHAR_TREASURES_STORAGE_KEY, items);
+}
+export function getCharTreasuresByCharId(items, charId) {
+  return (items || []).filter((t) => t.charId === charId);
 }
 
 // 记忆注入配置

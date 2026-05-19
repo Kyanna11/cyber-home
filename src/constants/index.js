@@ -32,6 +32,7 @@ export const STICKY_NOTES_STORAGE_KEY = "cyber-home-sticky-notes";
 export const SELF_CURATION_DRAFTS_STORAGE_KEY = "cyber-home-self-curation-drafts";
 export const GROUP_CHATS_STORAGE_KEY = "cyber-home-group-chats";
 export const GROUP_THREADS_STORAGE_KEY = "cyber-home-group-threads";
+export const CHAR_TREASURES_STORAGE_KEY = "cyber-home-char-treasures";
 
 // 消息分隔符（AI 回复中用来拆成多条消息）
 export const MSG_DELIMITER = "|||";

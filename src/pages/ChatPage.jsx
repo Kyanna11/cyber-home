@@ -1738,6 +1738,8 @@ export default function ChatPage({
   activeThread,
   // UI 设置
   updateCharUiSettings,
+  // 他的宝库
+  onAddCharTreasure,
 }) {
   // ── 局部 UI 状态 ──
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -1749,6 +1751,9 @@ export default function ChatPage({
   const [treasureTarget, setTreasureTarget] = useState(null); // 要收藏的 msg
   const [treasureForm, setTreasureForm] = useState(null);     // 收藏表单
   const [treasureSaved, setTreasureSaved] = useState(false);  // 短暂成功提示
+  // 他的宝库：让他珍藏
+  const [charTreasureTarget, setCharTreasureTarget] = useState(null); // msg
+  const [charTreasureSaved, setCharTreasureSaved] = useState(false);
   // 场景结束面板
   // null | "choose" | "treasure_done" | "timeline_done"
   const [sceneEndStep, setSceneEndStep] = useState(null);
@@ -2689,6 +2694,27 @@ export default function ChatPage({
                     title="编辑并重发"
                   >
                     ✏️
+                  </button>
+                )}
+
+                {/* 用户消息：让他珍藏 */}
+                {msg.role === "user" && !msg.isDiaryShare && !msg.isNoteShare && onAddCharTreasure && (
+                  <button
+                    onClick={() => setCharTreasureTarget(msg)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: 11,
+                      color: "var(--text-faint)",
+                      padding: "2px 4px",
+                      borderRadius: 4,
+                      transition: "color .2s",
+                      fontFamily: "var(--font-main)",
+                    }}
+                    title="让他珍藏"
+                  >
+                    💝
                   </button>
                 )}
 
@@ -3826,6 +3852,128 @@ export default function ChatPage({
           </div>
         </div>
       )}
+
+      {/* ── 让他珍藏弹窗 ── */}
+      {charTreasureTarget && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 300,
+            background: "rgba(74,69,96,.38)",
+            backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+            display: "flex", alignItems: "flex-end", justifyContent: "center",
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setCharTreasureTarget(null); }}
+        >
+          <div style={{
+            width: "100%", maxWidth: 480,
+            background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+            borderRadius: "20px 20px 0 0",
+            boxShadow: "0 -8px 40px rgba(74,69,96,.22)",
+            overflow: "hidden",
+          }}>
+            {/* 顶栏 */}
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "16px 18px 12px",
+              borderBottom: "1px solid rgba(196,166,184,.18)",
+            }}>
+              <span style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>
+                💝 要把这句话交给他收好吗？
+              </span>
+              <button
+                onClick={() => setCharTreasureTarget(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, color: "#9a8aac", padding: 4 }}
+              >✕</button>
+            </div>
+
+            <div style={{ padding: "14px 18px 32px" }}>
+              {/* 内容预览 */}
+              <div style={{
+                background: "rgba(255,255,255,.65)",
+                border: "1px solid rgba(196,166,184,.22)",
+                borderRadius: 12, padding: "10px 14px", marginBottom: 14,
+                fontSize: 13, color: "#5a4a6a", lineHeight: 1.75,
+                maxHeight: 100, overflow: "hidden",
+              }}>
+                {(charTreasureTarget.content || "").slice(0, 120)}
+                {(charTreasureTarget.content || "").length > 120 ? "…" : ""}
+              </div>
+
+              {/* 备注输入 */}
+              <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
+                我希望 ta 记得为什么这句话重要（可不填）
+              </label>
+              <CharTreasureNoteInput
+                onConfirm={(note) => {
+                  if (!onAddCharTreasure || !activeCharId) return;
+                  onAddCharTreasure({
+                    charId:     activeCharId,
+                    sourceType: "message",
+                    sourceId:   charTreasureTarget.id || null,
+                    content:    charTreasureTarget.content,
+                    note:       note,
+                    authorType: "user",
+                    pinned:     false,
+                    sourceRefs: [
+                      buildSourceRef({
+                        sourceType:  "chat",
+                        sourceId:    charTreasureTarget.id || "",
+                        sourceTitle: activeChar?.name || "",
+                        excerpt:     (charTreasureTarget.content || "").slice(0, 80),
+                      }),
+                    ],
+                  });
+                  setCharTreasureSaved(true);
+                  setTimeout(() => {
+                    setCharTreasureTarget(null);
+                    setCharTreasureSaved(false);
+                  }, 900);
+                }}
+                saved={charTreasureSaved}
+                charName={activeChar?.name || "ta"}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+// ── 让他珍藏：备注输入 + 确认（内部组件，避免 hook 顺序问题）──
+function CharTreasureNoteInput({ onConfirm, saved, charName }) {
+  const [note, setNote] = useState("");
+  return (
+    <>
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        rows={2}
+        placeholder="比如：这是我第一次告诉他…"
+        style={{
+          width: "100%", padding: "10px 14px", borderRadius: 12, boxSizing: "border-box",
+          border: "1px solid rgba(196,166,184,.38)", background: "rgba(255,255,255,.7)",
+          fontSize: 13, color: "#5a4a6a", fontFamily: "var(--font-main)",
+          outline: "none", resize: "none", lineHeight: 1.7, marginBottom: 14,
+        }}
+      />
+      {saved ? (
+        <div style={{ textAlign: "center", padding: "10px 0", fontSize: 13, color: "#7a6a8e" }}>
+          💝 已放进 {charName} 的宝库
+        </div>
+      ) : (
+        <button
+          onClick={() => onConfirm(note.trim())}
+          style={{
+            width: "100%", padding: "12px", borderRadius: 14,
+            background: "rgba(120,100,160,.85)", border: "none",
+            color: "white", fontSize: 14, cursor: "pointer",
+            fontFamily: "var(--font-main)", letterSpacing: 1,
+          }}
+        >
+          💝 放进他的宝库
+        </button>
+      )}
+    </>
   );
 }

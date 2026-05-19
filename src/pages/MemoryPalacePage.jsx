@@ -241,6 +241,8 @@ export default function MemoryPalacePage({
   applyFeedbackToProfile,
   reflectSettings,
   setReflectSettings,
+  openCharTreasure,
+  charTreasures,
 }) {
   const charName = (characters.find((c) => c.id === memCharId) || {}).name || "记忆";
 
@@ -286,6 +288,36 @@ export default function MemoryPalacePage({
           <div className="memory-header-spacer" />
         )}
       </div>
+
+      {/* 他的宝库快捷入口 */}
+      {openCharTreasure && (
+        <div style={{ padding: "6px 16px 2px", display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={() => openCharTreasure(memCharId)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "5px 14px", borderRadius: 10, fontSize: 11,
+              background: "rgba(196,166,184,.12)",
+              border: "1px solid rgba(196,166,184,.3)",
+              color: "#7a6a8e", cursor: "pointer",
+              fontFamily: "var(--font-main)", letterSpacing: 0.3,
+            }}
+          >
+            💝 他的宝库
+            {(() => {
+              const cnt = (charTreasures || []).filter((t) => t.charId === memCharId).length;
+              return cnt > 0 ? (
+                <span style={{
+                  fontSize: 10, background: "rgba(120,100,160,.15)",
+                  padding: "1px 6px", borderRadius: 6, color: "#6a5a8a",
+                }}>
+                  {cnt}
+                </span>
+              ) : null;
+            })()}
+          </button>
+        </div>
+      )}
 
       {/* Tab 栏 */}
       <div className="mem-tabs">

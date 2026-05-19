@@ -26,6 +26,7 @@ import {
   loadSelfCurationDrafts, saveSelfCurationDrafts,
   loadGroupChats, saveGroupChats,
   loadGroupThreads, saveGroupThreads,
+  loadCharTreasures, saveCharTreasures,
 } from "./utils/storage";
 import { genId, estimateTokens, buildSourceRef } from "./utils/helpers";
 import { splitRawTextToChunks } from "./utils/chunker";
@@ -56,6 +57,7 @@ import ConfigPage from "./pages/ConfigPage";
 import TreasurePage from "./pages/TreasurePage";
 import StickyNotesPage from "./pages/StickyNotesPage";
 import GroupChatPage from "./pages/GroupChatPage";
+import CharTreasurePage from "./pages/CharTreasurePage";
 
 // MSG_DELIMITER is used internally by parseResponse in utils/prompt.js
 
@@ -225,6 +227,10 @@ export default function App() {
   const [groupThreads, setGroupThreads] = useState(() => loadGroupThreads());
   const [activeGroupId, setActiveGroupId] = useState(null);
 
+  // ─── 他的宝库 ───
+  const [charTreasures, setCharTreasures] = useState(() => loadCharTreasures());
+  const [charTreasureCharId, setCharTreasureCharId] = useState(null);
+
   // ─── API 配置 ───
   const [config, setConfig] = useState(loadConfig);
   const [ctxConfig, setCtxConfig] = useState(loadCtxConfig);
@@ -266,6 +272,7 @@ export default function App() {
   useEffect(() => { saveStickyNotes(stickyNotes); }, [stickyNotes]);
   useEffect(() => { saveGroupChats(groupChats); }, [groupChats]);
   useEffect(() => { saveGroupThreads(groupThreads); }, [groupThreads]);
+  useEffect(() => { saveCharTreasures(charTreasures); }, [charTreasures]);
   useEffect(() => { localStorage.setItem("worldViews", JSON.stringify(worldViews)); }, [worldViews]);
   useEffect(() => { localStorage.setItem("reflectSettings", JSON.stringify(reflectSettings)); }, [reflectSettings]);
   useEffect(() => { localStorage.setItem("userProfile", JSON.stringify(userProfile)); }, [userProfile]);
@@ -1227,6 +1234,37 @@ ${chunksText}
     const updated = treasures.filter((t) => t.id !== id);
     setTreasures(updated);
     saveTreasures(updated);
+  };
+
+  // ── 他的宝库 CRUD ──
+  const addCharTreasure = (item) => {
+    const now = Date.now();
+    const entry = {
+      ...item,
+      id:        item.id || genId(),
+      createdAt: item.createdAt || now,
+      updatedAt: now,
+      pinned:    item.pinned ?? false,
+      sourceRefs: item.sourceRefs || [],
+    };
+    setCharTreasures((prev) => [entry, ...prev]);
+  };
+  const deleteCharTreasure = (id) => {
+    setCharTreasures((prev) => prev.filter((t) => t.id !== id));
+  };
+  const updateCharTreasure = (id, fields) => {
+    setCharTreasures((prev) =>
+      prev.map((t) => t.id === id ? { ...t, ...fields, updatedAt: Date.now() } : t)
+    );
+  };
+  const toggleCharTreasurePin = (id) => {
+    setCharTreasures((prev) =>
+      prev.map((t) => t.id === id ? { ...t, pinned: !t.pinned } : t)
+    );
+  };
+  const openCharTreasure = (charId) => {
+    setCharTreasureCharId(charId);
+    navigateTo("charTreasure");
   };
 
   // ── 便签墙 CRUD ──
@@ -2365,6 +2403,117 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
     }
   };
 
+  // 从群聊记录生成整体沉淀草稿
+  const generateGroupSettlement = async (group, thread) => {
+    if (!group || !thread) return null;
+    const msgs = (thread.messages || []).filter(
+      (m) => (m.role === "user" || m.role === "char") && (m.content || "").trim()
+    );
+    if (msgs.length < 4) {
+      setSettlementNotice("客厅里的聊天还太少，整理不出什么~");
+      return null;
+    }
+    if (!config.apiUrl?.trim() || !config.apiKey?.trim()) {
+      setSettlementNotice("请先配置 API 地址和密钥。");
+      return null;
+    }
+    const firstMemberId = group.memberIds?.[0];
+    const firstChar = characters.find((c) => c.id === firstMemberId);
+    const model = firstChar?.modelOverride?.trim()
+      || (config.model === "__custom__" ? config.customModel : config.model)?.trim()
+      || "";
+    if (!model) {
+      setSettlementNotice("请先配置要使用的模型。");
+      return null;
+    }
+    const userName = userProfile?.globalFacts?.name?.trim() || "用户";
+    const chatLines = msgs.map((m) => {
+      const who = m.role === "user" ? userName : m.authorName;
+      return `${who}：${(m.content || "").slice(0, 100)}`;
+    }).join("\n");
+
+    const memberNames = group.memberIds
+      .map((id) => characters.find((c) => c.id === id)?.name || "ta")
+      .join("、");
+
+    const settlePrompt = `这是小家客厅的一次聊天记录，参与者包括用户「${userName}」和入住者「${memberNames}」。
+
+以下是聊天记录：
+${chatLines}
+
+请用温暖自然的语气，整理这次客厅聊天的关键内容，严格按以下格式输出：
+
+【关系变化记录】
+这次聊天里发生了什么？有什么值得记录的关系变化或集体氛围？100字以内。如果没有什么特别的，写：暂无
+
+【唤醒摘要建议】
+如果要把这次客厅聊天的精华融入某个入住者的唤醒摘要，你会怎么提炼？50字以内。如果没有需要更新的，写：暂无
+
+【不可遗忘追加】
+这次聊天中有没有值得加入规则或承诺的内容？每条一行，不超过20字，最多2条。没有则写：无
+
+【记忆锚点建议】
+哪些细节值得作为记忆锚点？严格按格式：类型:内容（类型只能是：事实 / 情绪 / 觉察，内容不超过30字）最多2条。没有则写：无
+
+请不要用markdown格式。`;
+
+    try {
+      setReflecting(true);
+      setSettlementNotice("");
+      const response = await fetch(config.apiUrl.replace(/\/+$/, "") + "/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: settlePrompt }],
+          temperature: 0.7,
+          max_tokens: 600,
+        }),
+      });
+      const data = await response.json();
+      const rawOutput = data.choices?.[0]?.message?.content;
+      if (!rawOutput) throw new Error("返回为空");
+
+      const parsed = parseSettlementOutput(rawOutput);
+      const now = Date.now();
+      const sourceRefs = [
+        buildSourceRef({
+          sourceType:  "group_chat",
+          sourceId:    thread.id,
+          sourceTitle: group.name || "小家客厅",
+          excerpt:     msgs[0]?.content?.slice(0, 80) || "",
+        }),
+      ];
+      const draft = {
+        id: genId(),
+        loverId: firstMemberId || null,
+        title: `${group.name || "小家客厅"} · 客厅整理 · ${new Date(now).toLocaleDateString("zh-CN")}`,
+        status: "pending",
+        source: "group_chat",
+        sourceIds: [thread.id],
+        sourceRefs,
+        createdAt: now,
+        rawOutput,
+        ...parsed,
+        appliedSections: [],
+      };
+      setSettlementDrafts((prev) => [draft, ...prev]);
+      // 跳转到第一位成员的记忆宫殿 summary 标签
+      if (firstMemberId) {
+        setMemCharId(firstMemberId);
+        setMemTab("summary");
+        setMemEntryFrom("group_chat");
+        navigateTo("memoryPalace");
+      }
+      return draft.id;
+    } catch (err) {
+      setSettlementNotice("客厅整理失败：" + err.message);
+      return null;
+    } finally {
+      setReflecting(false);
+    }
+  };
+
   // 采纳沉淀草稿的某一节（append，不覆盖手写内容）
   const applySettlementSection = (draftId, section, charId) => {
     const draft = settlementDrafts.find((d) => d.id === draftId);
@@ -3067,6 +3216,8 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           applyFeedbackToProfile={applyFeedbackToProfile}
           reflectSettings={reflectSettings}
           setReflectSettings={setReflectSettings}
+          openCharTreasure={openCharTreasure}
+          charTreasures={charTreasures}
         />
       )}
 
@@ -3083,6 +3234,20 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           stickyNotes={stickyNotes}
           onOpenGroupChat={openGroupChat}
           groupChats={groupChats}
+        />
+      )}
+
+      {/* 他的宝库 */}
+      {page === "charTreasure" && (
+        <CharTreasurePage
+          charId={charTreasureCharId}
+          characters={characters}
+          charTreasures={charTreasures}
+          onDelete={deleteCharTreasure}
+          onTogglePin={toggleCharTreasurePin}
+          onUpdate={updateCharTreasure}
+          navigateTo={navigateTo}
+          onBack={() => navigateTo(memEntryFrom === "chat" ? "chat" : "memoryPalace")}
         />
       )}
 
@@ -3103,6 +3268,10 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           setGroupThreads={setGroupThreads}
           onCreateGroup={() => {}}
           onSelectGroup={(gId) => setActiveGroupId(gId)}
+          onSaveTreasure={handleSaveTreasure}
+          onAddTimelineEvent={addTimelineEvent}
+          onGenerateGroupSettlement={generateGroupSettlement}
+          onAddCharTreasure={addCharTreasure}
         />
       )}
 
@@ -3239,6 +3408,7 @@ ${mig.wakeSummary ? `你目前的唤醒摘要：\n${mig.wakeSummary}\n` : ""}${m
           closeSceneThread={closeSceneThread}
           activeThread={chatThreads[activeCharId]?.find(t => t.id === activeThreadId) || null}
           updateCharUiSettings={updateCharUiSettings}
+          onAddCharTreasure={addCharTreasure}
         />
       )}
     </>

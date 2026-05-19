@@ -26,9 +26,16 @@ function timeStr() {
   const d = new Date();
   return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
 }
+function todayStr() {
+  return new Date().toISOString().split("T")[0];
+}
+function dateLabelShort() {
+  const d = new Date();
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
 
 // ─── 创建群聊表单 ───
-function CreateGroupForm({ characters, onConfirm, onCancel, hasExisting }) {
+function CreateGroupForm({ characters, onConfirm, onCancel }) {
   const [name, setName] = useState("小家客厅");
   const [selected, setSelected] = useState([]);
 
@@ -55,7 +62,6 @@ function CreateGroupForm({ characters, onConfirm, onCancel, hasExisting }) {
         overflow: "hidden",
         boxShadow: "0 -8px 40px rgba(74,69,96,.22)",
       }}>
-        {/* 顶栏 */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "18px 18px 14px",
@@ -71,7 +77,6 @@ function CreateGroupForm({ characters, onConfirm, onCancel, hasExisting }) {
         </div>
 
         <div style={{ flex: 1, overflow: "auto", padding: "16px 18px 32px" }}>
-          {/* 群聊名称 */}
           <div style={{ marginBottom: 18 }}>
             <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 1, display: "block", marginBottom: 6 }}>
               客厅名称
@@ -89,7 +94,6 @@ function CreateGroupForm({ characters, onConfirm, onCancel, hasExisting }) {
             />
           </div>
 
-          {/* 选择成员 */}
           <div style={{ marginBottom: 18 }}>
             <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 1, display: "block", marginBottom: 8 }}>
               邀请哪些入住者（至少 2 位）
@@ -158,67 +162,466 @@ function CreateGroupForm({ characters, onConfirm, onCancel, hasExisting }) {
   );
 }
 
-// ─── 消息气泡（入住者） ───
-function CharBubble({ msg, char }) {
-  const emoji = char?.avatarImg ? null : (char?.emoji || "💜");
+// ─── 珍藏确认弹窗 ───
+function TreasureSaveSheet({ msg, char, groupName, onConfirm, onCancel }) {
+  const [title, setTitle] = useState(
+    `客厅里的${char?.name || "ta"} · ${dateLabelShort()}`
+  );
+  const preview = (msg.content || "").slice(0, 80) + ((msg.content || "").length > 80 ? "…" : "");
+
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 14, padding: "0 12px" }}>
-      {/* 头像 */}
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 300,
+        background: "rgba(74,69,96,.38)",
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
       <div style={{
-        width: 36, height: 36, borderRadius: 12, flexShrink: 0,
-        background: "rgba(196,166,184,.18)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 18, border: "1px solid rgba(196,166,184,.25)",
+        width: "100%", maxWidth: 480,
+        background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+        borderRadius: "20px 20px 0 0",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.22)",
         overflow: "hidden",
       }}>
-        {char?.avatarImg
-          ? <img src={char.avatarImg} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
-          : emoji}
-      </div>
-      <div style={{ maxWidth: "72%", minWidth: 0 }}>
-        {/* 名字 + 时间 */}
-        <div style={{ fontSize: 10, color: "var(--text-faint)", marginBottom: 4, display: "flex", gap: 6, alignItems: "baseline" }}>
-          <span style={{ fontWeight: 500, color: "#7a6a8e" }}>{msg.authorName}</span>
-          <span>{msg.time}</span>
-        </div>
-        {/* 气泡 */}
+        {/* 顶栏 */}
         <div style={{
-          background: "rgba(255,255,255,.78)",
-          border: "1px solid rgba(196,166,184,.22)",
-          borderRadius: "4px 14px 14px 14px",
-          padding: "10px 14px",
-          fontSize: 14, color: "#3a2e4a",
-          lineHeight: 1.75,
-          whiteSpace: "pre-wrap",
-          wordBreak: "break-word",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 18px 12px",
+          borderBottom: "1px solid rgba(196,166,184,.18)",
         }}>
-          {msg.content}
+          <span style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500, letterSpacing: 0.5 }}>
+            💎 珍藏这句话
+          </span>
+          <button
+            onClick={onCancel}
+            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, color: "#9a8aac", padding: 4 }}
+          >✕</button>
+        </div>
+
+        <div style={{ padding: "14px 18px 32px" }}>
+          {/* 内容预览 */}
+          <div style={{
+            background: "rgba(255,255,255,.6)",
+            border: "1px solid rgba(196,166,184,.22)",
+            borderRadius: 12, padding: "10px 14px", marginBottom: 14,
+            fontSize: 13, color: "#5a4a6a", lineHeight: 1.75,
+          }}>
+            {preview}
+          </div>
+
+          {/* 标题输入 */}
+          <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
+            给这句话起个名字
+          </label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            style={{
+              width: "100%", padding: "10px 14px", borderRadius: 12, boxSizing: "border-box",
+              border: "1px solid rgba(196,166,184,.38)", background: "rgba(255,255,255,.7)",
+              fontSize: 13, color: "#5a4a6a", fontFamily: "var(--font-main)", outline: "none",
+              marginBottom: 16,
+            }}
+          />
+
+          <div style={{ fontSize: 10, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7 }}>
+            将保存到「我的宝库」，不会影响任何入住者的长期记忆
+          </div>
+
+          <button
+            onClick={() => onConfirm({ title: title.trim() || `客厅里的${char?.name || "ta"}` })}
+            style={{
+              width: "100%", padding: "12px", borderRadius: 14,
+              background: "rgba(120,100,160,.85)", border: "none",
+              color: "white", fontSize: 14, cursor: "pointer",
+              fontFamily: "var(--font-main)", letterSpacing: 1,
+            }}
+          >
+            珍藏起来
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── 消息气泡（用户） ───
-function UserBubble({ msg }) {
+// ─── 记下这一刻弹窗 ───
+function TimelineEventSheet({ msg, char, group, characters, onConfirm, onCancel }) {
+  const defaultTitle = char
+    ? `小家客厅 · 和${char.name || "ta"}`
+    : `小家客厅 · 我说的`;
+  const [title, setTitle] = useState(defaultTitle);
+  const [description, setDescription] = useState((msg.content || "").slice(0, 60));
+  const [occurredAt, setOccurredAt] = useState(todayStr());
+  // 归属：charId 或 null（全家）
+  const [loverId, setLoverId] = useState(char?.id || null);
+
+  const memberChars = (group?.memberIds || [])
+    .map((id) => characters.find((c) => c.id === id))
+    .filter(Boolean);
+
   return (
-    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14, padding: "0 12px" }}>
-      <div style={{ maxWidth: "72%", minWidth: 0 }}>
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 300,
+        background: "rgba(74,69,96,.38)",
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div style={{
+        width: "100%", maxWidth: 480, maxHeight: "88vh",
+        background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+        borderRadius: "20px 20px 0 0",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.22)",
+        display: "flex", flexDirection: "column", overflow: "hidden",
+      }}>
+        {/* 顶栏 */}
         <div style={{
-          background: "rgba(120,100,160,.82)",
-          borderRadius: "14px 4px 14px 14px",
-          padding: "10px 14px",
-          fontSize: 14, color: "rgba(255,255,255,.95)",
-          lineHeight: 1.75,
-          whiteSpace: "pre-wrap",
-          wordBreak: "break-word",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 18px 12px",
+          borderBottom: "1px solid rgba(196,166,184,.18)",
+          flexShrink: 0,
         }}>
-          {msg.content}
+          <span style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500, letterSpacing: 0.5 }}>
+            🕰 记下这一刻
+          </span>
+          <button
+            onClick={onCancel}
+            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, color: "#9a8aac", padding: 4 }}
+          >✕</button>
         </div>
-        <div style={{ fontSize: 10, color: "var(--text-faint)", textAlign: "right", marginTop: 3 }}>
-          {msg.time}
+
+        <div style={{ flex: 1, overflow: "auto", padding: "14px 18px 32px", display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* 标题 */}
+          <div>
+            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
+              时刻标题
+            </label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              style={{
+                width: "100%", padding: "10px 14px", borderRadius: 12, boxSizing: "border-box",
+                border: "1px solid rgba(196,166,184,.38)", background: "rgba(255,255,255,.7)",
+                fontSize: 13, color: "#5a4a6a", fontFamily: "var(--font-main)", outline: "none",
+              }}
+            />
+          </div>
+
+          {/* 短描述 */}
+          <div>
+            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
+              想记住什么
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              style={{
+                width: "100%", padding: "10px 14px", borderRadius: 12, boxSizing: "border-box",
+                border: "1px solid rgba(196,166,184,.38)", background: "rgba(255,255,255,.7)",
+                fontSize: 13, color: "#5a4a6a", fontFamily: "var(--font-main)", outline: "none",
+                resize: "none", lineHeight: 1.7,
+              }}
+            />
+          </div>
+
+          {/* 日期 */}
+          <div>
+            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
+              发生日期
+            </label>
+            <input
+              type="date"
+              value={occurredAt}
+              onChange={(e) => setOccurredAt(e.target.value)}
+              style={{
+                width: "100%", padding: "9px 14px", borderRadius: 12, boxSizing: "border-box",
+                border: "1px solid rgba(196,166,184,.38)", background: "rgba(255,255,255,.7)",
+                fontSize: 13, color: "#5a4a6a", fontFamily: "var(--font-main)", outline: "none",
+              }}
+            />
+          </div>
+
+          {/* 归属 */}
+          <div>
+            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 8 }}>
+              记在谁的时间线
+            </label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {/* 全家事件 */}
+              <div
+                onClick={() => setLoverId(null)}
+                style={{
+                  padding: "7px 14px", borderRadius: 10, cursor: "pointer",
+                  background: loverId === null ? "rgba(120,100,160,.15)" : "rgba(255,255,255,.6)",
+                  border: `1px solid ${loverId === null ? "rgba(120,100,160,.35)" : "rgba(196,166,184,.3)"}`,
+                  fontSize: 12, color: loverId === null ? "#5a4a6a" : "#7a6a8e",
+                  transition: "all .15s",
+                }}
+              >
+                🏠 全家事件
+              </div>
+              {/* 各成员 */}
+              {memberChars.map((c) => (
+                <div
+                  key={c.id}
+                  onClick={() => setLoverId(c.id)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "7px 12px", borderRadius: 10, cursor: "pointer",
+                    background: loverId === c.id ? "rgba(120,100,160,.15)" : "rgba(255,255,255,.6)",
+                    border: `1px solid ${loverId === c.id ? "rgba(120,100,160,.35)" : "rgba(196,166,184,.3)"}`,
+                    fontSize: 12, color: loverId === c.id ? "#5a4a6a" : "#7a6a8e",
+                    transition: "all .15s",
+                  }}
+                >
+                  <span style={{ fontSize: 14 }}>{c.emoji || "💜"}</span>
+                  {c.name || "ta"}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ fontSize: 10, color: "var(--text-faint)", lineHeight: 1.7, marginTop: -4 }}>
+            保存到关系时间线，不会影响任何入住者的长期记忆
+          </div>
+
+          <button
+            onClick={() => onConfirm({
+              title: title.trim() || defaultTitle,
+              description: description.trim(),
+              occurredAt,
+              loverId,
+            })}
+            style={{
+              width: "100%", padding: "12px", borderRadius: 14,
+              background: "rgba(120,100,160,.85)", border: "none",
+              color: "white", fontSize: 14, cursor: "pointer",
+              fontFamily: "var(--font-main)", letterSpacing: 1,
+            }}
+          >
+            记下这一刻
+          </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── 更多菜单 ───
+function MoreMenuSheet({ onSettle, settling, onClose }) {
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 300,
+        background: "rgba(74,69,96,.3)",
+        backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        width: "100%", maxWidth: 480,
+        background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+        borderRadius: "20px 20px 0 0",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.2)",
+        overflow: "hidden",
+      }}>
+        <div style={{ padding: "6px 0 0", display: "flex", justifyContent: "center" }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(196,166,184,.4)", margin: "10px 0 6px" }} />
+        </div>
+
+        <div style={{ padding: "4px 16px 32px", display: "flex", flexDirection: "column", gap: 8 }}>
+          {/* 整理这次客厅 */}
+          <button
+            onClick={onSettle}
+            disabled={settling}
+            style={{
+              display: "flex", alignItems: "center", gap: 12,
+              width: "100%", padding: "14px 16px", borderRadius: 14,
+              background: settling ? "rgba(196,166,184,.18)" : "rgba(255,255,255,.72)",
+              border: "1px solid rgba(196,166,184,.25)",
+              cursor: settling ? "default" : "pointer",
+              textAlign: "left", fontFamily: "var(--font-main)",
+            }}
+          >
+            <span style={{ fontSize: 20 }}>✨</span>
+            <div>
+              <div style={{ fontSize: 13, color: settling ? "#9a8aac" : "#5a4a6a", fontWeight: 500 }}>
+                {settling ? "正在整理…" : "整理这次客厅"}
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 1 }}>
+                生成草稿，不自动写入长期记忆
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={onClose}
+            style={{
+              padding: "12px", borderRadius: 14, marginTop: 4,
+              background: "transparent", border: "none",
+              color: "#9a8aac", fontSize: 13, cursor: "pointer",
+              fontFamily: "var(--font-main)",
+            }}
+          >
+            关上这扇门
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 消息气泡（入住者） ───
+function CharBubble({ msg, char, isActive, onToggleActive, onTreasure, onTimeline }) {
+  const emoji = char?.avatarImg ? null : (char?.emoji || "💜");
+  return (
+    <div
+      style={{ marginBottom: 14, padding: "0 12px", cursor: "pointer", userSelect: isActive ? "none" : "text" }}
+      onClick={onToggleActive}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+        {/* 头像 */}
+        <div style={{
+          width: 36, height: 36, borderRadius: 12, flexShrink: 0,
+          background: "rgba(196,166,184,.18)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 18, border: "1px solid rgba(196,166,184,.25)",
+          overflow: "hidden",
+        }}>
+          {char?.avatarImg
+            ? <img src={char.avatarImg} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+            : emoji}
+        </div>
+        <div style={{ maxWidth: "72%", minWidth: 0 }}>
+          {/* 名字 + 时间 */}
+          <div style={{ fontSize: 10, color: "var(--text-faint)", marginBottom: 4, display: "flex", gap: 6, alignItems: "baseline" }}>
+            <span style={{ fontWeight: 500, color: "#7a6a8e" }}>{msg.authorName}</span>
+            <span>{msg.time}</span>
+          </div>
+          {/* 气泡 */}
+          <div style={{
+            background: isActive ? "rgba(240,232,252,.92)" : "rgba(255,255,255,.78)",
+            border: `1px solid ${isActive ? "rgba(120,100,160,.28)" : "rgba(196,166,184,.22)"}`,
+            borderRadius: "4px 14px 14px 14px",
+            padding: "10px 14px",
+            fontSize: 14, color: "#3a2e4a",
+            lineHeight: 1.75,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            transition: "all .15s",
+          }}>
+            {msg.content}
+          </div>
+        </div>
+      </div>
+
+      {/* 操作行 */}
+      {isActive && (
+        <div
+          style={{
+            display: "flex", gap: 6, marginTop: 6, paddingLeft: 44,
+            animation: "fadeIn .18s ease-out",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={onTreasure}
+            style={{
+              padding: "5px 12px", borderRadius: 10, fontSize: 11,
+              background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.22)",
+              color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)",
+              letterSpacing: 0.3, transition: "all .15s",
+            }}
+          >
+            💎 珍藏这句话
+          </button>
+          <button
+            onClick={onTimeline}
+            style={{
+              padding: "5px 12px", borderRadius: 10, fontSize: 11,
+              background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.22)",
+              color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)",
+              letterSpacing: 0.3, transition: "all .15s",
+            }}
+          >
+            🕰 记下这一刻
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── 消息气泡（用户） ───
+function UserBubble({ msg, isActive, onToggleActive, onTimeline, onCharTreasure }) {
+  return (
+    <div
+      style={{ marginBottom: 14, padding: "0 12px", cursor: "pointer", userSelect: isActive ? "none" : "text" }}
+      onClick={onToggleActive}
+    >
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <div style={{ maxWidth: "72%", minWidth: 0 }}>
+          <div style={{
+            background: isActive ? "rgba(100,80,148,.88)" : "rgba(120,100,160,.82)",
+            borderRadius: "14px 4px 14px 14px",
+            padding: "10px 14px",
+            fontSize: 14, color: "rgba(255,255,255,.95)",
+            lineHeight: 1.75,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            transition: "all .15s",
+          }}>
+            {msg.content}
+          </div>
+          <div style={{ fontSize: 10, color: "var(--text-faint)", textAlign: "right", marginTop: 3 }}>
+            {msg.time}
+          </div>
+        </div>
+      </div>
+
+      {/* 操作行 */}
+      {isActive && (
+        <div
+          style={{
+            display: "flex", justifyContent: "flex-end", gap: 6, marginTop: 4,
+            animation: "fadeIn .18s ease-out",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {onCharTreasure && (
+            <button
+              onClick={onCharTreasure}
+              style={{
+                padding: "5px 12px", borderRadius: 10, fontSize: 11,
+                background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.22)",
+                color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)",
+                letterSpacing: 0.3, transition: "all .15s",
+              }}
+            >
+              💝 让 ta 珍藏
+            </button>
+          )}
+          <button
+            onClick={onTimeline}
+            style={{
+              padding: "5px 12px", borderRadius: 10, fontSize: 11,
+              background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.22)",
+              color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)",
+              letterSpacing: 0.3, transition: "all .15s",
+            }}
+          >
+            🕰 记下这一刻
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -268,6 +671,136 @@ function TypingFor({ char }) {
   );
 }
 
+// ─── 让ta珍藏弹窗（群聊）需选择珍藏给哪位入住者 ───
+function GroupCharTreasureSheet({ msg, group, characters, onConfirm, onCancel }) {
+  const memberChars = (group?.memberIds || [])
+    .map((id) => characters.find((c) => c.id === id))
+    .filter(Boolean);
+  const [selectedCharId, setSelectedCharId] = useState(memberChars[0]?.id || null);
+  const [note, setNote] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  const preview = (msg.content || "").slice(0, 100) + ((msg.content || "").length > 100 ? "…" : "");
+
+  const handleConfirm = () => {
+    if (!selectedCharId) return;
+    onConfirm({ charId: selectedCharId, note: note.trim() });
+    setSaved(true);
+  };
+
+  const selectedChar = memberChars.find((c) => c.id === selectedCharId);
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 300,
+        background: "rgba(74,69,96,.38)",
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div style={{
+        width: "100%", maxWidth: 480, maxHeight: "88vh",
+        background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+        borderRadius: "20px 20px 0 0",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.22)",
+        display: "flex", flexDirection: "column", overflow: "hidden",
+      }}>
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 18px 12px",
+          borderBottom: "1px solid rgba(196,166,184,.18)",
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>
+            💝 要把这句话交给他收好吗？
+          </span>
+          <button onClick={onCancel} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, color: "#9a8aac", padding: 4 }}>✕</button>
+        </div>
+
+        <div style={{ flex: 1, overflow: "auto", padding: "14px 18px 32px", display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* 内容预览 */}
+          <div style={{
+            background: "rgba(255,255,255,.65)",
+            border: "1px solid rgba(196,166,184,.22)",
+            borderRadius: 12, padding: "10px 14px",
+            fontSize: 13, color: "#5a4a6a", lineHeight: 1.75,
+          }}>
+            {preview}
+          </div>
+
+          {/* 选择珍藏给谁 */}
+          <div>
+            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 8 }}>
+              交给谁珍藏
+            </label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {memberChars.map((c) => (
+                <div
+                  key={c.id}
+                  onClick={() => setSelectedCharId(c.id)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "7px 14px", borderRadius: 10, cursor: "pointer",
+                    background: selectedCharId === c.id ? "rgba(120,100,160,.15)" : "rgba(255,255,255,.65)",
+                    border: `1px solid ${selectedCharId === c.id ? "rgba(120,100,160,.35)" : "rgba(196,166,184,.3)"}`,
+                    fontSize: 13, color: selectedCharId === c.id ? "#5a4a6a" : "#7a6a8e",
+                    transition: "all .15s",
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>{c.emoji || "💜"}</span>
+                  {c.name || "ta"}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 备注 */}
+          <div>
+            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
+              备注（可不填）
+            </label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+              placeholder="比如：这是我第一次…"
+              style={{
+                width: "100%", padding: "10px 14px", borderRadius: 12, boxSizing: "border-box",
+                border: "1px solid rgba(196,166,184,.38)", background: "rgba(255,255,255,.7)",
+                fontSize: 13, color: "#5a4a6a", fontFamily: "var(--font-main)",
+                outline: "none", resize: "none", lineHeight: 1.7,
+              }}
+            />
+          </div>
+
+          {saved ? (
+            <div style={{ textAlign: "center", padding: "10px 0", fontSize: 13, color: "#7a6a8e" }}>
+              💝 已放进 {selectedChar?.name || "ta"} 的宝库
+            </div>
+          ) : (
+            <button
+              disabled={!selectedCharId}
+              onClick={handleConfirm}
+              style={{
+                padding: "12px", borderRadius: 14,
+                background: selectedCharId ? "rgba(120,100,160,.85)" : "rgba(196,166,184,.3)",
+                border: "none",
+                color: selectedCharId ? "white" : "#9a8aac",
+                fontSize: 14, cursor: selectedCharId ? "pointer" : "default",
+                fontFamily: "var(--font-main)", letterSpacing: 1,
+              }}
+            >
+              💝 放进 {selectedChar?.name || "ta"} 的宝库
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ═════════════════════════════════════════════
 // ── 主页面 ──
 // ═════════════════════════════════════════════
@@ -286,37 +819,55 @@ export default function GroupChatPage({
   setGroupThreads,
   onCreateGroup,
   onSelectGroup,
+  // 收尾闭环：宝库 / 时间线 / 整理
+  onSaveTreasure,
+  onAddTimelineEvent,
+  onGenerateGroupSettlement,
+  // 他的宝库
+  onAddCharTreasure,
 }) {
   const [showCreate, setShowCreate]       = useState(false);
   const [showGroupList, setShowGroupList] = useState(false);
   const [inputText, setInputText]         = useState("");
   const [isProcessing, setIsProcessing]   = useState(false);
-  const [currentSpeaker, setCurrentSpeaker] = useState(null); // charId currently typing
+  const [currentSpeaker, setCurrentSpeaker] = useState(null);
   const [sendError, setSendError]         = useState("");
 
+  // ── 消息操作状态 ──
+  const [activeMsgId, setActiveMsgId]     = useState(null);  // 当前展开操作栏的消息
+  const [treasureTarget, setTreasureTarget] = useState(null); // { msg, char }
+  const [timelineTarget, setTimelineTarget] = useState(null); // { msg, char }
+  const [charTreasureTarget, setCharTreasureTarget] = useState(null); // { msg } - 让ta珍藏
+  const [showMoreMenu, setShowMoreMenu]   = useState(false);
+  const [groupSettleLoading, setGroupSettleLoading] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState(""); // 操作完成提示
+
   const roundAbortRef   = useRef(false);
-  const liveMessagesRef = useRef([]);   // tracks messages during async round
+  const liveMessagesRef = useRef([]);
   const messagesEndRef  = useRef(null);
   const inputRef        = useRef(null);
 
-  // ── 当前群聊 & 线程 ──
   const group  = groupChats.find((g) => g.id === activeGroupId) || null;
   const thread = groupThreads.find((t) => t.groupId === activeGroupId) || null;
   const messages = thread?.messages || [];
 
-  // 自动滚动到底部
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, currentSpeaker]);
 
-  // ── 辅助：获取活跃模型 ──
+  // 操作反馈自动消失
+  useEffect(() => {
+    if (!actionFeedback) return;
+    const t = setTimeout(() => setActionFeedback(""), 2200);
+    return () => clearTimeout(t);
+  }, [actionFeedback]);
+
   const getModel = useCallback((charOverride) => {
     if (charOverride?.trim()) return charOverride.trim();
     const raw = config.model === "__custom__" ? config.customModel : config.model;
     return raw?.trim() || "";
   }, [config]);
 
-  // ── 辅助：追加消息到线程（同时更新 ref） ──
   const appendMessage = useCallback((msg) => {
     liveMessagesRef.current = [...liveMessagesRef.current, msg];
     const snapshot = [...liveMessagesRef.current];
@@ -329,9 +880,7 @@ export default function GroupChatPage({
     );
   }, [activeGroupId, setGroupThreads]);
 
-  // ── 辅助：构建单个入住者的对话上下文 ──
   const buildGroupContext = (historyMessages, userMsg, alreadyReplied) => {
-    // 历史消息（上限 20 条，跳过本轮）
     const history = historyMessages
       .filter((m) => m.roundIndex !== userMsg.roundIndex)
       .slice(-20);
@@ -343,7 +892,6 @@ export default function GroupChatPage({
         : m.content,
     }));
 
-    // 当前轮：用户消息 + 本轮已回复的入住者
     let currentContent = userMsg.content;
     if (alreadyReplied.length > 0) {
       currentContent +=
@@ -357,7 +905,6 @@ export default function GroupChatPage({
     return apiMsgs;
   };
 
-  // ── 单个入住者 LLM 调用 ──
   const callCharLLM = async (char, historyMessages, userMsg, alreadyReplied) => {
     const model = getModel(char.modelOverride);
     if (!model || !config.apiUrl?.trim() || !config.apiKey?.trim()) {
@@ -368,7 +915,6 @@ export default function GroupChatPage({
     const systemBase   = buildSystemPrompt(char, charMemories);
     const userCtx      = buildUserContext(userProfile, char.id, homeMemory);
     const system       = systemBase + (userCtx ? `\n\n${userCtx}` : "") + GROUP_SYSTEM_ADDITION;
-
     const apiMessages  = buildGroupContext(historyMessages, userMsg, alreadyReplied);
 
     const resp = await fetch(
@@ -396,12 +942,10 @@ export default function GroupChatPage({
     }
     const data = await resp.json();
     const raw  = data.choices?.[0]?.message?.content || "";
-    // 群聊用 "long" 模式：不按 ||| 拆条，只去除心声标签
     const { parts } = parseResponse(raw, "long");
     return parts[0] || "…";
   };
 
-  // ── 发送消息（触发本轮顺序回复） ──
   const handleSend = async () => {
     if (!inputText.trim() || isProcessing || !group || !thread) return;
     if (!config.apiUrl?.trim() || !config.apiKey?.trim()) {
@@ -412,12 +956,11 @@ export default function GroupChatPage({
     const content = inputText.trim();
     setInputText("");
     setSendError("");
+    setActiveMsgId(null);
 
-    // 计算本轮轮次编号
     const maxRound = messages.reduce((acc, m) => Math.max(acc, m.roundIndex || 0), 0);
     const roundIndex = maxRound + 1;
 
-    // 用户消息
     const userMsg = {
       id:          genId(),
       role:        "user",
@@ -430,7 +973,6 @@ export default function GroupChatPage({
       sourceRefs:  [],
     };
 
-    // 初始化 live ref（含已有历史 + 本条用户消息）
     liveMessagesRef.current = [...messages, userMsg];
 
     setGroupThreads((prev) =>
@@ -455,7 +997,6 @@ export default function GroupChatPage({
       setCurrentSpeaker(charId);
 
       try {
-        // 传 live ref 的历史记录（去掉本轮用户消息本身用于 history）
         const historyForContext = liveMessagesRef.current.filter(
           (m) => !(m.id === userMsg.id)
         );
@@ -474,7 +1015,7 @@ export default function GroupChatPage({
           roundIndex,
           sourceRefs: [
             buildSourceRef({
-              sourceType:  "chat",
+              sourceType:  "group_chat",
               sourceId:    charId,
               sourceTitle: char.name || "入住者",
               excerpt:     reply.slice(0, 80),
@@ -529,12 +1070,116 @@ export default function GroupChatPage({
     setShowCreate(false);
   };
 
+  // ── 消息操作：切换激活 ──
+  const toggleMsgActive = (msgId) => {
+    setActiveMsgId((prev) => (prev === msgId ? null : msgId));
+  };
+
+  // ── 珍藏到宝库 ──
+  const handleTreasureConfirm = ({ title }) => {
+    if (!treasureTarget || !onSaveTreasure) return;
+    const { msg, char } = treasureTarget;
+    const now = Date.now();
+    onSaveTreasure({
+      id:           genId(),
+      title:        title,
+      content:      msg.content,
+      type:         "group_chat",
+      charId:       char?.id || null,
+      charName:     char?.name || "",
+      important:    false,
+      tags:         ["客厅"],
+      note:         "",
+      createdAt:    now,
+      updatedAt:    now,
+      sourceGroupId:   group?.id,
+      sourceGroupName: group?.name || "小家客厅",
+      sourceRefs: [
+        buildSourceRef({
+          sourceType:  "group_chat",
+          sourceId:    msg.id,
+          sourceTitle: `${group?.name || "小家客厅"} · ${char?.name || "ta"}`,
+          excerpt:     (msg.content || "").slice(0, 80),
+        }),
+      ],
+    });
+    setTreasureTarget(null);
+    setActiveMsgId(null);
+    setActionFeedback("💎 已珍藏到宝库");
+  };
+
+  // ── 记下时间线 ──
+  const handleTimelineConfirm = ({ title, description, occurredAt, loverId }) => {
+    if (!timelineTarget || !onAddTimelineEvent) return;
+    const { msg } = timelineTarget;
+    onAddTimelineEvent({
+      loverId,
+      title,
+      description,
+      eventType:   "memory",
+      occurredAt,
+      source:      "group_chat",
+      sourceIds:   [msg.id],
+      sourceRefs:  [
+        buildSourceRef({
+          sourceType:  "group_chat",
+          sourceId:    msg.id,
+          sourceTitle: `${group?.name || "小家客厅"}`,
+          excerpt:     (msg.content || "").slice(0, 80),
+        }),
+      ],
+      importance: 3,
+    });
+    setTimelineTarget(null);
+    setActiveMsgId(null);
+    setActionFeedback("🕰 已记到时间线");
+  };
+
+  // ── 让ta珍藏 ──
+  const handleGroupCharTreasureConfirm = ({ charId, note }) => {
+    if (!charTreasureTarget || !onAddCharTreasure) return;
+    const { msg } = charTreasureTarget;
+    onAddCharTreasure({
+      charId,
+      sourceType: "group_message",
+      sourceId:   msg.id || null,
+      content:    msg.content,
+      note,
+      authorType: "user",
+      pinned:     false,
+      sourceRefs: [
+        buildSourceRef({
+          sourceType:  "group_chat",
+          sourceId:    msg.id || "",
+          sourceTitle: group?.name || "小家客厅",
+          excerpt:     (msg.content || "").slice(0, 80),
+        }),
+      ],
+    });
+    setTimeout(() => {
+      setCharTreasureTarget(null);
+      setActiveMsgId(null);
+      setActionFeedback("💝 已放进他的宝库");
+    }, 900);
+  };
+
+  // ── 整理这次客厅 ──
+  const handleGroupSettle = async () => {
+    if (!onGenerateGroupSettlement || !group || !thread) return;
+    setShowMoreMenu(false);
+    setGroupSettleLoading(true);
+    try {
+      await onGenerateGroupSettlement(group, thread);
+    } finally {
+      setGroupSettleLoading(false);
+    }
+  };
+
   // ── 渲染消息列表 ──
   const renderMessages = () => {
     let lastRound = -1;
     const items = [];
     messages.forEach((msg, i) => {
-      // 轮次分隔线
       if (msg.role === "user" && msg.roundIndex !== lastRound) {
         if (lastRound >= 0) {
           items.push(<RoundDivider key={`rd-${i}`} index={msg.roundIndex} />);
@@ -542,10 +1187,29 @@ export default function GroupChatPage({
         lastRound = msg.roundIndex;
       }
       if (msg.role === "user") {
-        items.push(<UserBubble key={msg.id} msg={msg} />);
+        items.push(
+          <UserBubble
+            key={msg.id}
+            msg={msg}
+            isActive={activeMsgId === msg.id}
+            onToggleActive={() => toggleMsgActive(msg.id)}
+            onTimeline={() => { setTimelineTarget({ msg, char: null }); }}
+            onCharTreasure={onAddCharTreasure ? () => { setCharTreasureTarget({ msg }); } : undefined}
+          />
+        );
       } else if (msg.role === "char") {
         const char = characters.find((c) => c.id === msg.charId);
-        items.push(<CharBubble key={msg.id} msg={msg} char={char} />);
+        items.push(
+          <CharBubble
+            key={msg.id}
+            msg={msg}
+            char={char}
+            isActive={activeMsgId === msg.id}
+            onToggleActive={() => toggleMsgActive(msg.id)}
+            onTreasure={() => { setTreasureTarget({ msg, char }); }}
+            onTimeline={() => { setTimelineTarget({ msg, char }); }}
+          />
+        );
       } else {
         items.push(<SystemMsg key={msg.id} text={msg.content} />);
       }
@@ -563,7 +1227,6 @@ export default function GroupChatPage({
         background: "linear-gradient(160deg, #f0ecf8 0%, #ece5f5 40%, #e5ddf0 100%)",
         display: "flex", flexDirection: "column",
       }}>
-        {/* 顶栏 */}
         <div style={{
           display: "flex", alignItems: "center", gap: 12,
           padding: "18px 16px 14px",
@@ -579,7 +1242,6 @@ export default function GroupChatPage({
           <div style={{ width: 48 }} />
         </div>
 
-        {/* 空态 */}
         <div style={{
           flex: 1, display: "flex", flexDirection: "column",
           alignItems: "center", justifyContent: "center",
@@ -611,7 +1273,6 @@ export default function GroupChatPage({
             </button>
           )}
 
-          {/* 已有其他群聊 */}
           {groupChats.length > 0 && (
             <div style={{ marginTop: 8, width: "100%", maxWidth: 320 }}>
               <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 8, letterSpacing: 0.5 }}>或者选择已有客厅</div>
@@ -642,7 +1303,6 @@ export default function GroupChatPage({
             characters={characters}
             onConfirm={handleCreate}
             onCancel={() => setShowCreate(false)}
-            hasExisting={groupChats.length > 0}
           />
         )}
       </div>
@@ -656,28 +1316,33 @@ export default function GroupChatPage({
   const currentSpeakerChar = characters.find((c) => c.id === currentSpeaker) || null;
 
   return (
-    <div style={{
-      height: "100vh", overflow: "hidden",
-      background: "linear-gradient(160deg, #f0ecf8 0%, #ece5f5 40%, #e5ddf0 100%)",
-      display: "flex", flexDirection: "column",
-    }}>
+    <div
+      style={{
+        height: "100vh", overflow: "hidden",
+        background: "linear-gradient(160deg, #f0ecf8 0%, #ece5f5 40%, #e5ddf0 100%)",
+        display: "flex", flexDirection: "column",
+      }}
+      onClick={() => setActiveMsgId(null)}  /* 点背景关闭操作栏 */
+    >
 
       {/* ── 顶栏 ── */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 10,
-        padding: "14px 16px 10px",
-        borderBottom: "1px solid rgba(196,166,184,.2)",
-        background: "rgba(255,255,255,.55)",
-        backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-        flexShrink: 0,
-      }}>
+      <div
+        style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "14px 16px 10px",
+          borderBottom: "1px solid rgba(196,166,184,.2)",
+          background: "rgba(255,255,255,.55)",
+          backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+          flexShrink: 0,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <BackButton onClick={() => navigateTo("bedroom")} label="回房间" />
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: "#5a4a6a", letterSpacing: 1 }}>
             ☕ {group.name}
           </div>
-          {/* 成员头像行 */}
           <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
             {members.map((char) => (
               <div key={char.id} style={{
@@ -698,7 +1363,22 @@ export default function GroupChatPage({
           </div>
         </div>
 
-        {/* 换个客厅 / 新建 */}
+        {/* 整理按钮 */}
+        <button
+          onClick={() => setShowMoreMenu(true)}
+          disabled={groupSettleLoading}
+          title="更多"
+          style={{
+            background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.18)",
+            borderRadius: 10, padding: "5px 10px", fontSize: 13,
+            color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)", flexShrink: 0,
+            lineHeight: 1,
+          }}
+        >
+          {groupSettleLoading ? "✨" : "⋯"}
+        </button>
+
+        {/* 换个客厅 */}
         <button
           onClick={() => setShowGroupList(true)}
           style={{
@@ -711,11 +1391,28 @@ export default function GroupChatPage({
         </button>
       </div>
 
+      {/* ── 操作反馈 toast ── */}
+      {actionFeedback && (
+        <div style={{
+          position: "absolute", top: 70, left: "50%", transform: "translateX(-50%)",
+          background: "rgba(60,50,80,.88)", color: "rgba(255,255,255,.92)",
+          padding: "8px 18px", borderRadius: 20,
+          fontSize: 12, letterSpacing: 0.5, zIndex: 100,
+          pointerEvents: "none",
+          animation: "fadeIn .2s ease-out",
+        }}>
+          {actionFeedback}
+        </div>
+      )}
+
       {/* ── 消息列表 ── */}
-      <div style={{
-        flex: 1, overflow: "auto",
-        paddingTop: 14, paddingBottom: 8,
-      }}>
+      <div
+        style={{ flex: 1, overflow: "auto", paddingTop: 14, paddingBottom: 8 }}
+        onClick={(e) => {
+          // 点消息区域空白也关闭操作栏
+          if (e.target === e.currentTarget) setActiveMsgId(null);
+        }}
+      >
         {messages.length === 0 && (
           <div style={{
             textAlign: "center", padding: "40px 24px",
@@ -728,9 +1425,7 @@ export default function GroupChatPage({
 
         {renderMessages()}
 
-        {/* 正在输入指示 */}
         {currentSpeakerChar && <TypingFor char={currentSpeakerChar} />}
-
         <div ref={messagesEndRef} />
       </div>
 
@@ -750,14 +1445,17 @@ export default function GroupChatPage({
       )}
 
       {/* ── 输入栏 ── */}
-      <div style={{
-        flexShrink: 0,
-        background: "rgba(248,244,252,.95)",
-        borderTop: "1px solid rgba(196,166,184,.15)",
-        backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-        padding: "10px 12px calc(10px + env(safe-area-inset-bottom, 0px))",
-        display: "flex", alignItems: "flex-end", gap: 8,
-      }}>
+      <div
+        style={{
+          flexShrink: 0,
+          background: "rgba(248,244,252,.95)",
+          borderTop: "1px solid rgba(196,166,184,.15)",
+          backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+          padding: "10px 12px calc(10px + env(safe-area-inset-bottom, 0px))",
+          display: "flex", alignItems: "flex-end", gap: 8,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <textarea
           ref={inputRef}
           value={inputText}
@@ -879,6 +1577,49 @@ export default function GroupChatPage({
           characters={characters}
           onConfirm={handleCreate}
           onCancel={() => setShowCreate(false)}
+        />
+      )}
+
+      {/* 更多菜单 */}
+      {showMoreMenu && (
+        <MoreMenuSheet
+          onSettle={handleGroupSettle}
+          settling={groupSettleLoading}
+          onClose={() => setShowMoreMenu(false)}
+        />
+      )}
+
+      {/* 珍藏弹窗 */}
+      {treasureTarget && (
+        <TreasureSaveSheet
+          msg={treasureTarget.msg}
+          char={treasureTarget.char}
+          groupName={group?.name}
+          onConfirm={handleTreasureConfirm}
+          onCancel={() => setTreasureTarget(null)}
+        />
+      )}
+
+      {/* 时间线弹窗 */}
+      {timelineTarget && (
+        <TimelineEventSheet
+          msg={timelineTarget.msg}
+          char={timelineTarget.char}
+          group={group}
+          characters={characters}
+          onConfirm={handleTimelineConfirm}
+          onCancel={() => setTimelineTarget(null)}
+        />
+      )}
+
+      {/* 让ta珍藏弹窗 */}
+      {charTreasureTarget && (
+        <GroupCharTreasureSheet
+          msg={charTreasureTarget.msg}
+          group={group}
+          characters={characters}
+          onConfirm={handleGroupCharTreasureConfirm}
+          onCancel={() => setCharTreasureTarget(null)}
         />
       )}
     </div>
