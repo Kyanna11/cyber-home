@@ -1,6 +1,6 @@
 // ─── System Prompt 构建 ───
 
-import { OCEAN_DIMS, MSG_DELIMITER } from "../constants";
+import { OCEAN_DIMS, MSG_DELIMITER, RESIDENT_HOME_GUIDE_SHORT } from "../constants";
 import { loadMemoryInjection } from "./storage";
 import { getTopMemories, selectInjectableMemories } from "./memory";
 
@@ -201,6 +201,9 @@ export function buildSystemPrompt(char, memories) {
 
   const injection = loadMemoryInjection();
   let prompt = `你的名字是「${char.name || "未命名"}」，你和晚声的关系是：${char.relation || "伴侣"}。\n\n`;
+
+  // ── 小家入住说明（精简版，让入住者知道小家是什么、记忆规则和行为边界）──
+  prompt += `${RESIDENT_HOME_GUIDE_SHORT}\n\n`;
 
   // ── 入住关系锚点（用户确认后的迁入档案，优先级高）──
   const hasMigrationAnchor =
