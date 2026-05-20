@@ -1740,6 +1740,8 @@ export default function ChatPage({
   updateCharUiSettings,
   // 他的宝库
   onAddCharTreasure,
+  // 他的房间
+  onOpenCharRoom,
 }) {
   // ── 局部 UI 状态 ──
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -1928,7 +1930,11 @@ export default function ChatPage({
         </button>
 
         {/* 中间信息区 */}
-        <div className="chat-title-area">
+        <div
+          className="chat-title-area"
+          onClick={onOpenCharRoom ? () => onOpenCharRoom(activeCharId) : undefined}
+          style={onOpenCharRoom ? { cursor: "pointer" } : undefined}
+        >
           <div className="chat-companion-name">{activeChar?.name || "赛博伴侣"}</div>
           {isSceneMode ? (
             <div style={{

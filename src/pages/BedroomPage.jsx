@@ -17,6 +17,8 @@ export default function BedroomPage({
   // 群聊
   onOpenGroupChat,
   groupChats,
+  // 他的房间
+  openCharRoom,
 }) {
   const unreadNotes = (stickyNotes || []).filter((n) => !n.read);
   const recentNotes = (stickyNotes || [])
@@ -357,6 +359,26 @@ export default function BedroomPage({
                   <div className="char-name">{char.name || "未命名"}</div>
                   <div className="char-relation">{char.relation || ""}</div>
                 </div>
+                {openCharRoom && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowCharSelect(false);
+                      openCharRoom(char.id);
+                    }}
+                    style={{
+                      flexShrink: 0, marginLeft: 4,
+                      padding: "4px 10px", borderRadius: 10,
+                      background: "rgba(120,100,160,.1)",
+                      border: "1px solid rgba(120,100,160,.2)",
+                      color: "#6a5a8a", fontSize: 11,
+                      cursor: "pointer", fontFamily: "var(--font-main)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    他的房间
+                  </button>
+                )}
               </div>
             ))}
             {/* 客厅入口 */}

@@ -10,6 +10,7 @@ export default function ProfilesPage({
   navigateTo,
   openProfileEdit,
   createChar,
+  openCharRoom,
 }) {
   return (
     <div className="profiles-page page-fade">
@@ -44,6 +45,22 @@ export default function ProfilesPage({
                 {char.relation || "未设定关系"}
               </div>
             </div>
+            {openCharRoom && (
+              <button
+                onClick={(e) => { e.stopPropagation(); openCharRoom(char.id); }}
+                style={{
+                  flexShrink: 0, marginRight: 4,
+                  padding: "4px 10px", borderRadius: 10,
+                  background: "rgba(120,100,160,.1)",
+                  border: "1px solid rgba(120,100,160,.2)",
+                  color: "#6a5a8a", fontSize: 11,
+                  cursor: "pointer", fontFamily: "var(--font-main)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                进入房间
+              </button>
+            )}
             <div className="profile-card-arrow">›</div>
           </div>
         ))}

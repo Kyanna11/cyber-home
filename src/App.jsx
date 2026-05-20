@@ -58,6 +58,7 @@ import TreasurePage from "./pages/TreasurePage";
 import StickyNotesPage from "./pages/StickyNotesPage";
 import GroupChatPage from "./pages/GroupChatPage";
 import CharTreasurePage from "./pages/CharTreasurePage";
+import CharRoomPage from "./pages/CharRoomPage";
 
 // MSG_DELIMITER is used internally by parseResponse in utils/prompt.js
 
@@ -230,6 +231,9 @@ export default function App() {
   // ─── 他的宝库 ───
   const [charTreasures, setCharTreasures] = useState(() => loadCharTreasures());
   const [charTreasureCharId, setCharTreasureCharId] = useState(null);
+
+  // ─── 他的房间 ───
+  const [charRoomCharId, setCharRoomCharId] = useState(null);
 
   // ─── API 配置 ───
   const [config, setConfig] = useState(loadConfig);
@@ -1265,6 +1269,11 @@ ${chunksText}
   const openCharTreasure = (charId) => {
     setCharTreasureCharId(charId);
     navigateTo("charTreasure");
+  };
+
+  const openCharRoom = (charId) => {
+    setCharRoomCharId(charId);
+    navigateTo("charRoom");
   };
 
   // ── 便签墙 CRUD ──
@@ -3044,6 +3053,7 @@ ${chatLines}
           navigateTo={navigateTo}
           openProfileEdit={openProfileEdit}
           createChar={createChar}
+          openCharRoom={openCharRoom}
         />
       )}
 
@@ -3234,6 +3244,7 @@ ${chatLines}
           stickyNotes={stickyNotes}
           onOpenGroupChat={openGroupChat}
           groupChats={groupChats}
+          openCharRoom={openCharRoom}
         />
       )}
 
@@ -3248,6 +3259,26 @@ ${chatLines}
           onUpdate={updateCharTreasure}
           navigateTo={navigateTo}
           onBack={() => navigateTo(memEntryFrom === "chat" ? "chat" : "memoryPalace")}
+        />
+      )}
+
+      {/* 他的房间 */}
+      {page === "charRoom" && (
+        <CharRoomPage
+          char={characters.find((c) => c.id === charRoomCharId) || null}
+          charId={charRoomCharId}
+          chatThreads={chatThreads}
+          stickyNotes={stickyNotes}
+          timelineEvents={timelineEvents}
+          charTreasures={charTreasures}
+          onEnterChat={(charId) => { enterChat(charId); }}
+          onOpenProfile={(char) => { setEditingChar(char); setEditSection("basic"); navigateTo("profileEdit"); }}
+          onOpenMemoryPalace={(charId) => { setMemCharId(charId); setMemEntryFrom("charRoom"); navigateTo("memoryPalace"); }}
+          onOpenTimeline={(charId) => { openTimeline(charId); }}
+          onOpenWakePreview={(charId) => { setWakePreviewCharId(charId); navigateTo("wakePreview"); }}
+          onOpenCharTreasure={openCharTreasure}
+          navigateTo={navigateTo}
+          onBack={() => navigateTo(prevPage || "bedroom")}
         />
       )}
 
@@ -3409,6 +3440,7 @@ ${chatLines}
           activeThread={chatThreads[activeCharId]?.find(t => t.id === activeThreadId) || null}
           updateCharUiSettings={updateCharUiSettings}
           onAddCharTreasure={addCharTreasure}
+          onOpenCharRoom={openCharRoom}
         />
       )}
     </>
