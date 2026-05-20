@@ -3022,6 +3022,7 @@ ${chatLines}
           navigateTo={navigateTo}
           setShowMyProfile={setShowMyProfile}
           userProfile={userProfile}
+          stickyNotes={stickyNotes}
         />
       )}
 
