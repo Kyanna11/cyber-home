@@ -85,9 +85,9 @@ export default function ProfileEditPage({
           <BackButton
             onClick={() => {
               saveEditingChar();
-              navigateTo(prevPage === "chat" ? "chat" : "profiles");
+              navigateTo(prevPage === "chat" ? "chat" : prevPage === "charRoom" ? "charRoom" : "profiles");
             }}
-            label={prevPage === "chat" ? "回对话" : "档案"}
+            label={prevPage === "chat" ? "回对话" : prevPage === "charRoom" ? "他的房间" : "档案"}
           />
           <div className="profile-edit-title">
             {editingChar.name || "新入住者"}
@@ -96,7 +96,7 @@ export default function ProfileEditPage({
             className="profile-edit-save"
             onClick={() => {
               saveEditingChar();
-              navigateTo(prevPage === "chat" ? "chat" : "profiles");
+              navigateTo(prevPage === "chat" ? "chat" : prevPage === "charRoom" ? "charRoom" : "profiles");
             }}
           >
             保存

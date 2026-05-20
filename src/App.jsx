@@ -1682,7 +1682,7 @@ ${chunksText}
       );
     }
 
-    setPage("chat");
+    navigateTo("chat");
   };
 
   const openMemoryPalace = (charId, from = "profileEdit") => {
@@ -3258,7 +3258,7 @@ ${chatLines}
           onTogglePin={toggleCharTreasurePin}
           onUpdate={updateCharTreasure}
           navigateTo={navigateTo}
-          onBack={() => navigateTo(memEntryFrom === "chat" ? "chat" : "memoryPalace")}
+          onBack={() => navigateTo(memEntryFrom === "chat" ? "chat" : memEntryFrom === "charRoom" ? "charRoom" : "memoryPalace")}
         />
       )}
 
@@ -3273,10 +3273,10 @@ ${chatLines}
           charTreasures={charTreasures}
           onEnterChat={(charId) => { enterChat(charId); }}
           onOpenProfile={(char) => { setEditingChar(char); setEditSection("basic"); navigateTo("profileEdit"); }}
-          onOpenMemoryPalace={(charId) => { setMemCharId(charId); setMemEntryFrom("charRoom"); navigateTo("memoryPalace"); }}
-          onOpenTimeline={(charId) => { openTimeline(charId); }}
+          onOpenMemoryPalace={(charId) => openMemoryPalace(charId, "charRoom")}
+          onOpenTimeline={(charId) => openTimeline(charId)}
           onOpenWakePreview={(charId) => { setWakePreviewCharId(charId); navigateTo("wakePreview"); }}
-          onOpenCharTreasure={openCharTreasure}
+          onOpenCharTreasure={(charId) => { setMemEntryFrom("charRoom"); openCharTreasure(charId); }}
           navigateTo={navigateTo}
           onBack={() => navigateTo(prevPage || "bedroom")}
         />
@@ -3385,6 +3385,7 @@ ${chatLines}
           activeCharId={activeCharId}
           setCharacters={setCharacters}
           navigateTo={navigateTo}
+          prevPage={prevPage}
           openMemoryPalace={openMemoryPalace}
           setEditingChar={setEditingChar}
           setEditSection={setEditSection}

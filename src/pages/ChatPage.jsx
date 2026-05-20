@@ -1666,6 +1666,7 @@ export default function ChatPage({
   activeCharId,
   // 导航
   navigateTo,
+  prevPage,
   openMemoryPalace,
   setEditingChar,
   setEditSection,
@@ -1743,6 +1744,10 @@ export default function ChatPage({
   // 他的房间
   onOpenCharRoom,
 }) {
+  // 返回目标：从他的房间进入时，返回他的房间；否则返回卧室
+  const chatBackTarget = prevPage === "charRoom" ? "charRoom" : "bedroom";
+  const chatBackLabel  = "回房间";
+
   // ── 局部 UI 状态 ──
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [attachView, setAttachView] = useState(null); // null | "grid" | "notes" | "intent" | "link" | "scene" | "music" | "image"
@@ -1863,7 +1868,7 @@ export default function ChatPage({
           {/* 行 1：返回 · 角色名 · 今天就到这儿 */}
           <div style={{ display: "flex", alignItems: "center" }}>
             <button
-              onClick={() => navigateTo("bedroom")}
+              onClick={() => navigateTo(chatBackTarget)}
               style={{
                 background: "none", border: "none", cursor: "pointer",
                 display: "flex", alignItems: "center", gap: 3,
@@ -1874,7 +1879,7 @@ export default function ChatPage({
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
                 <path d="M15 18l-6-6 6-6" />
               </svg>
-              回房间
+              {chatBackLabel}
             </button>
             <div style={{
               flex: 1, textAlign: "center",
@@ -1922,7 +1927,7 @@ export default function ChatPage({
         </button>
 
         {/* 回房间 */}
-        <button className="back-btn" onClick={() => navigateTo("bedroom")}>
+        <button className="back-btn" onClick={() => navigateTo(chatBackTarget)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>

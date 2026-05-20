@@ -254,6 +254,8 @@ export default function MemoryPalacePage({
           onClick={() => {
             if (memEntryFrom === "chat") {
               navigateTo("chat");
+            } else if (memEntryFrom === "charRoom") {
+              navigateTo("charRoom");
             } else {
               const char = characters.find((c) => c.id === memCharId);
               if (char) {
@@ -263,7 +265,7 @@ export default function MemoryPalacePage({
               navigateTo("profileEdit");
             }
           }}
-          label={memEntryFrom === "chat" ? "回对话" : "档案"}
+          label={memEntryFrom === "chat" ? "回对话" : memEntryFrom === "charRoom" ? "他的房间" : "档案"}
         />
         <div className="memory-header-title">🏛️ {charName}的记忆宫殿</div>
         {openTimeline ? (
