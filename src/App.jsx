@@ -234,6 +234,7 @@ export default function App() {
 
   // ─── 他的房间 ───
   const [charRoomCharId, setCharRoomCharId] = useState(null);
+  const [charRoomFrom, setCharRoomFrom] = useState("bedroom"); // 进入他的房间前所在的页面
 
   // ─── API 配置 ───
   const [config, setConfig] = useState(loadConfig);
@@ -1272,6 +1273,7 @@ ${chunksText}
   };
 
   const openCharRoom = (charId) => {
+    setCharRoomFrom(page); // 记录进入前的页面，不受子页返回的 prevPage 污染
     setCharRoomCharId(charId);
     navigateTo("charRoom");
   };
@@ -3278,7 +3280,7 @@ ${chatLines}
           onOpenWakePreview={(charId) => { setWakePreviewCharId(charId); navigateTo("wakePreview"); }}
           onOpenCharTreasure={(charId) => { setMemEntryFrom("charRoom"); openCharTreasure(charId); }}
           navigateTo={navigateTo}
-          onBack={() => navigateTo(prevPage || "bedroom")}
+          onBack={() => navigateTo(charRoomFrom || "bedroom")}
         />
       )}
 
