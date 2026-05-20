@@ -49,7 +49,7 @@ body{background:var(--bg-dream);font-family:var(--font-main);font-weight:300;col
 .empty-hint{text-align:center;padding:32px 0;color:var(--text-faint);font-size:13px;letter-spacing:1px;line-height:2}
 
 /* ── 入口页 ── */
-.entrance{height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative;overflow:hidden;background:url('/entrance-bg.jpg') center/cover no-repeat}
+.entrance{height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative;overflow:hidden;background:url('/entrance-bg.png') center/cover no-repeat}
 .entrance::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 20% 40%,rgba(200,190,220,.1) 0%,transparent 40%),radial-gradient(circle at 75% 55%,rgba(232,196,196,.08) 0%,transparent 35%);animation:mistDrift 14s ease-in-out infinite alternate}
 @keyframes mistDrift{0%{transform:translateX(-6px)}100%{transform:translateX(6px) translateY(-4px)}}
 .float-dots{position:absolute;inset:0;pointer-events:none}
@@ -177,7 +177,7 @@ body{background:var(--bg-dream);font-family:var(--font-main);font-weight:300;col
 .del-confirm-do{flex:1;padding:10px;border-radius:12px;border:none;background:rgba(200,140,140,.15);font-family:var(--font-main);font-size:13px;color:#b07070;cursor:pointer;font-weight:400}
 
 /* ── 卧室页 ── */
-.bedroom{height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden;background:url('/bedroom-bg.jpg') center/cover no-repeat}
+.bedroom{height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden;background:url('/bedroom-bg.png') center/cover no-repeat}
 .bedroom-header{position:absolute;top:0;left:0;right:0;padding:calc(12px + var(--safe-top)) 20px 12px;display:flex;justify-content:space-between;align-items:center;z-index:10;background:linear-gradient(to bottom,rgba(238,233,240,.95),transparent);backdrop-filter:blur(8px)}
 .bedroom-title{font-size:15px;font-weight:400;letter-spacing:3px;color:var(--text-mid);position:absolute;left:50%;transform:translateX(-50%)}
 .bedroom-profiles-btn{background:none;border:none;font-size:18px;cursor:pointer;padding:6px;border-radius:8px;transition:all .25s;line-height:1}

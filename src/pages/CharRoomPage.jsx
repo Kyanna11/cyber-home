@@ -324,7 +324,7 @@ export default function CharRoomPage({
               sublabel={
                 (() => {
                   const cnt = (charTreasures || []).filter((t) => t.charId === charId).length;
-                  return cnt > 0 ? `${cnt} 件珍藏` : "用户说过的话";
+                  return cnt > 0 ? `${cnt} 件珍藏` : "他最爱的珍藏";
                 })()
               }
               onClick={() => onOpenCharTreasure?.(charId)}
