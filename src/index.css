@@ -176,6 +176,9 @@ body{background:var(--bg-dream);font-family:var(--font-main);font-weight:300;col
 .del-confirm-cancel{flex:1;padding:10px;border-radius:12px;border:1px solid var(--card-border);background:transparent;font-family:var(--font-main);font-size:13px;color:var(--text-mid);cursor:pointer}
 .del-confirm-do{flex:1;padding:10px;border-radius:12px;border:none;background:rgba(200,140,140,.15);font-family:var(--font-main);font-size:13px;color:#b07070;cursor:pointer;font-weight:400}
 
+/* ── 客厅页 ── */
+.lounge{height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden;background:url('/lounge-bg.png') center/cover no-repeat}
+
 /* ── 卧室页 ── */
 .bedroom{height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden;background:url('/bedroom-bg.png') center/cover no-repeat}
 .bedroom-header{position:absolute;top:0;left:0;right:0;padding:calc(12px + var(--safe-top)) 20px 12px;display:flex;justify-content:space-between;align-items:center;z-index:10;background:linear-gradient(to bottom,rgba(238,233,240,.95),transparent);backdrop-filter:blur(8px)}

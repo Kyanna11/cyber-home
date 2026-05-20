@@ -1222,17 +1222,16 @@ export default function GroupChatPage({
   // ══════════════════
   if (!group || !thread) {
     return (
-      <div style={{
-        height: "100vh", overflow: "hidden",
-        background: "linear-gradient(160deg, #f0ecf8 0%, #ece5f5 40%, #e5ddf0 100%)",
-        display: "flex", flexDirection: "column",
-      }}>
+      <div className="lounge" style={{ position: "relative" }}>
+        {/* 遮罩：压暖色调、引出薰衣草紫 */}
+        <div style={{ position: "absolute", inset: 0, background: "rgba(222,212,244,.56)", pointerEvents: "none", zIndex: 0 }} />
+        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
         <div style={{
           display: "flex", alignItems: "center", gap: 12,
           padding: "18px 16px 14px",
           borderBottom: "1px solid rgba(196,166,184,.2)",
-          background: "rgba(255,255,255,.4)",
-          backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+          background: "rgba(238,230,255,.80)",
+          backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
           flexShrink: 0,
         }}>
           <BackButton onClick={() => navigateTo("bedroom")} label="回房间" />
@@ -1305,6 +1304,7 @@ export default function GroupChatPage({
             onCancel={() => setShowCreate(false)}
           />
         )}
+        </div>{/* end content wrapper */}
       </div>
     );
   }
@@ -1317,13 +1317,13 @@ export default function GroupChatPage({
 
   return (
     <div
-      style={{
-        height: "100vh", overflow: "hidden",
-        background: "linear-gradient(160deg, #f0ecf8 0%, #ece5f5 40%, #e5ddf0 100%)",
-        display: "flex", flexDirection: "column",
-      }}
+      className="lounge"
+      style={{ position: "relative" }}
       onClick={() => setActiveMsgId(null)}  /* 点背景关闭操作栏 */
     >
+      {/* 遮罩：压暖色调、引出薰衣草紫 */}
+      <div style={{ position: "absolute", inset: 0, background: "rgba(222,212,244,.56)", pointerEvents: "none", zIndex: 0 }} />
+      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
 
       {/* ── 顶栏 ── */}
       <div
@@ -1331,8 +1331,8 @@ export default function GroupChatPage({
           display: "flex", alignItems: "center", gap: 10,
           padding: "14px 16px 10px",
           borderBottom: "1px solid rgba(196,166,184,.2)",
-          background: "rgba(255,255,255,.55)",
-          backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+          background: "rgba(238,230,255,.82)",
+          backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
           flexShrink: 0,
         }}
         onClick={(e) => e.stopPropagation()}
@@ -1448,9 +1448,9 @@ export default function GroupChatPage({
       <div
         style={{
           flexShrink: 0,
-          background: "rgba(248,244,252,.95)",
-          borderTop: "1px solid rgba(196,166,184,.15)",
-          backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+          background: "rgba(240,233,255,.97)",
+          borderTop: "1px solid rgba(196,166,184,.2)",
+          backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
           padding: "10px 12px calc(10px + env(safe-area-inset-bottom, 0px))",
           display: "flex", alignItems: "flex-end", gap: 8,
         }}
@@ -1622,6 +1622,7 @@ export default function GroupChatPage({
           onCancel={() => setCharTreasureTarget(null)}
         />
       )}
+      </div>{/* end content wrapper */}
     </div>
   );
 }
