@@ -6,15 +6,6 @@
 import { useState } from "react";
 import Avatar from "../components/Avatar";
 import BackButton from "../components/BackButton";
-import BgCustomizer from "../components/BgCustomizer";
-
-const BG_KEY = "cyber-home-bedroom-bg";
-function loadBg() {
-  try {
-    const s = localStorage.getItem(BG_KEY);
-    return s ? { dataUrl: null, opacity: 0.9, ...JSON.parse(s) } : { dataUrl: null, opacity: 0.9 };
-  } catch { return { dataUrl: null, opacity: 0.9 }; }
-}
 
 // ── 热点标签卡片 ──
 // position: { top, left } 为百分比字符串，相对于场景区域
@@ -132,24 +123,12 @@ export default function BedroomPage({
   groupChats,
   openCharRoom,
 }) {
-  const [bgConfig, setBgConfig] = useState(loadBg);
-
   const unreadNotes = (stickyNotes || []).filter((n) => !n.read);
   const recentNotes = (stickyNotes || [])
     .slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 3);
 
   return (
     <div className="bedroom" style={{ position: "relative" }}>
-
-      {/* 自定义背景图层 */}
-      {bgConfig.dataUrl && (
-        <div style={{
-          position: "absolute", inset: 0, zIndex: 0,
-          backgroundImage: `url(${bgConfig.dataUrl})`,
-          backgroundSize: "cover", backgroundPosition: "center",
-          opacity: bgConfig.opacity, pointerEvents: "none",
-        }} />
-      )}
 
       {/* ── 顶栏 ── */}
       <div style={{
@@ -191,7 +170,6 @@ export default function BedroomPage({
               padding: "3px 6px", lineHeight: 1,
             }}
           >📋</button>
-          <BgCustomizer storageKey={BG_KEY} bgConfig={bgConfig} onUpdate={setBgConfig} />
         </div>
       </div>
 

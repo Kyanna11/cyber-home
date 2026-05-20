@@ -3,16 +3,7 @@
 // 主入口：门区域点击 → 推门进入，带闪光动效
 // 底部一排：其他次要入口
 
-import { useState, useEffect } from "react";
-import BgCustomizer from "../components/BgCustomizer";
-
-const BG_KEY = "cyber-home-entrance-bg";
-function loadBg() {
-  try {
-    const s = localStorage.getItem(BG_KEY);
-    return s ? { dataUrl: null, opacity: 0.9, ...JSON.parse(s) } : { dataUrl: null, opacity: 0.9 };
-  } catch { return { dataUrl: null, opacity: 0.9 }; }
-}
+import { useState } from "react";
 
 // 闪光粒子配置
 const SPARKS = [
@@ -32,7 +23,6 @@ export default function EntrancePage({
   userProfile,
   stickyNotes,
 }) {
-  const [bgConfig, setBgConfig] = useState(loadBg);
   const [doorHover, setDoorHover] = useState(false);
   const [showSparks, setShowSparks] = useState(false);
 
@@ -52,31 +42,11 @@ export default function EntrancePage({
       className={`entrance ${doorAnimating ? "door-animating" : ""}`}
       style={{ position: "relative" }}
     >
-      {/* 自定义背景图层（覆盖在默认背景上） */}
-      {bgConfig.dataUrl && (
-        <div style={{
-          position: "absolute", inset: 0, zIndex: 0,
-          backgroundImage: `url(${bgConfig.dataUrl})`,
-          backgroundSize: "cover", backgroundPosition: "center",
-          opacity: bgConfig.opacity, pointerEvents: "none",
-        }} />
-      )}
-
       {/* 漂浮光点 */}
       <div className="float-dots">
         {[1,2,3,4,5].map(i => <div key={i} className="float-dot" />)}
       </div>
 
-      {/* ── 顶栏：仅自定义按钮 ── */}
-      <div style={{
-        position: "absolute", top: 0, left: 0, right: 0,
-        paddingTop: "calc(10px + env(safe-area-inset-top, 0px))",
-        paddingRight: 14, paddingLeft: 14, paddingBottom: 8,
-        display: "flex", justifyContent: "flex-end",
-        zIndex: 10,
-      }}>
-        <BgCustomizer storageKey={BG_KEY} bgConfig={bgConfig} onUpdate={setBgConfig} />
-      </div>
 
       {/* ── 门区域：点击主入口 ── */}
       {/* 基于花园图：门位于水平居中、垂直 24%-63% */}
@@ -123,7 +93,7 @@ export default function EntrancePage({
           textAlign: "center",
           boxShadow: "0 4px 20px rgba(74,69,96,.1)",
           pointerEvents: "none",
-          marginTop: "4%",
+          marginTop: "16%",
         }}>
           <div style={{
             fontSize: 16, fontWeight: 600, letterSpacing: 5,
@@ -147,7 +117,7 @@ export default function EntrancePage({
         {/* 推门进入 */}
         <div style={{
           marginTop: "auto",
-          marginBottom: "8%",
+          marginBottom: "18%",
           fontSize: 12,
           letterSpacing: 5,
           fontFamily: "var(--font-main)",
