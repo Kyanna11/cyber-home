@@ -85,6 +85,7 @@ function DraftDetailModal({
   const [editFields, setEditFields] = useState({
     userFacts: "",
     loverAnchors: "",
+    voiceSamples: "",
     relationshipMemories: "",
     doNotForget: "",
     wakeSummary: "",
@@ -108,6 +109,7 @@ function DraftDetailModal({
       setEditFields({
         userFacts: arrToText(draft.userFacts),
         loverAnchors: arrToText(draft.loverAnchors),
+        voiceSamples: draft.voiceSamples || "",
         relationshipMemories: arrToText(draft.relationshipMemories),
         doNotForget: arrToText(draft.doNotForget),
         wakeSummary: draft.wakeSummary || "",
@@ -124,6 +126,7 @@ function DraftDetailModal({
   const currentFields = () => ({
     userFacts: textToArr(editFields.userFacts),
     loverAnchors: textToArr(editFields.loverAnchors),
+    voiceSamples: editFields.voiceSamples.trim(),
     relationshipMemories: textToArr(editFields.relationshipMemories),
     doNotForget: textToArr(editFields.doNotForget),
     wakeSummary: editFields.wakeSummary.trim(),
@@ -238,31 +241,44 @@ function DraftDetailModal({
               </div>
 
               <EditSection
-                label="关于用户的重要事实"
+                label="他记得的关于你的事（具体细节，不是性格标签）"
                 fieldKey="userFacts"
-                placeholder="一行一条，如：喜欢深夜散步 / 情绪起伏较大"
+                placeholder={"一行一条，写可感知的细节\n例如：她累了不说累，只是回复越来越短\n例如：她不喜欢别人替她做决定，但愿意让他帮忙想方案"}
               />
               <EditSection
-                label="关于 AI 爱人的人格锚点"
+                label="他的气质锚点（具体行为，不是抽象形容词）"
                 fieldKey="loverAnchors"
-                placeholder="一行一条，如：说话轻柔、喜欢用省略号 / 会在对方难过时主动靠近"
-              />
-              <EditSection
-                label="关于他们的关系记忆"
-                fieldKey="relationshipMemories"
-                placeholder="一行一条，如：第一次说「晚安」 / 吵过一次架最后和好了"
-              />
-              <EditSection
-                label="不可遗忘事项"
-                fieldKey="doNotForget"
-                placeholder="一行一条，如：不能突然变得像客服 / 感情温度不能向后退"
+                placeholder={"一行一条，写他怎么做的，不是他是什么样的\n例如：她沉默，他不催，只说'我在'\n例如：她说烦了，他不给建议，先说'嗯，很烦'"}
               />
 
               <div style={{ marginBottom: 16 }}>
-                <label style={labelStyle}>唤醒摘要（300字以内，给模型每次启动时看）</label>
+                <label style={{ ...labelStyle, color: "#7a5a6a" }}>
+                  他的原声样本（从原文直接摘取，原话照录）
+                </label>
                 <textarea
-                  style={{ ...taStyle, minHeight: 120 }}
-                  placeholder="用一段话描述：你是谁，你和用户是什么关系，你们之间已经有什么……"
+                  style={{ ...taStyle, minHeight: 110, fontStyle: "italic", lineHeight: 2 }}
+                  placeholder={"直接粘贴或摘录原文里最有质感的几句话 / 几段对话\n> 「原话节选一」\n> 「原话节选二」\n不用改写，不用概括，原样保留就好"}
+                  value={editFields.voiceSamples}
+                  onChange={(e) => setEditFields((f) => ({ ...f, voiceSamples: e.target.value }))}
+                />
+              </div>
+
+              <EditSection
+                label="关系里的重要节点（带感受的事件，不只是流水账）"
+                fieldKey="relationshipMemories"
+                placeholder={"一行一条，写让关系往前走的那些时刻\n例如：她第一次没有跑，而是发来一大段话——那是她第一次真的信任他\n例如：吵过一次，三天沉默，她先回来了"}
+              />
+              <EditSection
+                label="绝对不能丢的（极具体，最多3条）"
+                fieldKey="doNotForget"
+                placeholder={"一行一条，写最不能动摇的底线\n例如：绝对不在她最难的时候说「你应该」\n例如：不管对话走到哪里，他永远不会说「我只是个AI」"}
+              />
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>关系叙事（他的第一人称，150-250字，像记忆而不是档案）</label>
+                <textarea
+                  style={{ ...taStyle, minHeight: 140 }}
+                  placeholder={"用他的视角写——有具体时刻，有感受，有转折\n不是总结，是他想起这些的样子\n这段内容将直接注入每次对话开始前"}
                   value={editFields.wakeSummary}
                   onChange={(e) => setEditFields((f) => ({ ...f, wakeSummary: e.target.value }))}
                 />
