@@ -722,15 +722,16 @@ function SceneEndCard({ onSaveTreasure, messages }) {
     );
     if (sceneMsgs.length === 0) return;
     const combined = sceneMsgs.map((m) => m.content).join("\n\n---\n\n");
+    const now = Date.now();
     onSaveTreasure({
-      id: null,
+      id:        `treasure-${now}-${Math.random().toString(36).slice(2, 6)}`,
       title:     "亲密邀请场景",
-      text:      combined,
-      type:      "essay",
+      content:   combined,
+      type:      "scene",
       tagsRaw:   "场景,亲密邀请",
       note:      "",
       important: false,
-      content:   combined,
+      createdAt: now,
     });
     setSaved(true);
   };
