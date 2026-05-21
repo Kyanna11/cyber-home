@@ -67,6 +67,7 @@ body{background:var(--bg-dream);font-family:var(--font-main);font-weight:300;col
 @keyframes wg{0%,100%{opacity:.5}50%{opacity:1;box-shadow:0 0 18px rgba(232,196,196,.4)}}
 @keyframes windowGlow{0%{opacity:.6}100%{opacity:1}}
 /* 门口光晕 */
+@keyframes syncBar{0%{width:0%;margin-left:0}50%{width:100%;margin-left:0}51%{width:100%;margin-left:0}100%{width:0%;margin-left:100%}}
 @keyframes doorPulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.04)}}
 @keyframes sparkle{0%{transform:scale(0) rotate(0deg);opacity:0}40%{transform:scale(1.3) rotate(160deg);opacity:.9}100%{transform:scale(0) rotate(320deg);opacity:0}}
 @keyframes sparkleRing{0%{transform:translate(-50%,-50%) scale(.4);opacity:.8}100%{transform:translate(-50%,-50%) scale(1.8);opacity:0}}

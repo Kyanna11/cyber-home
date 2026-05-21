@@ -27,7 +27,17 @@ import {
   loadGroupChats, saveGroupChats,
   loadGroupThreads, saveGroupThreads,
   loadCharTreasures, saveCharTreasures,
+  loadAllFromCloud,
 } from "./utils/storage";
+import {
+  CHARS_STORAGE_KEY, THREADS_STORAGE_KEY, MEMORIES_STORAGE_KEY,
+  DIARY_STORAGE_KEY, TREASURES_STORAGE_KEY, STICKY_NOTES_STORAGE_KEY,
+  GROUP_CHATS_STORAGE_KEY, GROUP_THREADS_STORAGE_KEY, CHAR_TREASURES_STORAGE_KEY,
+  TIMELINE_EVENTS_STORAGE_KEY, SETTLEMENT_DRAFTS_STORAGE_KEY, PROFILE_DRAFTS_STORAGE_KEY,
+  HOME_MEMORY_KEY, MIGRATION_DRAFTS_STORAGE_KEY, MEMORY_CHUNKS_STORAGE_KEY,
+  RAW_ARCHIVES_STORAGE_KEY, SELF_CURATION_DRAFTS_STORAGE_KEY, MEMORY_INJECTION_KEY,
+  STORAGE_KEY, CTX_STORAGE_KEY,
+} from "./constants";
 import { genId, estimateTokens, buildSourceRef } from "./utils/helpers";
 import { splitRawTextToChunks } from "./utils/chunker";
 import { extractAndSaveMemories, getTopMemories } from "./utils/memory";
@@ -240,6 +250,9 @@ export default function App() {
   const [config, setConfig] = useState(loadConfig);
   const [ctxConfig, setCtxConfig] = useState(loadCtxConfig);
 
+  // ─── 云端同步状态 ───
+  const [cloudSyncing, setCloudSyncing] = useState(false);
+
   // ─── Refs ───
   const messagesEndRef = useRef(null);
   const pendingDiaryRef = useRef(null);
@@ -253,6 +266,44 @@ export default function App() {
     l.rel = "stylesheet";
     l.href = FONTS_LINK;
     document.head.appendChild(l);
+  }, []);
+
+  // ── 启动时从 Supabase 同步最新数据 ──
+  useEffect(() => {
+    const isFirstDevice = !localStorage.getItem(CHARS_STORAGE_KEY);
+    if (isFirstDevice) setCloudSyncing(true);
+
+    loadAllFromCloud().then((d) => {
+      if (!d) { setCloudSyncing(false); return; }
+
+      // 用云端数据更新 React state（key 存在才覆盖）
+      if (d[CHARS_STORAGE_KEY])              setCharacters(d[CHARS_STORAGE_KEY]);
+      if (d[THREADS_STORAGE_KEY])            setChatThreads(d[THREADS_STORAGE_KEY]);
+      if (d[MEMORIES_STORAGE_KEY])           setAllMemories(d[MEMORIES_STORAGE_KEY]);
+      if (d[DIARY_STORAGE_KEY])              setNoteEntries(normalizeNotes(d[DIARY_STORAGE_KEY]));
+      if (d[TREASURES_STORAGE_KEY])          setTreasures(d[TREASURES_STORAGE_KEY]);
+      if (d[STICKY_NOTES_STORAGE_KEY])       setStickyNotes(d[STICKY_NOTES_STORAGE_KEY]);
+      if (d[GROUP_CHATS_STORAGE_KEY])        setGroupChats(d[GROUP_CHATS_STORAGE_KEY]);
+      if (d[GROUP_THREADS_STORAGE_KEY])      setGroupThreads(d[GROUP_THREADS_STORAGE_KEY]);
+      if (d[CHAR_TREASURES_STORAGE_KEY])     setCharTreasures(d[CHAR_TREASURES_STORAGE_KEY]);
+      if (d[TIMELINE_EVENTS_STORAGE_KEY])    setTimelineEvents(d[TIMELINE_EVENTS_STORAGE_KEY]);
+      if (d[SETTLEMENT_DRAFTS_STORAGE_KEY])  setSettlementDrafts(d[SETTLEMENT_DRAFTS_STORAGE_KEY]);
+      if (d[PROFILE_DRAFTS_STORAGE_KEY])     setProfileDrafts(d[PROFILE_DRAFTS_STORAGE_KEY]);
+      if (d[HOME_MEMORY_KEY])                setHomeMemory(d[HOME_MEMORY_KEY]);
+      if (d[MIGRATION_DRAFTS_STORAGE_KEY])   setMigrationDrafts(d[MIGRATION_DRAFTS_STORAGE_KEY]);
+      if (d[MEMORY_CHUNKS_STORAGE_KEY])      setMemoryChunks(d[MEMORY_CHUNKS_STORAGE_KEY]);
+      if (d[RAW_ARCHIVES_STORAGE_KEY])       setRawArchives(d[RAW_ARCHIVES_STORAGE_KEY]);
+      if (d[SELF_CURATION_DRAFTS_STORAGE_KEY]) setSelfCurationDrafts(d[SELF_CURATION_DRAFTS_STORAGE_KEY]);
+      if (d[MEMORY_INJECTION_KEY])           setMemInjection(d[MEMORY_INJECTION_KEY]);
+      if (d[STORAGE_KEY])                    setConfig(d[STORAGE_KEY]);
+      if (d[CTX_STORAGE_KEY])               setCtxConfig(d[CTX_STORAGE_KEY]);
+      if (d["userProfile"])                  setUserProfile(d["userProfile"]);
+      if (d["worldViews"])                   setWorldViews(d["worldViews"]);
+      if (d["reflectSettings"])              setReflectSettings(d["reflectSettings"]);
+
+      setCloudSyncing(false);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -3014,6 +3065,33 @@ ${chatLines}
   // ═══ 渲染 ═══
   return (
     <>
+      {/* 云端同步加载屏（首次在新设备使用时） */}
+      {cloudSyncing && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 9999,
+          background: "linear-gradient(160deg, #f0ecf8 0%, #ece5f5 100%)",
+          display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center", gap: 14,
+        }}>
+          <div style={{ fontSize: 32 }}>🏠</div>
+          <div style={{
+            fontSize: 13, color: "#7a6a8e", letterSpacing: 2,
+            fontFamily: "var(--font-main)",
+          }}>正在把小家搬过来…</div>
+          <div style={{
+            width: 48, height: 3, borderRadius: 2,
+            background: "rgba(120,100,160,.2)",
+            overflow: "hidden",
+          }}>
+            <div style={{
+              height: "100%", borderRadius: 2,
+              background: "rgba(120,100,160,.6)",
+              animation: "syncBar 1.2s ease-in-out infinite",
+            }} />
+          </div>
+        </div>
+      )}
+
       {/* 入口页 */}
       {page === "entrance" && (
         <EntrancePage
