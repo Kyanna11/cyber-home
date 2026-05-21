@@ -1712,6 +1712,7 @@ export default function ChatPage({
   messages,
   isSending,
   isTyping,
+  offlineGenerating,
   messagesEndRef,
   handleRegenerate,
   // 输入栏
@@ -2571,8 +2572,22 @@ export default function ChatPage({
           }
 
           return (
+          <div key={i}>
+            {/* 离线思念分隔提示 */}
+            {msg.isOfflineMessage && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "6px 16px 2px",
+                opacity: 0.55,
+              }}>
+                <div style={{ flex: 1, height: 1, background: "rgba(160,130,180,.25)" }} />
+                <span style={{ fontSize: 10, color: "#9a8aac", letterSpacing: 1, whiteSpace: "nowrap" }}>
+                  💭 你不在的时候，他发来了
+                </span>
+                <div style={{ flex: 1, height: 1, background: "rgba(160,130,180,.25)" }} />
+              </div>
+            )}
           <div
-            key={i}
             className={`msg-wrap ${msg.role === "bot" ? "is-bot" : "is-user"}`}
             style={S ? {
               paddingRight: msg.role === "bot" ? 48 : undefined,
@@ -2774,6 +2789,7 @@ export default function ChatPage({
               </div>
             )}
           </div>
+          </div>
           );
         })}
 
@@ -2786,6 +2802,13 @@ export default function ChatPage({
               <div className="typing-dot" style={S ? { background: S.typingDot } : undefined} />
               <div className="typing-dot" style={S ? { background: S.typingDot } : undefined} />
               <div className="typing-dot" style={S ? { background: S.typingDot } : undefined} />
+            </div>
+          </div>
+        )}
+        {offlineGenerating && (
+          <div className="typing-wrap">
+            <div style={{ fontSize: 11, color: "var(--text-faint)", padding: "4px 14px", letterSpacing: 1 }}>
+              💭 他好像想说什么……
             </div>
           </div>
         )}

@@ -222,6 +222,11 @@ export default function App() {
   const [activeThreadId, setActiveThreadId] = useState(null);
   const [showThreadSidebar, setShowThreadSidebar] = useState(false);
   const [replyMode, setReplyMode] = useState("chat"); // "chat" | "long"
+  const [offlineGenerating, setOfflineGenerating] = useState(false);
+  // 记录每个角色上次打开聊天的时间，用于判断是否触发离线思念
+  const lastCharOpenedRef = useRef(loadJSON("_lastCharOpened", {}));
+  // 本次 session 内已触发过离线消息的 charId 集合（不重复触发）
+  const offlineCheckedRef = useRef(new Set());
 
   // ─── 手札 ───
   const [noteEntries, setNoteEntries] = useState(() => normalizeNotes(loadDiary()));
@@ -1708,6 +1713,101 @@ ${chunksText}
     });
   };
 
+  // ── 离线思念：打开聊天时检测是否需要生成"他在你不在的时候发的消息" ──
+  const OFFLINE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 小时
+  const OFFLINE_MIN_REAL_MSGS = 4; // 至少有 4 条真实对话才触发
+
+  const generateOfflineMessage = async (char, initialMsgs) => {
+    if (!config.apiUrl?.trim() || !config.apiKey?.trim()) return;
+    const model = getActiveModel(char.modelOverride);
+    if (!model) return;
+
+    const realMsgs = initialMsgs.filter(
+      (m) => (m.role === "user" || m.role === "bot") && !m.isSceneOpening && (m.content || "").trim()
+    );
+    if (realMsgs.length < OFFLINE_MIN_REAL_MSGS) return;
+
+    // 计算离线时长
+    const lastOpened = lastCharOpenedRef.current[char.id] || 0;
+    const elapsedMs = Date.now() - lastOpened;
+    const totalHours = Math.floor(elapsedMs / 3600000);
+    const days = Math.floor(totalHours / 24);
+    const remHours = totalHours % 24;
+    const timeAgoStr = days >= 1
+      ? `${days}天${remHours > 0 ? remHours + "小时" : ""}`
+      : `${totalHours}小时`;
+
+    const now = new Date();
+    const currentTimeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+    const isNight = now.getHours() >= 22 || now.getHours() < 6;
+    const isMorning = now.getHours() >= 6 && now.getHours() < 11;
+
+    const userName = userProfile?.globalFacts?.name?.trim() || "晚声";
+    const charName = char.name?.trim() || "他";
+
+    // 最近几条对话作为上下文
+    const recentLines = realMsgs.slice(-4)
+      .map((m) => `${m.role === "user" ? userName : charName}：${(m.content || "").slice(0, 60)}${(m.content || "").length > 60 ? "…" : ""}`)
+      .join("\n");
+
+    // 角色人设作为 system
+    const sysLines = [];
+    if (char.systemPrompt?.trim()) sysLines.push(char.systemPrompt.trim());
+    if (char.migration?.wakeSummary?.trim())
+      sysLines.push(`【关系记忆】\n${char.migration.wakeSummary.trim()}`);
+    if (char.migration?.doNotChangeRules?.trim())
+      sysLines.push(`【不可改变的规则】\n${char.migration.doNotChangeRules.trim()}`);
+    const sysContext = sysLines.join("\n\n") ||
+      `你是${charName}，和${userName}之间有深厚的感情基础。`;
+
+    const prompt = `你和${userName}上次对话是${timeAgoStr}前。现在是${currentTimeStr}${isNight ? "，夜深了" : isMorning ? "，清晨" : ""}。
+
+你们上次聊的是：
+${recentLines}
+
+你在${userName}不在的这段时间里想起了她，想发一条消息。写一条自然的消息——可以是一个感受、一件想起的小事、一个问题，也可以只是打个招呼。
+像发微信一样，1-2句话，短而自然。不要直接说「我在想你」这种太直白的开场。
+直接输出消息内容，不要加任何前缀或说明。`;
+
+    setOfflineGenerating(true);
+    try {
+      const resp = await fetch(config.apiUrl.replace(/\/+$/, "") + "/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: sysContext },
+            { role: "user", content: prompt },
+          ],
+          temperature: 0.9,
+          max_tokens: 120,
+        }),
+      });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const content = data.choices?.[0]?.message?.content?.trim();
+      if (!content) return;
+
+      const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+      const offlineMsg = {
+        id: genId(),
+        role: "bot",
+        content,
+        time: timeStr,
+        ts: Date.now(),
+        isOfflineMessage: true,
+        offlineElapsed: timeAgoStr,
+      };
+      // 追加到当前消息列表——useEffect 会自动同步回 thread，下次 callLLM 会把它纳入上下文
+      setMessages((prev) => [...prev, offlineMsg]);
+    } catch (e) {
+      console.warn("[offline] 生成失败:", e.message);
+    } finally {
+      setOfflineGenerating(false);
+    }
+  };
+
   const enterChat = (charId) => {
     setActiveCharId(charId);
     setShowCharSelect(false);
@@ -1723,6 +1823,25 @@ ${chunksText}
       setActiveThreadId(threads[0].id);
       initialMsgs = [...threads[0].messages];
       setMessages(initialMsgs);
+    }
+
+    // ── 离线思念：检测是否触发 ──
+    const now = Date.now();
+    const lastOpened = lastCharOpenedRef.current[charId] || 0;
+    const elapsed = now - lastOpened;
+    // 更新"上次打开时间"
+    lastCharOpenedRef.current[charId] = now;
+    saveJSON("_lastCharOpened", lastCharOpenedRef.current);
+    // 满足条件：离开超过 2 小时 + 本 session 未触发过 + 不是首次入住
+    if (
+      char &&
+      elapsed > OFFLINE_THRESHOLD_MS &&
+      lastOpened > 0 &&
+      !offlineCheckedRef.current.has(charId)
+    ) {
+      offlineCheckedRef.current.add(charId);
+      // 延迟执行，让页面先渲染完
+      setTimeout(() => generateOfflineMessage(char, initialMsgs), 1200);
     }
 
     // ── 入住仪式：首次进入时自动注入一条 system 消息 ──
@@ -3521,6 +3640,7 @@ ${chatLines}
           messages={messages}
           isSending={isSending}
           isTyping={isTyping}
+          offlineGenerating={offlineGenerating}
           messagesEndRef={messagesEndRef}
           handleRegenerate={handleRegenerate}
           inputText={inputText}
