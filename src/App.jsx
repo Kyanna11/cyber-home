@@ -28,6 +28,8 @@ import {
   loadGroupThreads, saveGroupThreads,
   loadCharTreasures, saveCharTreasures,
   loadAllFromCloud,
+  loadJSON,
+  saveJSON,
 } from "./utils/storage";
 import {
   CHARS_STORAGE_KEY, THREADS_STORAGE_KEY, MEMORIES_STORAGE_KEY,
