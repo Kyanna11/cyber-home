@@ -191,7 +191,7 @@ export function buildUserContext(userProfile, charId, homeMemory = null) {
 }
 
 // 构建完整的角色 system prompt
-export function buildSystemPrompt(char, memories) {
+export function buildSystemPrompt(char, memories, pendingThreads = []) {
   if (!char) return "你是一个温柔的赛博伴侣。";
   const p = char.profile || {};
   const o = char.ocean || {};
@@ -303,6 +303,14 @@ export function buildSystemPrompt(char, memories) {
     if (latestSummary) {
       prompt += ` 【最近的反思总结】\n${latestSummary.text}\n\n`;
     }
+  }
+
+  // ── 伏笔追踪：注入还没聊完的事 ──
+  const openThreads = (pendingThreads || []).filter((t) => t.status === "open");
+  if (openThreads.length > 0) {
+    prompt += `【还没聊完的事】\n以下是你们之前提到但还没展开的话题，如果当前对话有合适的时机，可以自然地带出来：\n`;
+    openThreads.forEach((t) => { prompt += `- ${t.content}\n`; });
+    prompt += `\n`;
   }
 
   prompt += `你拥有内心独白（心声），请在回复中用 [心声]...[/心声] 标签包裹你的内心想法，然后在标签外写你真正说出口的话。心声应该体现你的真实情感和思考过程。\n\n重要的消息格式要求：你说出口的话请用 ${MSG_DELIMITER} 作为分隔符来分成多条消息，就像在聊天软件里一条一条发送那样。每条消息保持简短自然。心声不需要分条。\n\n请始终保持你的人格特质和三观体系来回应晚声。`;

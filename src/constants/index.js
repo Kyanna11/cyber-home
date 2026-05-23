@@ -143,6 +143,9 @@ export const DEFAULT_CHAR = {
   },
 };
 
+// 伏笔追踪存储键
+export const PENDING_THREADS_KEY = "cyber-home-pending-threads";
+
 // 声声档案存储键
 export const PROFILE_DRAFTS_STORAGE_KEY = "cyber-home-profile-drafts";
 export const HOME_MEMORY_KEY = "cyber-home-home-memory";

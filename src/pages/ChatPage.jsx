@@ -1717,6 +1717,11 @@ export default function ChatPage({
   settleReminderText,
   onGoSettle,
   onDismissSettleReminder,
+  // 伏笔追踪
+  charPendingThreads,
+  onAddPendingThread,
+  onResolvePendingThread,
+  onDeletePendingThread,
   messagesEndRef,
   handleRegenerate,
   // 输入栏
@@ -1772,6 +1777,8 @@ export default function ChatPage({
   const [sceneEndStep, setSceneEndStep] = useState(null);
   // 聊天背景设置面板
   const [showChatBgPanel, setShowChatBgPanel] = useState(false);
+  // 伏笔追踪面板
+  const [showThreadsPanel, setShowThreadsPanel] = useState(false);
 
   // ── 场景模式检测 ──（必须在 chatBgStyle 之前）
   const isSceneMode = activeThread?.threadType === "scene" && !activeThread?.sceneClosed;
@@ -2546,6 +2553,110 @@ export default function ChatPage({
         </div>
       )}
 
+      {/* ── 伏笔追踪：胶囊 + 展开列表 ── */}
+      {(() => {
+        const openThreads = (charPendingThreads || []).filter((t) => t.status === "open");
+        const allThreads  = charPendingThreads || [];
+        if (allThreads.length === 0) return null;
+        return (
+          <div style={{ position: "relative", zIndex: 4 }}>
+            {/* 胶囊触发行 */}
+            <div
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                padding: "4px 0 2px",
+              }}
+            >
+              <button
+                onClick={() => setShowThreadsPanel((v) => !v)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "3px 12px", borderRadius: 20,
+                  background: openThreads.length > 0
+                    ? "rgba(196,166,184,.18)" : "rgba(160,160,160,.1)",
+                  border: openThreads.length > 0
+                    ? "1px solid rgba(196,166,184,.35)" : "1px solid rgba(160,160,160,.2)",
+                  color: openThreads.length > 0 ? "var(--text-soft)" : "var(--text-faint)",
+                  fontSize: 11, cursor: "pointer",
+                  fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                  transition: "all .2s",
+                  ...(S ? { background: "rgba(160,120,220,.12)", border: "1px solid rgba(160,120,220,.2)", color: "rgba(200,170,240,.8)" } : {}),
+                }}
+              >
+                🧵
+                <span>
+                  {openThreads.length > 0
+                    ? `${openThreads.length} 条还没聊完`
+                    : "伏笔都了结了"}
+                </span>
+                <span style={{ opacity: 0.6, fontSize: 9 }}>{showThreadsPanel ? "▲" : "▼"}</span>
+              </button>
+            </div>
+
+            {/* 展开面板 */}
+            {showThreadsPanel && (
+              <div style={{
+                margin: "0 12px 6px",
+                borderRadius: 14,
+                background: S ? "rgba(30,20,50,.6)" : "rgba(250,245,255,.92)",
+                border: S ? "1px solid rgba(160,120,220,.2)" : "1px solid rgba(196,166,184,.2)",
+                backdropFilter: "blur(8px)",
+                overflow: "hidden",
+              }}>
+                {allThreads.length === 0 && (
+                  <div style={{ padding: "14px 16px", fontSize: 12, color: "var(--text-faint)", textAlign: "center" }}>
+                    还没有伏笔～在消息上点 🧵 标记
+                  </div>
+                )}
+                {allThreads.map((t) => (
+                  <div
+                    key={t.id}
+                    style={{
+                      display: "flex", alignItems: "flex-start", gap: 10,
+                      padding: "10px 14px",
+                      borderBottom: "1px solid rgba(196,166,184,.1)",
+                      opacity: t.status === "resolved" ? 0.45 : 1,
+                    }}
+                  >
+                    <span style={{ fontSize: 13, marginTop: 1, flexShrink: 0 }}>
+                      {t.status === "resolved" ? "✅" : "🧵"}
+                    </span>
+                    <span style={{
+                      flex: 1, fontSize: 12, lineHeight: 1.65,
+                      color: S ? "rgba(220,200,255,.85)" : "var(--text-soft)",
+                      textDecoration: t.status === "resolved" ? "line-through" : "none",
+                    }}>
+                      {t.content}
+                    </span>
+                    <div style={{ display: "flex", gap: 4, flexShrink: 0, marginTop: 1 }}>
+                      {t.status === "open" && (
+                        <button
+                          onClick={() => onResolvePendingThread(activeCharId, t.id)}
+                          title="标记已了结"
+                          style={{
+                            background: "none", border: "none", cursor: "pointer",
+                            fontSize: 11, color: "var(--text-faint)", padding: "1px 4px",
+                          }}
+                        >了结</button>
+                      )}
+                      <button
+                        onClick={() => onDeletePendingThread(activeCharId, t.id)}
+                        title="删除"
+                        style={{
+                          background: "none", border: "none", cursor: "pointer",
+                          fontSize: 12, color: "var(--text-faint)", padding: "1px 3px",
+                          opacity: 0.6,
+                        }}
+                      >×</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── 消息区 ── */}
       <div
         className="messages-area"
@@ -2814,6 +2925,26 @@ export default function ChatPage({
                     }}
                     title="珍藏这段"
                   >💎</button>
+                )}
+
+                {/* 标记为伏笔（user & bot 均可，有实际文字内容才显示） */}
+                {(msg.role === "user" || msg.role === "bot") &&
+                  !msg.isDiaryShare && !msg.isNoteShare && !msg.isOfflineMessage &&
+                  (msg.content || "").trim() && onAddPendingThread && (
+                  <button
+                    onClick={() => {
+                      const content = (msg.content || "").slice(0, 120).trim();
+                      onAddPendingThread(activeCharId, content, msg.role);
+                      setShowThreadsPanel(true);
+                    }}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      fontSize: 11, color: "var(--text-faint)",
+                      padding: "2px 4px", borderRadius: 4,
+                      transition: "color .2s", fontFamily: "var(--font-main)",
+                    }}
+                    title="标记为伏笔"
+                  >🧵</button>
                 )}
 
                 {/* 最后一条 bot 消息：重新生成 */}

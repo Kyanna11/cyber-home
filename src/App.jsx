@@ -30,6 +30,8 @@ import {
   loadAllFromCloud,
   loadJSON,
   saveJSON,
+  loadPendingThreads,
+  savePendingThreads,
 } from "./utils/storage";
 import {
   CHARS_STORAGE_KEY, THREADS_STORAGE_KEY, MEMORIES_STORAGE_KEY,
@@ -235,6 +237,8 @@ export default function App() {
   const settleDismissedRef = useRef(new Set());
   const [showSettleReminder, setShowSettleReminder] = useState(false);
   const [settleReminderText, setSettleReminderText] = useState("");
+  // ── 伏笔追踪 { [charId]: [thread] } ──
+  const [pendingThreads, setPendingThreads] = useState(() => loadPendingThreads());
 
   // ─── 手札 ───
   const [noteEntries, setNoteEntries] = useState(() => normalizeNotes(loadDiary()));
@@ -1873,6 +1877,45 @@ ${recentLines}
     if (activeCharId) settleDismissedRef.current.add(activeCharId);
   };
 
+  // ── 伏笔追踪 handlers ──
+  const handleAddPendingThread = (charId, content, from) => {
+    setPendingThreads((prev) => {
+      const next = {
+        ...prev,
+        [charId]: [
+          ...(prev[charId] || []),
+          { id: genId(), content, from, createdAt: Date.now(), status: "open" },
+        ],
+      };
+      savePendingThreads(next);
+      return next;
+    });
+  };
+
+  const handleResolvePendingThread = (charId, threadId) => {
+    setPendingThreads((prev) => {
+      const next = {
+        ...prev,
+        [charId]: (prev[charId] || []).map((t) =>
+          t.id === threadId ? { ...t, status: "resolved", resolvedAt: Date.now() } : t
+        ),
+      };
+      savePendingThreads(next);
+      return next;
+    });
+  };
+
+  const handleDeletePendingThread = (charId, threadId) => {
+    setPendingThreads((prev) => {
+      const next = {
+        ...prev,
+        [charId]: (prev[charId] || []).filter((t) => t.id !== threadId),
+      };
+      savePendingThreads(next);
+      return next;
+    });
+  };
+
   const enterChat = (charId) => {
     setActiveCharId(charId);
     setShowCharSelect(false);
@@ -3060,9 +3103,12 @@ ${chatLines}
       ? buildSceneSystemAddition(curThread.sceneConfig)
       : "";
     const sceneAddition = extraSystem || autoScene;
+    const openPendingThreads = activeCharId
+      ? (pendingThreads[activeCharId] || []).filter((t) => t.status === "open")
+      : [];
     const sysPrompt =
       timeInfo + "\n\n" +
-      buildSystemPrompt(activeChar, charMemories) +
+      buildSystemPrompt(activeChar, charMemories, openPendingThreads) +
       (activeChar && worldViews[activeChar.id] ? `\n\n【你的世界观与核心认知】\n${worldViews[activeChar.id]}` : "") +
       (userCtx ? `\n\n${userCtx}` : "") +
       sceneAddition +
@@ -3224,7 +3270,8 @@ ${chatLines}
   const getCurrentPromptTokens = () => {
     if (!activeChar) return 0;
     const charMemories = getCharMemories(activeChar.id);
-    const prompt = buildSystemPrompt(activeChar, charMemories);
+    const openPT = (pendingThreads[activeChar.id] || []).filter((t) => t.status === "open");
+    const prompt = buildSystemPrompt(activeChar, charMemories, openPT);
     return estimateTokens(prompt);
   };
 
@@ -3722,6 +3769,10 @@ ${chatLines}
           settleReminderText={settleReminderText}
           onGoSettle={handleGoSettle}
           onDismissSettleReminder={handleDismissSettleReminder}
+          charPendingThreads={activeCharId ? (pendingThreads[activeCharId] || []) : []}
+          onAddPendingThread={handleAddPendingThread}
+          onResolvePendingThread={handleResolvePendingThread}
+          onDeletePendingThread={handleDeletePendingThread}
           messagesEndRef={messagesEndRef}
           handleRegenerate={handleRegenerate}
           inputText={inputText}

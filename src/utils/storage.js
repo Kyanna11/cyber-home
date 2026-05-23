@@ -192,6 +192,11 @@ export function getCharTreasuresByCharId(items, charId) {
   return (items || []).filter((t) => t.charId === charId);
 }
 
+// 伏笔追踪 { [charId]: [{ id, content, from, createdAt, status }] }
+import { PENDING_THREADS_KEY } from "../constants";
+export function loadPendingThreads() { return loadJSON(PENDING_THREADS_KEY, {}); }
+export function savePendingThreads(data) { saveJSON(PENDING_THREADS_KEY, data); }
+
 // 记忆注入配置
 export function loadMemoryInjection() {
   return loadJSON(MEMORY_INJECTION_KEY, {
