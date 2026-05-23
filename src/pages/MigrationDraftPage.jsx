@@ -505,6 +505,7 @@ function ChunkSelectorPanel({
   const [filterArchive, setFilterArchive] = useState("all");
   const [keyword, setKeyword] = useState("");
   const [onlySelected, setOnlySelected] = useState(false);
+  const [expandedChunkId, setExpandedChunkId] = useState(null); // 当前展开全文的片段
 
   // 经过筛选的片段列表
   const filtered = useMemo(() => {
@@ -591,6 +592,19 @@ function ChunkSelectorPanel({
             <div style={{ fontSize: 11, color: "#9a8aac", marginBottom: 10 }}>{subtitle}</div>
           )}
 
+          {/* 片段数量多时的分批策略提示 */}
+          {charChunks.length > 100 && (
+            <div style={{
+              fontSize: 11, color: "#7a6a4a", lineHeight: 1.7,
+              padding: "7px 12px", marginBottom: 8,
+              borderRadius: 10,
+              background: "rgba(200,170,80,.08)",
+              border: "1px solid rgba(200,170,80,.2)",
+            }}>
+              💡 共 {charChunks.length} 段，建议分批提炼：每次用搜索找 15–20 段聚焦一个主题（比如"说话方式"、"重要时刻"、"对我的了解"），多次生成的草稿会追加叠加，不会覆盖。
+            </div>
+          )}
+
           {/* 搜索 + 档案筛选 */}
           <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
             <input
@@ -661,52 +675,89 @@ function ChunkSelectorPanel({
           ) : (
             filtered.map(chunk => {
               const isSelected = selected.has(chunk.id);
+              const isExpanded = expandedChunkId === chunk.id;
               const archive = archivesMap[chunk.archiveId];
               return (
                 <div
                   key={chunk.id}
-                  onClick={() => toggleChunk(chunk.id)}
                   style={{
-                    display: "flex", gap: 10, alignItems: "flex-start",
-                    padding: "11px 12px", marginBottom: 6,
+                    marginBottom: 6,
                     borderRadius: 12,
                     background: isSelected ? "rgba(140,110,180,.12)" : "rgba(255,255,255,.62)",
                     border: `1px solid ${isSelected ? "rgba(140,110,180,.35)" : "rgba(196,166,184,.25)"}`,
-                    cursor: "pointer",
                     transition: "all .15s",
+                    overflow: "hidden",
                   }}
                 >
-                  {/* 勾选框 */}
-                  <div style={{
-                    width: 18, height: 18, flexShrink: 0,
-                    borderRadius: 5,
-                    border: `1.5px solid ${isSelected ? "rgba(140,110,180,.8)" : "rgba(196,166,184,.5)"}`,
-                    background: isSelected ? "rgba(140,110,180,.75)" : "transparent",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    marginTop: 1,
-                  }}>
-                    {isSelected && <span style={{ color: "#fff", fontSize: 11, lineHeight: 1 }}>✓</span>}
-                  </div>
+                  {/* 主行：勾选 + 预览 + 展开按钮 */}
+                  <div
+                    style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "11px 12px", cursor: "pointer" }}
+                    onClick={() => toggleChunk(chunk.id)}
+                  >
+                    {/* 勾选框 */}
+                    <div style={{
+                      width: 18, height: 18, flexShrink: 0,
+                      borderRadius: 5,
+                      border: `1.5px solid ${isSelected ? "rgba(140,110,180,.8)" : "rgba(196,166,184,.5)"}`,
+                      background: isSelected ? "rgba(140,110,180,.75)" : "transparent",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      marginTop: 1,
+                    }}>
+                      {isSelected && <span style={{ color: "#fff", fontSize: 11, lineHeight: 1 }}>✓</span>}
+                    </div>
 
-                  {/* 内容 */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: "#5a4a7a" }}>
-                        {archive?.title || "未知档案"} · 第 {chunk.index + 1} 段
-                      </span>
-                      <span style={{ fontSize: 10, color: "#b0a0c0" }}>{chunk.text.length} 字</span>
-                      {chunk.sourcePlatform && (
-                        <span style={{ fontSize: 10, color: "#b0a0c0" }}>{chunk.sourcePlatform}</span>
+                    {/* 内容 */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "#5a4a7a" }}>
+                          {archive?.title || "未知档案"} · 第 {chunk.index + 1} 段
+                        </span>
+                        <span style={{ fontSize: 10, color: "#b0a0c0" }}>{chunk.text.length} 字</span>
+                        {chunk.sourcePlatform && (
+                          <span style={{ fontSize: 10, color: "#b0a0c0" }}>{chunk.sourcePlatform}</span>
+                        )}
+                      </div>
+                      {!isExpanded && (
+                        <div style={{ fontSize: 11, color: "#6a5a7a", lineHeight: 1.7 }}>
+                          {chunk.text.slice(0, 150)}{chunk.text.length > 150 ? "…" : ""}
+                        </div>
                       )}
                     </div>
-                    <div style={{
-                      fontSize: 11, color: "#6a5a7a", lineHeight: 1.7,
-                      display: "-webkit-box", WebkitLineClamp: 3,
-                      WebkitBoxOrient: "vertical", overflow: "hidden",
-                    }}>
-                      {chunk.text.slice(0, 150)}{chunk.text.length > 150 ? "…" : ""}
-                    </div>
+
+                    {/* 展开/收起按钮 */}
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        setExpandedChunkId(isExpanded ? null : chunk.id);
+                      }}
+                      style={{
+                        flexShrink: 0,
+                        background: "none", border: "none", cursor: "pointer",
+                        fontSize: 10, color: "#9a8aac",
+                        padding: "2px 6px", borderRadius: 6,
+                        letterSpacing: 0.5, fontFamily: "var(--font-main)",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {isExpanded ? "收起" : "全文"}
+                    </button>
                   </div>
+
+                  {/* 展开的全文区域 */}
+                  {isExpanded && (
+                    <div style={{
+                      padding: "0 12px 12px 40px",
+                      fontSize: 12, color: "#4a3a5a", lineHeight: 1.85,
+                      whiteSpace: "pre-wrap", wordBreak: "break-all",
+                      borderTop: "1px solid rgba(196,166,184,.15)",
+                      paddingTop: 10,
+                      maxHeight: 360,
+                      overflow: "auto",
+                      background: "rgba(255,255,255,.4)",
+                    }}>
+                      {chunk.text}
+                    </div>
+                  )}
                 </div>
               );
             })
