@@ -55,6 +55,7 @@ export const CLOUD_KEYS = [
   "userProfile",
   "worldViews",
   "reflectSettings",
+  PENDING_THREADS_KEY,
 ];
 
 // ── 通用本地读写 ──

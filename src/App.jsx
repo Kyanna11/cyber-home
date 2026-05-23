@@ -40,7 +40,7 @@ import {
   TIMELINE_EVENTS_STORAGE_KEY, SETTLEMENT_DRAFTS_STORAGE_KEY, PROFILE_DRAFTS_STORAGE_KEY,
   HOME_MEMORY_KEY, MIGRATION_DRAFTS_STORAGE_KEY, MEMORY_CHUNKS_STORAGE_KEY,
   RAW_ARCHIVES_STORAGE_KEY, SELF_CURATION_DRAFTS_STORAGE_KEY, MEMORY_INJECTION_KEY,
-  STORAGE_KEY, CTX_STORAGE_KEY,
+  STORAGE_KEY, CTX_STORAGE_KEY, PENDING_THREADS_KEY,
 } from "./constants";
 import { genId, estimateTokens, buildSourceRef } from "./utils/helpers";
 import { splitRawTextToChunks } from "./utils/chunker";
@@ -317,6 +317,7 @@ export default function App() {
       if (d["userProfile"])                  setUserProfile(d["userProfile"]);
       if (d["worldViews"])                   setWorldViews(d["worldViews"]);
       if (d["reflectSettings"])              setReflectSettings(d["reflectSettings"]);
+      if (d[PENDING_THREADS_KEY])            setPendingThreads(d[PENDING_THREADS_KEY]);
 
       setCloudSyncing(false);
     });
