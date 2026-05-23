@@ -1754,6 +1754,9 @@ export default function ChatPage({
   onAddCharTreasure,
   // 他的房间
   onOpenCharRoom,
+  // 场景补充指示
+  sceneNote,
+  setSceneNote,
 }) {
   // 返回目标：从他的房间进入时，返回他的房间；否则返回卧室
   const chatBackTarget = prevPage === "charRoom" ? "charRoom" : "bedroom";
@@ -1781,6 +1784,10 @@ export default function ChatPage({
   const [showThreadsPanel, setShowThreadsPanel] = useState(false);
   // 旧版本查看：记录当前展开旧版的消息索引
   const [showVersionFor, setShowVersionFor] = useState(null);
+  // 心声折叠（场景模式下默认折叠）
+  const [expandedThoughts, setExpandedThoughts] = useState(new Set());
+  // 注入面板
+  const [showInjectPanel, setShowInjectPanel] = useState(false);
 
   // ── 场景模式检测 ──（必须在 chatBgStyle 之前）
   const isSceneMode = activeThread?.threadType === "scene" && !activeThread?.sceneClosed;
@@ -1913,7 +1920,7 @@ export default function ChatPage({
               }}
             >今天就到这儿</button>
           </div>
-          {/* 行 2：场景胶囊 + 场景/氛围 */}
+          {/* 行 2：场景胶囊 + 场景/氛围 + 注入按钮 */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             <span style={{
               fontSize: 10, color: "rgba(155,120,210,.75)",
@@ -1925,6 +1932,16 @@ export default function ChatPage({
                 {[activeThread.sceneConfig.scene, activeThread.sceneConfig.mood].filter(Boolean).join(" · ")}
               </span>
             )}
+            <button
+              onClick={() => setShowInjectPanel(true)}
+              style={{
+                background: sceneNote?.trim() ? "rgba(120,80,220,.22)" : "rgba(255,255,255,.07)",
+                border: `1px solid ${sceneNote?.trim() ? "rgba(160,110,255,.4)" : "rgba(130,90,220,.2)"}`,
+                borderRadius: 10, padding: "2px 9px", fontSize: 10,
+                color: sceneNote?.trim() ? "rgba(200,170,255,.9)" : "rgba(140,105,200,.65)",
+                cursor: "pointer", fontFamily: "var(--font-main)", letterSpacing: 0.5,
+              }}
+            >注入 {sceneNote?.trim() ? "·" : ""}</button>
           </div>
         </div>
       ) : (
@@ -2759,12 +2776,33 @@ export default function ChatPage({
               paddingLeft:  msg.role === "user" ? 48 : undefined,
             } : undefined}
           >
-            {msg.thought && (
-              <div className="thought-bubble">
-                <span className="thought-label">💭 心声</span>
-                {msg.thought}
-              </div>
-            )}
+            {msg.thought && (() => {
+              const thoughtExpanded = !isSceneMode || expandedThoughts.has(i);
+              return (
+                <div
+                  className="thought-bubble"
+                  onClick={isSceneMode ? () => setExpandedThoughts(prev => {
+                    const next = new Set(prev);
+                    if (next.has(i)) next.delete(i); else next.add(i);
+                    return next;
+                  }) : undefined}
+                  style={isSceneMode ? { cursor: "pointer", userSelect: "none" } : undefined}
+                >
+                  <span className="thought-label" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    💭 心声
+                    {isSceneMode && (
+                      <span style={{
+                        fontSize: 9, color: "rgba(160,130,200,.6)",
+                        transition: "transform .2s",
+                        display: "inline-block",
+                        transform: thoughtExpanded ? "rotate(0deg)" : "rotate(-90deg)",
+                      }}>▾</span>
+                    )}
+                  </span>
+                  {thoughtExpanded && msg.thought}
+                </div>
+              );
+            })()}
 
             {/* 链接 / 音乐 / 图片 分享卡片 */}
             {msg.isLinkShare ? (
@@ -2833,7 +2871,7 @@ export default function ChatPage({
                   } : {}),
                 }}
               >
-                {msg.replyMode === "long" && msg.role === "bot" && (
+                {msg.replyMode === "long" && msg.role === "bot" && !isSceneMode && (
                   <span style={{
                     display: "inline-block",
                     fontSize: 9,
@@ -3803,14 +3841,110 @@ export default function ChatPage({
         />
       )}
 
-      {/* ── 回复模式切换 ── */}
-      <div style={{
+      {/* ── 注入面板（场景模式）── */}
+      {showInjectPanel && isSceneMode && (
+        <>
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 180, background: "rgba(6,3,15,.5)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
+            onClick={() => setShowInjectPanel(false)}
+          />
+          <div style={{
+            position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 181,
+            background: "linear-gradient(180deg,#1a1030 0%,#130d25 100%)",
+            borderTop: "1px solid rgba(130,90,220,.2)",
+            borderRadius: "18px 18px 0 0",
+            padding: "20px 20px calc(20px + env(safe-area-inset-bottom,0px))",
+            maxHeight: "72vh", overflowY: "auto",
+          }}>
+            {/* 标题行 */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: "rgba(210,185,255,.85)", letterSpacing: 1 }}>注入 Prompt 内容</span>
+              <button onClick={() => setShowInjectPanel(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "rgba(155,120,210,.5)", padding: "0 2px" }}>✕</button>
+            </div>
+
+            {/* 场景配置预览 */}
+            {(() => {
+              const cfg = activeThread?.sceneConfig || {};
+              const fields = [
+                { label: "场景", value: cfg.scene },
+                { label: "氛围", value: cfg.mood },
+                { label: "前情提要", value: cfg.preface },
+                { label: "邀请内容", value: cfg.invitation },
+              ].filter(f => f.value?.trim());
+              return fields.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, color: "rgba(140,110,200,.5)", letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" }}>已注入的场景设定</div>
+                  {fields.map(f => (
+                    <div key={f.label} style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 10, color: "rgba(155,120,210,.6)", marginBottom: 2 }}>{f.label}</div>
+                      <div style={{
+                        fontSize: 12, color: "rgba(195,170,240,.7)", lineHeight: 1.65,
+                        background: "rgba(255,255,255,.04)", borderRadius: 8, padding: "6px 10px",
+                        border: "1px solid rgba(110,75,200,.12)",
+                      }}>{f.value}</div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* 分割线 */}
+            <div style={{ height: 1, background: "rgba(130,90,220,.12)", marginBottom: 14 }} />
+
+            {/* 补充指示 textarea */}
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 10, color: "rgba(140,110,200,.5)", letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" }}>补充指示</div>
+              <div style={{ fontSize: 11, color: "rgba(140,110,190,.45)", marginBottom: 8, lineHeight: 1.6 }}>
+                告诉他这次你希望怎样，你的状态，想要的感觉……会直接注入到 Prompt 里，对他可见。
+              </div>
+              <textarea
+                value={sceneNote || ""}
+                onChange={e => setSceneNote?.(e.target.value)}
+                placeholder="比如：今天状态很敏感，说话轻一点。希望你主动一点，不要等我问。"
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  minHeight: 90, resize: "none",
+                  background: "rgba(255,255,255,.05)",
+                  border: "1px solid rgba(130,90,220,.2)",
+                  borderRadius: 10, padding: "10px 12px",
+                  fontSize: 13, color: "rgba(210,185,255,.85)",
+                  fontFamily: "var(--font-main)", lineHeight: 1.7,
+                  outline: "none",
+                }}
+              />
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              {sceneNote?.trim() && (
+                <button
+                  onClick={() => setSceneNote?.("")}
+                  style={{
+                    padding: "7px 14px", borderRadius: 10, fontSize: 11,
+                    background: "none", border: "1px solid rgba(150,100,200,.18)",
+                    color: "rgba(155,120,210,.5)", cursor: "pointer",
+                    fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                  }}
+                >清空</button>
+              )}
+              <button
+                onClick={() => setShowInjectPanel(false)}
+                style={{
+                  padding: "7px 20px", borderRadius: 10, fontSize: 12,
+                  background: "rgba(100,60,200,.22)", border: "1px solid rgba(150,100,240,.3)",
+                  color: "rgba(200,175,255,.9)", cursor: "pointer",
+                  fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                }}
+              >好了</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── 回复模式切换（场景模式下隐藏，避免与场景邀请表单内的模式选择冲突）── */}
+      {!isSceneMode && <div style={{
         display: "flex", justifyContent: "center",
         padding: "5px 16px 2px",
-        background: S ? S.replyBarBg : "rgba(248,244,252,.95)",
-        borderTop: S
-          ? `1px solid ${S.replyBarBd}`
-          : (attachView === "grid" ? "none" : "1px solid rgba(196,166,184,.1)"),
+        background: "rgba(248,244,252,.95)",
+        borderTop: attachView === "grid" ? "none" : "1px solid rgba(196,166,184,.1)",
         flexShrink: 0,
         backdropFilter: S ? "blur(16px)" : undefined,
         WebkitBackdropFilter: S ? "blur(16px)" : undefined,
@@ -3852,7 +3986,7 @@ export default function ChatPage({
             </button>
           ))}
         </div>
-      </div>
+      </div>}
 
       {/* ── 输入栏 ── */}
       <div

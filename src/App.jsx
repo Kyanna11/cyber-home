@@ -240,6 +240,9 @@ export default function App() {
   // ── 伏笔追踪 { [charId]: [thread] } ──
   const [pendingThreads, setPendingThreads] = useState(() => loadPendingThreads());
 
+  // ── 亲密场景补充指示（本地会话，不持久化，场景结束自动清空）──
+  const [sceneNote, setSceneNote] = useState("");
+
   // ─── 手札 ───
   const [noteEntries, setNoteEntries] = useState(() => normalizeNotes(loadDiary()));
   const [pendingOpenNoteId, setPendingOpenNoteId] = useState(null);
@@ -3120,7 +3123,10 @@ ${chatLines}
     const autoScene = (curThread?.threadType === "scene" && !curThread?.sceneClosed)
       ? buildSceneSystemAddition(curThread.sceneConfig)
       : "";
-    const sceneAddition = extraSystem || autoScene;
+    const baseSceneAddition = extraSystem || autoScene;
+    const sceneAddition = baseSceneAddition && sceneNote.trim()
+      ? baseSceneAddition + `\n\n【补充指示】${sceneNote.trim()}`
+      : baseSceneAddition;
     const openPendingThreads = activeCharId
       ? (pendingThreads[activeCharId] || []).filter((t) => t.status === "open")
       : [];
@@ -3832,6 +3838,8 @@ ${chatLines}
           updateCharUiSettings={updateCharUiSettings}
           onAddCharTreasure={addCharTreasure}
           onOpenCharRoom={openCharRoom}
+          sceneNote={sceneNote}
+          setSceneNote={setSceneNote}
         />
       )}
     </>
