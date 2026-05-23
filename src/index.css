@@ -48,6 +48,11 @@ body{background:var(--bg-dream);font-family:var(--font-main);font-weight:300;col
 .btn-danger:hover{background:rgba(200,140,140,.14)}
 .empty-hint{text-align:center;padding:32px 0;color:var(--text-faint);font-size:13px;letter-spacing:1px;line-height:2}
 
+/* ── iOS 防缩放：输入框 font-size < 16px 会触发 Safari 自动缩放 ── */
+@media screen and (max-width: 1024px) {
+  input, textarea, select { font-size: max(16px, 1em); }
+}
+
 /* ── 入口页 ── */
 .entrance{height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative;overflow:hidden;background:url('/entrance-bg.png') center/cover no-repeat}
 .entrance::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 20% 40%,rgba(200,190,220,.1) 0%,transparent 40%),radial-gradient(circle at 75% 55%,rgba(232,196,196,.08) 0%,transparent 35%);animation:mistDrift 14s ease-in-out infinite alternate}

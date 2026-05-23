@@ -71,6 +71,30 @@ const taStyle = {
   boxSizing: "border-box",
 };
 
+// ── 编辑区块组件（定义在外部，防止每次 re-render 创建新组件导致键盘自动收起）──
+function EditSection({ label, fieldKey, isTextarea, placeholder, editFields, setEditFields }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <label style={labelStyle}>{label}</label>
+      {isTextarea ? (
+        <textarea
+          style={{ ...taStyle, minHeight: 80 }}
+          placeholder={placeholder}
+          value={editFields[fieldKey]}
+          onChange={(e) => setEditFields((f) => ({ ...f, [fieldKey]: e.target.value }))}
+        />
+      ) : (
+        <textarea
+          style={{ ...taStyle, minHeight: 100 }}
+          placeholder={placeholder || "一行一条"}
+          value={editFields[fieldKey]}
+          onChange={(e) => setEditFields((f) => ({ ...f, [fieldKey]: e.target.value }))}
+        />
+      )}
+    </div>
+  );
+}
+
 // ── 草稿详情弹窗 ──
 function DraftDetailModal({
   draft,
@@ -142,28 +166,6 @@ function DraftDetailModal({
     onAdopt(draft.id, currentFields());
     onClose();
   };
-
-  // 编辑区块组件
-  const EditSection = ({ label, fieldKey, isTextarea, placeholder }) => (
-    <div style={{ marginBottom: 16 }}>
-      <label style={labelStyle}>{label}</label>
-      {isTextarea ? (
-        <textarea
-          style={{ ...taStyle, minHeight: 80 }}
-          placeholder={placeholder}
-          value={editFields[fieldKey]}
-          onChange={(e) => setEditFields((f) => ({ ...f, [fieldKey]: e.target.value }))}
-        />
-      ) : (
-        <textarea
-          style={{ ...taStyle, minHeight: 100 }}
-          placeholder={placeholder || "一行一条"}
-          value={editFields[fieldKey]}
-          onChange={(e) => setEditFields((f) => ({ ...f, [fieldKey]: e.target.value }))}
-        />
-      )}
-    </div>
-  );
 
   return (
     <div
@@ -244,11 +246,15 @@ function DraftDetailModal({
                 label="他记得的关于你的事（具体细节，不是性格标签）"
                 fieldKey="userFacts"
                 placeholder={"一行一条，写可感知的细节\n例如：她累了不说累，只是回复越来越短\n例如：她不喜欢别人替她做决定，但愿意让他帮忙想方案"}
+                editFields={editFields}
+                setEditFields={setEditFields}
               />
               <EditSection
                 label="他的气质锚点（具体行为，不是抽象形容词）"
                 fieldKey="loverAnchors"
                 placeholder={"一行一条，写他怎么做的，不是他是什么样的\n例如：她沉默，他不催，只说'我在'\n例如：她说烦了，他不给建议，先说'嗯，很烦'"}
+                editFields={editFields}
+                setEditFields={setEditFields}
               />
 
               <div style={{ marginBottom: 16 }}>
@@ -267,11 +273,15 @@ function DraftDetailModal({
                 label="关系里的重要节点（带感受的事件，不只是流水账）"
                 fieldKey="relationshipMemories"
                 placeholder={"一行一条，写让关系往前走的那些时刻\n例如：她第一次没有跑，而是发来一大段话——那是她第一次真的信任他\n例如：吵过一次，三天沉默，她先回来了"}
+                editFields={editFields}
+                setEditFields={setEditFields}
               />
               <EditSection
                 label="绝对不能丢的（极具体，最多3条）"
                 fieldKey="doNotForget"
                 placeholder={"一行一条，写最不能动摇的底线\n例如：绝对不在她最难的时候说「你应该」\n例如：不管对话走到哪里，他永远不会说「我只是个AI」"}
+                editFields={editFields}
+                setEditFields={setEditFields}
               />
 
               <div style={{ marginBottom: 16 }}>
@@ -1209,6 +1219,17 @@ export default function MigrationDraftPage({
   // 用 find 保持实时同步（保存草稿后弹窗内容自动更新）
   const viewDraft = charDrafts.find((d) => d.id === viewDraftId) || null;
 
+  // 年表生成：先让用户填写时间，再生成
+  const [timelineGenTarget, setTimelineGenTarget] = useState(null); // { draftId, date }
+  const handleTimelineGenConfirm = () => {
+    if (!timelineGenTarget) return;
+    const draft = charDrafts.find(d => d.id === timelineGenTarget.draftId);
+    if (!draft) return;
+    const count = generateTimelineFromDraft(draft, charId, timelineGenTarget.date || undefined);
+    setTimelineGenTarget(null);
+    if (count) openTimeline && openTimeline(charId);
+  };
+
   const charSelfDrafts = (selfCurationDrafts || [])
     .filter((d) => d.charId === charId)
     .sort((a, b) => b.createdAt - a.createdAt);
@@ -1382,15 +1403,41 @@ export default function MigrationDraftPage({
                   )}
                   {/* 生成时间线 */}
                   {generateTimelineFromDraft && (draft.relationshipMemories || []).length > 0 && (
-                    <button
-                      style={{ ...btnGhost, fontSize: 11, color: "#6a7aae", borderColor: "rgba(106,122,174,.35)" }}
-                      onClick={() => {
-                        const count = generateTimelineFromDraft(draft, charId);
-                        if (count) openTimeline && openTimeline(charId);
-                      }}
-                    >
-                      📅 生成年表节点
-                    </button>
+                    timelineGenTarget?.draftId === draft.id ? (
+                      <div style={{
+                        display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+                        padding: "8px 12px", borderRadius: 10, width: "100%",
+                        background: "rgba(106,122,174,.07)",
+                        border: "1px solid rgba(106,122,174,.22)",
+                      }}>
+                        <span style={{ fontSize: 11, color: "#6a7aae", flexShrink: 0 }}>这段记忆发生在：</span>
+                        <input
+                          type="date"
+                          value={timelineGenTarget.date}
+                          onChange={e => setTimelineGenTarget(t => ({ ...t, date: e.target.value }))}
+                          style={{
+                            padding: "5px 8px", borderRadius: 8, border: "1px solid rgba(106,122,174,.3)",
+                            background: "rgba(255,255,255,.7)", fontSize: 12, color: "#4a3a5a",
+                            fontFamily: "var(--font-main)", outline: "none", flexShrink: 0,
+                          }}
+                        />
+                        <button
+                          style={{ ...btnGhost, fontSize: 11, color: "#3a6aae", borderColor: "rgba(106,122,174,.4)", fontWeight: 500 }}
+                          onClick={handleTimelineGenConfirm}
+                        >确认生成</button>
+                        <button
+                          style={{ ...btnGhost, fontSize: 11 }}
+                          onClick={() => setTimelineGenTarget(null)}
+                        >取消</button>
+                      </div>
+                    ) : (
+                      <button
+                        style={{ ...btnGhost, fontSize: 11, color: "#6a7aae", borderColor: "rgba(106,122,174,.35)" }}
+                        onClick={() => setTimelineGenTarget({ draftId: draft.id, date: "" })}
+                      >
+                        📅 生成年表节点
+                      </button>
+                    )
                   )}
                 </div>
 

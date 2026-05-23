@@ -743,7 +743,7 @@ export default function App() {
   };
 
   // 从迁入草稿生成时间线事件
-  const generateTimelineFromDraft = (draft, charId) => {
+  const generateTimelineFromDraft = (draft, charId, overrideDate) => {
     if (!draft) return;
     const memories = [
       ...(draft.relationshipMemories || []),
@@ -751,10 +751,8 @@ export default function App() {
     if (memories.length === 0) return;
 
     const now = Date.now();
-    const char = characters.find((c) => c.id === charId);
-    const baseDate = char?.migration?.importedAt
-      ? new Date(char.migration.importedAt).toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0];
+    // 优先使用用户指定的日期，其次回退到今天（迁入日期不准确，需用户手动填写）
+    const baseDate = overrideDate || new Date().toISOString().split("T")[0];
 
     const newEvents = memories.map((text, i) => ({
       id: genId(),
@@ -2422,6 +2420,13 @@ ${sourceText.slice(0, 3000)}
     );
   };
 
+  // 编辑声声档案草稿某一节的内容（items 为字符串数组）
+  const updateProfileDraftSection = (draftId, sectionKey, newItems) => {
+    setProfileDrafts((prev) =>
+      prev.map((d) => d.id === draftId ? { ...d, [sectionKey]: newItems, updatedAt: Date.now() } : d)
+    );
+  };
+
   const dismissProfileDraft = (draftId) => {
     setProfileDrafts((prev) =>
       prev.map((d) => d.id === draftId ? { ...d, status: "rejected", updatedAt: Date.now() } : d)
@@ -3384,6 +3389,7 @@ ${chatLines}
           deleteHomeMemoryEntry={deleteHomeMemoryEntry}
           applyProfileDraftSection={applyProfileDraftSection}
           unapplyProfileDraftSection={unapplyProfileDraftSection}
+          updateProfileDraftSection={updateProfileDraftSection}
           dismissProfileDraft={dismissProfileDraft}
           deleteProfileDraft={deleteProfileDraft}
         />
@@ -3522,6 +3528,7 @@ ${chatLines}
           deleteHomeMemoryEntry={deleteHomeMemoryEntry}
           applyProfileDraftSection={applyProfileDraftSection}
           unapplyProfileDraftSection={unapplyProfileDraftSection}
+          updateProfileDraftSection={updateProfileDraftSection}
           dismissProfileDraft={dismissProfileDraft}
           deleteProfileDraft={deleteProfileDraft}
         />

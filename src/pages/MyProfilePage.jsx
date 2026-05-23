@@ -17,8 +17,9 @@ const SECTION_COLORS = {
 };
 
 // ── 草稿卡片 ──
-function ProfileDraftCard({ draft, onApplySection, onUnapplySection, onDismiss, onDelete }) {
+function ProfileDraftCard({ draft, onApplySection, onUnapplySection, onUpdateSection, onDismiss, onDelete }) {
   const [expanded, setExpanded] = useState(new Set());
+  const [editingSection, setEditingSection] = useState(null); // { key, text }
   const applied    = draft.appliedSections || [];
   const date       = new Date(draft.createdAt).toLocaleDateString("zh-CN");
   const nonEmpty   = HOME_SECTIONS.filter((s) => (draft[s.key] || []).length > 0);
@@ -123,13 +124,71 @@ function ProfileDraftCard({ draft, onApplySection, onUnapplySection, onDismiss, 
                       ⚠️ 近期状态采纳后会标注「近期」，不会被当作永久事实
                     </div>
                   )}
-                  {items.map((text, i) => (
-                    <div key={i} style={{
-                      fontSize: 12, color: isApplied ? "#888" : "var(--text-main)", lineHeight: 1.75,
-                      padding: "3px 0", opacity: isApplied ? 0.6 : 1,
-                      borderBottom: i < items.length - 1 ? "1px solid rgba(196,166,184,.1)" : "none",
-                    }}>· {text}</div>
-                  ))}
+                  {editingSection?.key === key ? (
+                    <div style={{ marginTop: 4 }}>
+                      <textarea
+                        value={editingSection.text}
+                        onChange={e => setEditingSection(s => ({ ...s, text: e.target.value }))}
+                        placeholder="一行一条，空行会被忽略"
+                        autoFocus
+                        style={{
+                          width: "100%", padding: "8px 10px", borderRadius: 8,
+                          border: "1px solid rgba(196,166,184,.4)",
+                          background: "rgba(255,255,255,.8)",
+                          fontSize: 12, lineHeight: 1.75, resize: "none",
+                          fontFamily: "var(--font-main)", outline: "none",
+                          boxSizing: "border-box", minHeight: 80,
+                        }}
+                      />
+                      <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setEditingSection(null); }}
+                          style={{
+                            fontSize: 11, padding: "4px 12px", borderRadius: 8, cursor: "pointer",
+                            background: "transparent", border: "1px solid rgba(196,166,184,.3)",
+                            color: "var(--text-faint)", fontFamily: "var(--font-main)",
+                          }}
+                        >取消</button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newItems = editingSection.text.split("\n").map(l => l.trim()).filter(Boolean);
+                            onUpdateSection?.(key, newItems);
+                            setEditingSection(null);
+                          }}
+                          style={{
+                            flex: 1, fontSize: 11, padding: "4px 0", borderRadius: 8, cursor: "pointer",
+                            background: col.bg || "rgba(106,122,174,.12)",
+                            border: `1px solid ${col.border || "rgba(106,122,174,.25)"}`,
+                            color: col.accent || "#6a7aae", fontFamily: "var(--font-main)",
+                          }}
+                        >保存修改</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {items.map((text, i) => (
+                        <div key={i} style={{
+                          fontSize: 12, color: isApplied ? "#888" : "var(--text-main)", lineHeight: 1.75,
+                          padding: "3px 0", opacity: isApplied ? 0.6 : 1,
+                          borderBottom: i < items.length - 1 ? "1px solid rgba(196,166,184,.1)" : "none",
+                        }}>· {text}</div>
+                      ))}
+                      {!isApplied && onUpdateSection && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingSection({ key, text: items.join("\n") });
+                          }}
+                          style={{
+                            marginTop: 8, fontSize: 11, padding: "4px 12px", borderRadius: 8, cursor: "pointer",
+                            background: "transparent", border: `1px dashed ${col.border || "rgba(196,166,184,.3)"}`,
+                            color: col.accent || "var(--text-faint)", fontFamily: "var(--font-main)",
+                          }}
+                        >✏️ 编辑内容</button>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -286,6 +345,7 @@ export default function MyProfilePage({
   deleteHomeMemoryEntry,
   applyProfileDraftSection,
   unapplyProfileDraftSection,
+  updateProfileDraftSection,
   dismissProfileDraft,
   deleteProfileDraft,
 }) {
@@ -538,6 +598,7 @@ export default function MyProfilePage({
                 draft={draft}
                 onApplySection={(section) => applyProfileDraftSection && applyProfileDraftSection(draft.id, section)}
                 onUnapplySection={(section) => unapplyProfileDraftSection && unapplyProfileDraftSection(draft.id, section)}
+                onUpdateSection={(section, newItems) => updateProfileDraftSection?.(draft.id, section, newItems)}
                 onDismiss={() => dismissProfileDraft && dismissProfileDraft(draft.id)}
                 onDelete={() => deleteProfileDraft && deleteProfileDraft(draft.id)}
               />
