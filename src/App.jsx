@@ -3138,13 +3138,15 @@ ${chatLines}
       sceneAddition +
       memoryInstruction +
       modeInstruction;
+    // 某些 API（如 Gemini 中转）要求至少有一条 user 消息；场景开场时 ctx 可能为空，补一条兜底
+    const finalCtx = ctx.length > 0 ? ctx : [{ role: "user", content: "（请开始）" }];
     const modelToUse = getActiveModel(activeChar?.modelOverride);
     const resp = await fetch(config.apiUrl.replace(/\/+$/, "") + "/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
       body: JSON.stringify({
         model: modelToUse,
-        messages: [{ role: "system", content: sysPrompt }, ...ctx],
+        messages: [{ role: "system", content: sysPrompt }, ...finalCtx],
         temperature: 0.8,
         max_tokens: ctxConfig.maxTokens,
       }),
