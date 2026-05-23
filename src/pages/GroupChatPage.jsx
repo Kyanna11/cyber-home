@@ -1224,18 +1224,18 @@ export default function GroupChatPage({
     return (
       <div className="lounge" style={{ position: "relative" }}>
         {/* 遮罩：压暖色调、引出薰衣草紫 */}
-        <div style={{ position: "absolute", inset: 0, background: "rgba(222,212,244,.56)", pointerEvents: "none", zIndex: 0 }} />
+        <div style={{ position: "absolute", inset: 0, background: "rgba(180,160,225,.78)", pointerEvents: "none", zIndex: 0 }} />
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
         <div style={{
           display: "flex", alignItems: "center", gap: 12,
           padding: "18px 16px 14px",
-          borderBottom: "1px solid rgba(196,166,184,.2)",
-          background: "rgba(238,230,255,.80)",
+          borderBottom: "1px solid rgba(140,110,180,.25)",
+          background: "rgba(220,210,245,.92)",
           backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
           flexShrink: 0,
         }}>
           <BackButton onClick={() => navigateTo("bedroom")} label="回房间" />
-          <div style={{ flex: 1, textAlign: "center", fontSize: 15, fontWeight: 600, color: "#5a4a6a", letterSpacing: 2 }}>
+          <div style={{ flex: 1, textAlign: "center", fontSize: 15, fontWeight: 600, color: "#2e1f3e", letterSpacing: 2 }}>
             ☕ 小家客厅
           </div>
           <div style={{ width: 48 }} />
@@ -1322,7 +1322,7 @@ export default function GroupChatPage({
       onClick={() => setActiveMsgId(null)}  /* 点背景关闭操作栏 */
     >
       {/* 遮罩：压暖色调、引出薰衣草紫 */}
-      <div style={{ position: "absolute", inset: 0, background: "rgba(222,212,244,.56)", pointerEvents: "none", zIndex: 0 }} />
+      <div style={{ position: "absolute", inset: 0, background: "rgba(180,160,225,.78)", pointerEvents: "none", zIndex: 0 }} />
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
 
       {/* ── 顶栏 ── */}
@@ -1330,8 +1330,8 @@ export default function GroupChatPage({
         style={{
           display: "flex", alignItems: "center", gap: 10,
           padding: "14px 16px 10px",
-          borderBottom: "1px solid rgba(196,166,184,.2)",
-          background: "rgba(238,230,255,.82)",
+          borderBottom: "1px solid rgba(140,110,180,.25)",
+          background: "rgba(220,210,245,.92)",
           backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
           flexShrink: 0,
         }}
@@ -1340,7 +1340,7 @@ export default function GroupChatPage({
         <BackButton onClick={() => navigateTo("bedroom")} label="回房间" />
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#5a4a6a", letterSpacing: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#2e1f3e", letterSpacing: 1 }}>
             ☕ {group.name}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>

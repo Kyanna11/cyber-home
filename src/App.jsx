@@ -3031,6 +3031,9 @@ ${chatLines}
 
   // ═══ 聊天 ═══
 
+  // 重新生成时暂存旧版本，由 showMessagesSequentially 附加到第一条新消息上
+  const pendingRegenVersionRef = useRef(null);
+
   const showMessagesSequentially = useCallback((thought, parts, timeStr, mode = "chat") => {
     typingTimers.current.forEach(clearTimeout);
     typingTimers.current = [];
@@ -3042,9 +3045,18 @@ ${chatLines}
       delay += mode === "long" ? 400 : 600 + Math.random() * 300;
       const t2 = setTimeout(() => {
         setIsTyping(false);
+        // 第一条新消息：如果有待附加的旧版本，挂载上去
+        const prevVersions = (i === 0 && pendingRegenVersionRef.current)
+          ? pendingRegenVersionRef.current
+          : undefined;
+        if (i === 0 && pendingRegenVersionRef.current) pendingRegenVersionRef.current = null;
         setMessages((prev) => [
           ...prev,
-          { role: "bot", thought: i === 0 ? thought : null, content: text, time: timeStr, replyMode: mode },
+          {
+            role: "bot", thought: i === 0 ? thought : null,
+            content: text, time: timeStr, replyMode: mode,
+            ...(prevVersions ? { prevVersions } : {}),
+          },
         ]);
         if (i === parts.length - 1) {
           setIsSending(false);
@@ -3147,6 +3159,24 @@ ${chatLines}
     if (lastUserIdx === -1 || isSending) return;
     // 读取最后一条用户消息里保存的 replyMode，回退到当前状态
     const msgReplyMode = messages[lastUserIdx]?.replyMode || replyMode;
+
+    // 把旧的 bot 回复收集为一个历史版本，附加到下一条回复上
+    const oldBotMsgs = messages.slice(lastUserIdx + 1).filter(m => m.role === "bot" && (m.content || "").trim());
+    if (oldBotMsgs.length > 0) {
+      const firstOldMsg = oldBotMsgs[0];
+      const existingVersions = firstOldMsg.prevVersions || [];
+      pendingRegenVersionRef.current = [
+        ...existingVersions,
+        {
+          id: genId(),
+          content: oldBotMsgs.map(m => m.content).join("\n\n"),
+          thought: firstOldMsg.thought || null,
+          time: firstOldMsg.time || "",
+          savedAt: Date.now(),
+        },
+      ];
+    }
+
     const msgsUpToUser = messages.slice(0, lastUserIdx + 1);
     setMessages(msgsUpToUser);
     const now = new Date();

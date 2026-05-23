@@ -1779,6 +1779,8 @@ export default function ChatPage({
   const [showChatBgPanel, setShowChatBgPanel] = useState(false);
   // 伏笔追踪面板
   const [showThreadsPanel, setShowThreadsPanel] = useState(false);
+  // 旧版本查看：记录当前展开旧版的消息索引
+  const [showVersionFor, setShowVersionFor] = useState(null);
 
   // ── 场景模式检测 ──（必须在 chatBgStyle 之前）
   const isSceneMode = activeThread?.threadType === "scene" && !activeThread?.sceneClosed;
@@ -2863,71 +2865,43 @@ export default function ChatPage({
                   {msg.time}
                 </div>
 
-                {/* 用户消息：编辑按钮 */}
+                {/* 消息操作小胶囊按钮 */}
                 {msg.role === "user" && !msg.isDiaryShare && !msg.isNoteShare && (
                   <button
-                    onClick={() => {
-                      setEditingMsgIdx(i);
-                      setEditingMsgText(msg.content);
-                    }}
+                    onClick={() => { setEditingMsgIdx(i); setEditingMsgText(msg.content); }}
                     style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      fontSize: 11,
-                      color: "var(--text-faint)",
-                      padding: "2px 4px",
-                      borderRadius: 4,
-                      transition: "color .2s",
-                      fontFamily: "var(--font-main)",
+                      background: "none", border: "1px solid rgba(155,149,181,.22)", cursor: "pointer",
+                      fontSize: 10, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
+                      transition: "all .2s", fontFamily: "var(--font-main)", letterSpacing: 0.5,
                     }}
                     title="编辑并重发"
-                  >
-                    ✏️
-                  </button>
+                  >改写</button>
                 )}
 
-                {/* 用户消息：让他珍藏 */}
                 {msg.role === "user" && !msg.isDiaryShare && !msg.isNoteShare && onAddCharTreasure && (
                   <button
                     onClick={() => setCharTreasureTarget(msg)}
                     style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      fontSize: 11,
-                      color: "var(--text-faint)",
-                      padding: "2px 4px",
-                      borderRadius: 4,
-                      transition: "color .2s",
-                      fontFamily: "var(--font-main)",
+                      background: "none", border: "1px solid rgba(155,149,181,.22)", cursor: "pointer",
+                      fontSize: 10, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
+                      transition: "all .2s", fontFamily: "var(--font-main)", letterSpacing: 0.5,
                     }}
                     title="让他珍藏"
-                  >
-                    💝
-                  </button>
+                  >他藏</button>
                 )}
 
-                {/* bot 消息：珍藏这段 */}
                 {msg.role === "bot" && onSaveTreasure && (
                   <button
                     onClick={() => openTreasure(msg)}
                     style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      fontSize: 11,
-                      color: "var(--text-faint)",
-                      padding: "2px 4px",
-                      borderRadius: 4,
-                      transition: "color .2s",
-                      fontFamily: "var(--font-main)",
+                      background: "none", border: "1px solid rgba(155,149,181,.22)", cursor: "pointer",
+                      fontSize: 10, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
+                      transition: "all .2s", fontFamily: "var(--font-main)", letterSpacing: 0.5,
                     }}
                     title="珍藏这段"
-                  >💎</button>
+                  >珍藏</button>
                 )}
 
-                {/* 标记为伏笔（user & bot 均可，有实际文字内容才显示） */}
                 {(msg.role === "user" || msg.role === "bot") &&
                   !msg.isDiaryShare && !msg.isNoteShare && !msg.isOfflineMessage &&
                   (msg.content || "").trim() && onAddPendingThread && (
@@ -2938,37 +2912,71 @@ export default function ChatPage({
                       setShowThreadsPanel(true);
                     }}
                     style={{
-                      background: "none", border: "none", cursor: "pointer",
-                      fontSize: 11, color: "var(--text-faint)",
-                      padding: "2px 4px", borderRadius: 4,
-                      transition: "color .2s", fontFamily: "var(--font-main)",
+                      background: "none", border: "1px solid rgba(155,149,181,.22)", cursor: "pointer",
+                      fontSize: 10, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
+                      transition: "all .2s", fontFamily: "var(--font-main)", letterSpacing: 0.5,
                     }}
                     title="标记为伏笔"
-                  >🧵</button>
+                  >伏笔</button>
                 )}
 
-                {/* 最后一条 bot 消息：重新生成 */}
-                {msg.role === "bot" &&
-                  i === messages.length - 1 &&
-                  !isSending && (
-                    <button
-                      onClick={handleRegenerate}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        fontSize: 11,
-                        color: "var(--text-faint)",
-                        padding: "2px 4px",
-                        borderRadius: 4,
-                        transition: "color .2s",
-                        fontFamily: "var(--font-main)",
-                      }}
-                      title="重新生成"
-                    >
-                      🔄
-                    </button>
-                  )}
+                {/* 最后一条 bot 消息：重新生成 + 版本切换 */}
+                {msg.role === "bot" && i === messages.length - 1 && !isSending && (
+                  <button
+                    onClick={handleRegenerate}
+                    style={{
+                      background: "none", border: "1px solid rgba(155,149,181,.22)", cursor: "pointer",
+                      fontSize: 10, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
+                      transition: "all .2s", fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                    }}
+                    title="换一版"
+                  >换一版</button>
+                )}
+
+                {/* 旧版本查看入口（不限最后一条，任何有旧版的 bot 消息都显示） */}
+                {msg.role === "bot" && (msg.prevVersions || []).length > 0 && (
+                  <button
+                    onClick={() => setShowVersionFor(v => v === i ? null : i)}
+                    style={{
+                      background: showVersionFor === i ? "rgba(155,149,181,.12)" : "none",
+                      border: "1px solid rgba(155,149,181,.22)", cursor: "pointer",
+                      fontSize: 10, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
+                      transition: "all .2s", fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                    }}
+                    title="查看旧版本"
+                  >旧版 {msg.prevVersions.length}</button>
+                )}
+              </div>
+            )}
+
+            {/* 旧版本展示面板 */}
+            {msg.role === "bot" && showVersionFor === i && (msg.prevVersions || []).length > 0 && (
+              <div style={{
+                marginTop: 6, marginLeft: msg.role === "bot" ? 0 : "auto",
+                maxWidth: "88%",
+                borderRadius: 12,
+                border: "1px solid rgba(155,149,181,.22)",
+                background: "rgba(248,245,252,.85)",
+                overflow: "hidden",
+              }}>
+                <div style={{
+                  padding: "7px 12px 5px",
+                  fontSize: 10, color: "var(--text-faint)", letterSpacing: 1,
+                  borderBottom: "1px solid rgba(155,149,181,.15)",
+                }}>旧版本（共 {msg.prevVersions.length} 个）</div>
+                {[...msg.prevVersions].reverse().map((v, vi) => (
+                  <div key={v.id || vi} style={{
+                    padding: "10px 14px",
+                    borderBottom: vi < msg.prevVersions.length - 1 ? "1px solid rgba(155,149,181,.1)" : "none",
+                  }}>
+                    <div style={{ fontSize: 10, color: "var(--text-faint)", marginBottom: 5 }}>
+                      版本 {msg.prevVersions.length - vi} · {v.time || ""}
+                    </div>
+                    <div style={{ fontSize: 13, color: "var(--text-mid)", lineHeight: 1.75, whiteSpace: "pre-wrap" }}>
+                      {v.content}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
