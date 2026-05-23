@@ -942,8 +942,8 @@ export default function GroupChatPage({
     }
     const data = await resp.json();
     const raw  = data.choices?.[0]?.message?.content || "";
-    const { parts } = parseResponse(raw, "long");
-    return parts[0] || "…";
+    const { parts } = parseResponse(raw, "chat");
+    return parts.length > 0 ? parts : ["…"];
   };
 
   const handleSend = async () => {
@@ -1000,16 +1000,17 @@ export default function GroupChatPage({
         const historyForContext = liveMessagesRef.current.filter(
           (m) => !(m.id === userMsg.id)
         );
-        const reply = await callCharLLM(char, historyForContext, userMsg, repliedThisRound);
+        const parts = await callCharLLM(char, historyForContext, userMsg, repliedThisRound);
 
         if (roundAbortRef.current) break;
 
-        const charMsg = {
+        // 多条分发：||| 拆开的每段作为独立气泡
+        const firstMsg = {
           id:         genId(),
           role:       "char",
           charId,
           authorName: char.name || "入住者",
-          content:    reply,
+          content:    parts[0],
           createdAt:  Date.now(),
           time:       timeStr(),
           roundIndex,
@@ -1018,12 +1019,28 @@ export default function GroupChatPage({
               sourceType:  "group_chat",
               sourceId:    charId,
               sourceTitle: char.name || "入住者",
-              excerpt:     reply.slice(0, 80),
+              excerpt:     parts[0].slice(0, 80),
             }),
           ],
         };
-        appendMessage(charMsg);
-        repliedThisRound.push(charMsg);
+        appendMessage(firstMsg);
+        repliedThisRound.push(firstMsg);
+
+        // 追加后续分条（不重复计入 repliedThisRound）
+        for (let pi = 1; pi < parts.length; pi++) {
+          if (roundAbortRef.current) break;
+          appendMessage({
+            id:         genId(),
+            role:       "char",
+            charId,
+            authorName: char.name || "入住者",
+            content:    parts[pi],
+            createdAt:  Date.now(),
+            time:       timeStr(),
+            roundIndex,
+            sourceRefs: [],
+          });
+        }
       } catch (err) {
         if (!roundAbortRef.current) {
           setSendError(`${char.name || "入住者"} 回复失败：${err.message}`);
@@ -1321,8 +1338,8 @@ export default function GroupChatPage({
       style={{ position: "relative" }}
       onClick={() => setActiveMsgId(null)}  /* 点背景关闭操作栏 */
     >
-      {/* 遮罩：压暖色调、引出薰衣草紫 */}
-      <div style={{ position: "absolute", inset: 0, background: "rgba(180,160,225,.78)", pointerEvents: "none", zIndex: 0 }} />
+      {/* 遮罩：轻米色半透明，不压背景图 */}
+      <div style={{ position: "absolute", inset: 0, background: "rgba(240,230,215,.45)", pointerEvents: "none", zIndex: 0 }} />
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
 
       {/* ── 顶栏 ── */}
@@ -1469,7 +1486,7 @@ export default function GroupChatPage({
             padding: "10px 14px", borderRadius: 14,
             border: "1px solid rgba(196,166,184,.35)",
             background: "rgba(255,255,255,.85)",
-            fontSize: 14, color: "#3a2e4a", lineHeight: 1.6,
+            fontSize: "max(16px, 14px)", color: "#3a2e4a", lineHeight: 1.6,
             fontFamily: "var(--font-main)", outline: "none",
             opacity: isProcessing ? 0.6 : 1,
           }}
