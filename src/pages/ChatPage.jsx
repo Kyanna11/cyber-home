@@ -471,7 +471,6 @@ function IntimateInvitationPanel({ activeChar, onSend, onClose }) {
   const [customMood,  setCustomMood]  = useState("");
   const [preface,     setPreface]     = useState("");
   const [invitation,  setInvitation]  = useState("");
-  const [replyMode,   setReplyMode]   = useState("chat");
 
   const finalScene = scene === "自定义" ? customScene.trim() : scene;
   const finalMood  = mood  === "自定义" ? customMood.trim()  : mood;
@@ -479,7 +478,7 @@ function IntimateInvitationPanel({ activeChar, onSend, onClose }) {
 
   const handleSend = () => {
     if (!canSend) return;
-    onSend({ scene: finalScene, mood: finalMood, preface: preface.trim(), invitation: invitation.trim(), replyMode });
+    onSend({ scene: finalScene, mood: finalMood, preface: preface.trim(), invitation: invitation.trim() });
   };
 
   const chipStyle = (active) => ({
@@ -588,26 +587,6 @@ function IntimateInvitationPanel({ activeChar, onSend, onClose }) {
                 ...textInput, minHeight: 72, resize: "none", lineHeight: 1.75,
               }}
             />
-          </div>
-
-          {/* 回复方式 */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={fieldLabel}>ta 的回应方式</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {[{ v: "chat", label: "碎碎念", sub: "短句自然流" }, { v: "long", label: "沉浸长文", sub: "完整段落" }].map(({ v, label, sub }) => (
-                <button key={v} onClick={() => setReplyMode(v)} style={{
-                  flex: 1, padding: "9px 6px", borderRadius: 12, cursor: "pointer",
-                  fontFamily: "var(--font-main)", transition: "all .15s",
-                  background: replyMode === v ? "rgba(120,100,160,.14)" : "rgba(255,255,255,.7)",
-                  border: `1px solid ${replyMode === v ? "rgba(120,100,160,.4)" : "rgba(196,166,184,.25)"}`,
-                  color: replyMode === v ? "#5a4a8a" : "#7a6a8e",
-                  textAlign: "center",
-                }}>
-                  <div style={{ fontSize: 12, fontWeight: 500 }}>{label}</div>
-                  <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2 }}>{sub}</div>
-                </button>
-              ))}
-            </div>
           </div>
 
           <button
@@ -3939,12 +3918,14 @@ export default function ChatPage({
         </>
       )}
 
-      {/* ── 回复模式切换（场景模式下隐藏，避免与场景邀请表单内的模式选择冲突）── */}
-      {!isSceneMode && <div style={{
+      {/* ── 回复模式切换 ── */}
+      <div style={{
         display: "flex", justifyContent: "center",
         padding: "5px 16px 2px",
-        background: "rgba(248,244,252,.95)",
-        borderTop: attachView === "grid" ? "none" : "1px solid rgba(196,166,184,.1)",
+        background: S ? S.replyBarBg : "rgba(248,244,252,.95)",
+        borderTop: S
+          ? `1px solid ${S.replyBarBd}`
+          : (attachView === "grid" ? "none" : "1px solid rgba(196,166,184,.1)"),
         flexShrink: 0,
         backdropFilter: S ? "blur(16px)" : undefined,
         WebkitBackdropFilter: S ? "blur(16px)" : undefined,
@@ -3986,7 +3967,7 @@ export default function ChatPage({
             </button>
           ))}
         </div>
-      </div>}
+      </div>
 
       {/* ── 输入栏 ── */}
       <div
