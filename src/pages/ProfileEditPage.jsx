@@ -574,6 +574,52 @@ export default function ProfileEditPage({
                 />
               </div>
 
+              {/* 自动沉淀提醒 */}
+              <div className="section-card">
+                <div className="section-title">🌿 自动沉淀提醒</div>
+                <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7 }}>
+                  满足条件时，聊天页顶部会轻轻提醒你整理一下关系。设为 0 则关闭对应触发。
+                </div>
+                <div style={{ display: "flex", gap: 16 }}>
+                  <div className="field-group" style={{ flex: 1 }}>
+                    <label className="field-label">超过几天没整理</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input
+                        type="number"
+                        min="0"
+                        max="30"
+                        className="field-input"
+                        style={{ width: 72 }}
+                        value={editingChar.autoSettleDays ?? 2}
+                        onChange={(e) => setEditingChar((prev) => ({
+                          ...prev,
+                          autoSettleDays: Math.max(0, parseInt(e.target.value) || 0),
+                        }))}
+                      />
+                      <span style={{ fontSize: 12, color: "var(--text-faint)" }}>天</span>
+                    </div>
+                  </div>
+                  <div className="field-group" style={{ flex: 1 }}>
+                    <label className="field-label">新增消息超过几条</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input
+                        type="number"
+                        min="0"
+                        max="500"
+                        className="field-input"
+                        style={{ width: 72 }}
+                        value={editingChar.autoSettleMsgs ?? 50}
+                        onChange={(e) => setEditingChar((prev) => ({
+                          ...prev,
+                          autoSettleMsgs: Math.max(0, parseInt(e.target.value) || 0),
+                        }))}
+                      />
+                      <span style={{ fontSize: 12, color: "var(--text-faint)" }}>条</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* 危险区域 */}
               <div className="section-card" style={{ borderColor: "rgba(192,112,112,.2)" }}>
                 <div className="section-title" style={{ color: "#a06060" }}>⚠️ 危险区域</div>

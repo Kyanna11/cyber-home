@@ -229,6 +229,12 @@ export default function App() {
   const lastCharOpenedRef = useRef(loadJSON("_lastCharOpened", {}));
   // 本次 session 内已触发过离线消息的 charId 集合（不重复触发）
   const offlineCheckedRef = useRef(new Set());
+  // ── 自动沉淀提醒 ──
+  const lastSettledAtRef = useRef(loadJSON("_lastSettledAt", {}));
+  // 本次 session 内已被关掉的沉淀提醒，不重复弹
+  const settleDismissedRef = useRef(new Set());
+  const [showSettleReminder, setShowSettleReminder] = useState(false);
+  const [settleReminderText, setSettleReminderText] = useState("");
 
   // ─── 手札 ───
   const [noteEntries, setNoteEntries] = useState(() => normalizeNotes(loadDiary()));
@@ -1810,6 +1816,63 @@ ${recentLines}
     }
   };
 
+  // ── 自动沉淀提醒：检查是否需要弹出 ──
+  const checkSettleReminder = (char, allMsgs) => {
+    if (!char) return;
+    const charId = char.id;
+    if (settleDismissedRef.current.has(charId)) return;
+
+    const autoSettleDays = char.autoSettleDays ?? 2;
+    const autoSettleMsgs = char.autoSettleMsgs ?? 50;
+    const lastSettled = lastSettledAtRef.current[charId] || 0;
+
+    // 只计算真实对话消息（过滤系统卡片和场景触发）
+    const realMsgs = allMsgs.filter(
+      (m) => (m.role === "user" || m.role === "bot") &&
+        !m.isOfflineMessage && !m.isSceneOpening && (m.content || "").trim()
+    );
+    if (realMsgs.length === 0) return;
+
+    // 时间触发：距上次沉淀超过 N 天
+    if (autoSettleDays > 0 && lastSettled > 0) {
+      const daysSince = (Date.now() - lastSettled) / 86400000;
+      if (daysSince >= autoSettleDays) {
+        const d = Math.floor(daysSince);
+        setSettleReminderText(`你们已经 ${d} 天没有整理了`);
+        setShowSettleReminder(true);
+        return;
+      }
+    }
+
+    // 数量触发：自上次沉淀新增超过 N 条消息
+    if (autoSettleMsgs > 0) {
+      const newCount = lastSettled > 0
+        ? realMsgs.filter((m) => (m.ts || 0) > lastSettled).length
+        : realMsgs.length;
+      if (newCount >= autoSettleMsgs) {
+        setSettleReminderText(`你们聊了 ${newCount} 条还没整理过`);
+        setShowSettleReminder(true);
+      }
+    }
+  };
+
+  // 用户点击「现在整理一下」
+  const handleGoSettle = () => {
+    setShowSettleReminder(false);
+    if (activeCharId) {
+      settleDismissedRef.current.add(activeCharId);
+      lastSettledAtRef.current[activeCharId] = Date.now();
+      saveJSON("_lastSettledAt", lastSettledAtRef.current);
+      generateSettlementFromChat(activeCharId);
+    }
+  };
+
+  // 用户关掉提醒（本 session 内不再弹）
+  const handleDismissSettleReminder = () => {
+    setShowSettleReminder(false);
+    if (activeCharId) settleDismissedRef.current.add(activeCharId);
+  };
+
   const enterChat = (charId) => {
     setActiveCharId(charId);
     setShowCharSelect(false);
@@ -1845,6 +1908,10 @@ ${recentLines}
       // 延迟执行，让页面先渲染完
       setTimeout(() => generateOfflineMessage(char, initialMsgs), 1200);
     }
+
+    // ── 自动沉淀提醒：进入聊天时检查 ──
+    setShowSettleReminder(false); // 先重置，避免上一个角色的状态残留
+    setTimeout(() => checkSettleReminder(char, initialMsgs), 800);
 
     // ── 入住仪式：首次进入时自动注入一条 system 消息 ──
     if (char && !char.migration?.moveInCeremonyCreated) {
@@ -2930,12 +2997,20 @@ ${chatLines}
           ...prev,
           { role: "bot", thought: i === 0 ? thought : null, content: text, time: timeStr, replyMode: mode },
         ]);
-        if (i === parts.length - 1) setIsSending(false);
+        if (i === parts.length - 1) {
+          setIsSending(false);
+          // bot 最后一条回复后，检查消息数量触发
+          setMessages((snap) => {
+            const char = characters.find((c) => c.id === activeCharId);
+            if (char) checkSettleReminder(char, snap);
+            return snap;
+          });
+        }
       }, delay);
       typingTimers.current.push(t2);
       if (i < parts.length - 1) delay += 200;
     });
-  }, []);
+  }, [activeCharId, characters]);
 
   // ── 场景系统提示附加 ──
   const buildSceneSystemAddition = (sceneConfig) => {
@@ -3643,6 +3718,10 @@ ${chatLines}
           isSending={isSending}
           isTyping={isTyping}
           offlineGenerating={offlineGenerating}
+          showSettleReminder={showSettleReminder}
+          settleReminderText={settleReminderText}
+          onGoSettle={handleGoSettle}
+          onDismissSettleReminder={handleDismissSettleReminder}
           messagesEndRef={messagesEndRef}
           handleRegenerate={handleRegenerate}
           inputText={inputText}

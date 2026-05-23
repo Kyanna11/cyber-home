@@ -131,6 +131,9 @@ export const DEFAULT_CHAR = {
   },
   worldview: { world: "", values: "", love: "", life: "", growth: "" },
   systemPromptExtra: "",
+  // ── 自动沉淀提醒 ──
+  autoSettleDays: 2,   // 距上次整理超过 N 天提醒（0 = 关闭）
+  autoSettleMsgs: 50,  // 新增消息超过 N 条提醒（0 = 关闭）
   // ── 普通聊天 UI 设置（不影响亲密邀请场景）──
   uiSettings: {
     chatBgType:   "default",  // "default" | "preset" | "url"

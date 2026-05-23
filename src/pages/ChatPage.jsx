@@ -1713,6 +1713,10 @@ export default function ChatPage({
   isSending,
   isTyping,
   offlineGenerating,
+  showSettleReminder,
+  settleReminderText,
+  onGoSettle,
+  onDismissSettleReminder,
   messagesEndRef,
   handleRegenerate,
   // 输入栏
@@ -2553,6 +2557,54 @@ export default function ChatPage({
         } : undefined}
       >
         <div className="time-divider" style={S ? { color: S.timeTxt } : undefined}>—— 今天 ——</div>
+
+        {/* ── 自动沉淀提醒横幅 ── */}
+        {showSettleReminder && !isSceneMode && (
+          <div style={{
+            margin: "0 12px 8px",
+            padding: "10px 14px",
+            borderRadius: 14,
+            background: "rgba(196,166,184,.13)",
+            border: "1px solid rgba(196,166,184,.25)",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            fontSize: 12,
+            color: "var(--text-soft)",
+            backdropFilter: "blur(6px)",
+          }}>
+            <span style={{ fontSize: 15 }}>🌿</span>
+            <span style={{ flex: 1, lineHeight: 1.6 }}>{settleReminderText}，要不要整理一下？</span>
+            <button
+              onClick={onGoSettle}
+              style={{
+                padding: "4px 12px",
+                borderRadius: 20,
+                background: "rgba(196,166,184,.25)",
+                border: "1px solid rgba(196,166,184,.4)",
+                color: "var(--text-soft)",
+                fontSize: 11,
+                cursor: "pointer",
+                fontFamily: "var(--font-main)",
+                letterSpacing: .5,
+                whiteSpace: "nowrap",
+              }}
+            >整理一下</button>
+            <button
+              onClick={onDismissSettleReminder}
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--text-faint)",
+                cursor: "pointer",
+                fontSize: 14,
+                padding: "0 2px",
+                lineHeight: 1,
+              }}
+            >×</button>
+          </div>
+        )}
+
         {messages.map((msg, i) => {
           // ── 系统消息：入住仪式卡片 ──
           if (msg.role === "system" && msg.type === "move_in_ceremony") {
