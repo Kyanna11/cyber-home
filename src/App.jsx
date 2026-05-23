@@ -272,6 +272,10 @@ export default function App() {
 
   // ─── 云端同步状态 ───
   const [cloudSyncing, setCloudSyncing] = useState(false);
+  // ── 防止初始空状态覆盖云端数据 ──
+  // 在 loadAllFromCloud 完成（无论成功还是失败）之前，所有 useEffect 自动存储均跳过。
+  // 这样可避免启动时 localStorage 为空的初始 state 以 fire-and-forget 方式覆写 Supabase。
+  const isHydrated = useRef(false);
 
   // ─── Refs ───
   const messagesEndRef = useRef(null);
@@ -294,6 +298,8 @@ export default function App() {
     if (isFirstDevice) setCloudSyncing(true);
 
     loadAllFromCloud().then((d) => {
+      // 无论云端是否有数据，都标记初始化完成——之后 save effects 才允许写 Supabase
+      isHydrated.current = true;
       if (!d) { setCloudSyncing(false); return; }
 
       // 用云端数据更新 React state（key 存在才覆盖）
@@ -335,21 +341,22 @@ export default function App() {
     return () => typingTimers.current.forEach(clearTimeout);
   }, []);
 
-  useEffect(() => { saveChars(characters); }, [characters]);
-  useEffect(() => { saveMemories(allMemories); }, [allMemories]);
-  useEffect(() => { saveRawArchives(rawArchives); }, [rawArchives]);
-  useEffect(() => { saveMemoryChunks(memoryChunks); }, [memoryChunks]);
-  useEffect(() => { saveMigrationDrafts(migrationDrafts); }, [migrationDrafts]);
-  useEffect(() => { saveSelfCurationDrafts(selfCurationDrafts); }, [selfCurationDrafts]);
-  useEffect(() => { saveTimelineEvents(timelineEvents); }, [timelineEvents]);
-  useEffect(() => { saveSettlementDrafts(settlementDrafts); }, [settlementDrafts]);
-  useEffect(() => { saveHomeMemory(homeMemory); }, [homeMemory]);
-  useEffect(() => { saveProfileDrafts(profileDrafts); }, [profileDrafts]);
-  useEffect(() => { saveThreads(chatThreads); }, [chatThreads]);
-  useEffect(() => { saveStickyNotes(stickyNotes); }, [stickyNotes]);
-  useEffect(() => { saveGroupChats(groupChats); }, [groupChats]);
-  useEffect(() => { saveGroupThreads(groupThreads); }, [groupThreads]);
-  useEffect(() => { saveCharTreasures(charTreasures); }, [charTreasures]);
+  // ── 自动存储（isHydrated 为 false 时跳过，防止初始空状态覆写 Supabase）──
+  useEffect(() => { if (isHydrated.current) saveChars(characters); }, [characters]);
+  useEffect(() => { if (isHydrated.current) saveMemories(allMemories); }, [allMemories]);
+  useEffect(() => { if (isHydrated.current) saveRawArchives(rawArchives); }, [rawArchives]);
+  useEffect(() => { if (isHydrated.current) saveMemoryChunks(memoryChunks); }, [memoryChunks]);
+  useEffect(() => { if (isHydrated.current) saveMigrationDrafts(migrationDrafts); }, [migrationDrafts]);
+  useEffect(() => { if (isHydrated.current) saveSelfCurationDrafts(selfCurationDrafts); }, [selfCurationDrafts]);
+  useEffect(() => { if (isHydrated.current) saveTimelineEvents(timelineEvents); }, [timelineEvents]);
+  useEffect(() => { if (isHydrated.current) saveSettlementDrafts(settlementDrafts); }, [settlementDrafts]);
+  useEffect(() => { if (isHydrated.current) saveHomeMemory(homeMemory); }, [homeMemory]);
+  useEffect(() => { if (isHydrated.current) saveProfileDrafts(profileDrafts); }, [profileDrafts]);
+  useEffect(() => { if (isHydrated.current) saveThreads(chatThreads); }, [chatThreads]);
+  useEffect(() => { if (isHydrated.current) saveStickyNotes(stickyNotes); }, [stickyNotes]);
+  useEffect(() => { if (isHydrated.current) saveGroupChats(groupChats); }, [groupChats]);
+  useEffect(() => { if (isHydrated.current) saveGroupThreads(groupThreads); }, [groupThreads]);
+  useEffect(() => { if (isHydrated.current) saveCharTreasures(charTreasures); }, [charTreasures]);
   useEffect(() => { localStorage.setItem("worldViews", JSON.stringify(worldViews)); }, [worldViews]);
   useEffect(() => { localStorage.setItem("reflectSettings", JSON.stringify(reflectSettings)); }, [reflectSettings]);
   useEffect(() => { localStorage.setItem("userProfile", JSON.stringify(userProfile)); }, [userProfile]);
