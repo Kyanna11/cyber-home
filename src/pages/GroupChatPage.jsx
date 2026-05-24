@@ -1281,8 +1281,297 @@ ${record.rawContent}
   };
 }
 
+// ─── 解析 AI 输出的 JSON ───
+function parseDraftOutput(raw) {
+  const s = raw.trim();
+  try { return JSON.parse(s); } catch {}
+  const m = s.match(/\{[\s\S]*\}/);
+  if (m) { try { return JSON.parse(m[0]); } catch {} }
+  return null;
+}
+
+// ─── 生成记忆沉淀草稿（LLM call）───
+async function generateDiaryMemoryDraft(diary, record, config, ctxConfig) {
+  const model = (config.model === "__custom__" ? config.customModel : config.model) || "";
+
+  const systemPrompt = `你是一个记忆整理助手，帮助用户从入住者日记中提炼值得保存的内容建议。
+你的输出必须是纯 JSON，不要加任何代码块标记（不要写 \`\`\`json）。`;
+
+  const userPrompt = `以下是一次小家客厅记录，以及 ${diary.charName} 为这次客厅写下的日记。
+
+【客厅记录原文】
+${record.rawContent}
+
+【${diary.charName} 的客厅日记】
+${diary.content}
+
+---
+
+请判断这篇日记中哪些内容值得被提炼成待确认记忆草稿。
+
+注意：
+- 不要把日记全文写入长期记忆
+- 不要把临时玩笑或当晚氛围误写成永久事实
+- 不要替声声自动下定义
+- 每条建议简短明确，不超过 80 字
+- 只属于这次客厅氛围、玩笑、临时说法的内容，放到 notForLongTermMemory
+- 如果某个分区没有建议，留空数组即可
+
+请输出纯 JSON（不要 markdown 代码块），格式如下：
+{
+  "charMemorySuggestions": [],
+  "userProfileSuggestions": [],
+  "relationshipSettlementSuggestions": [],
+  "timelineSuggestions": [],
+  "treasureSuggestions": [],
+  "notForLongTermMemory": []
+}`;
+
+  const resp = await fetch(
+    config.apiUrl.replace(/\/+$/, "") + "/chat/completions",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.5,
+        max_tokens: ctxConfig?.maxTokens ? Math.min(ctxConfig.maxTokens, 1500) : 1500,
+      }),
+    }
+  );
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${resp.status}`);
+  }
+  const data = await resp.json();
+  const raw  = data.choices?.[0]?.message?.content?.trim() || "";
+  const parsed = parseDraftOutput(raw);
+  return {
+    id:                                genId(),
+    diaryId:                           diary.id,
+    recordId:                          record.id,
+    charId:                            diary.charId,
+    charName:                          diary.charName,
+    status:                            "pending",
+    createdAt:                         Date.now(),
+    updatedAt:                         Date.now(),
+    charMemorySuggestions:             parsed?.charMemorySuggestions             || [],
+    userProfileSuggestions:            parsed?.userProfileSuggestions            || [],
+    relationshipSettlementSuggestions: parsed?.relationshipSettlementSuggestions || [],
+    timelineSuggestions:               parsed?.timelineSuggestions               || [],
+    treasureSuggestions:               parsed?.treasureSuggestions               || [],
+    notForLongTermMemory:              parsed?.notForLongTermMemory               || [],
+    rawOutput: raw,
+  };
+}
+
+// ─── 草稿分区定义 ───
+const DRAFT_SECTIONS = [
+  { key: "charMemorySuggestions",              emoji: "🧠", label: "关于ta应该记住的",  hint: "可进入记忆宫殿" },
+  { key: "userProfileSuggestions",             emoji: "👤", label: "关于声声的信息",    hint: "可生成声声档案草稿" },
+  { key: "relationshipSettlementSuggestions",  emoji: "💫", label: "关系新默契 / 变化", hint: "可进入关系沉淀草稿" },
+  { key: "timelineSuggestions",                emoji: "🕰", label: "值得记到时间线",    hint: "可生成时间线事件" },
+  { key: "treasureSuggestions",                emoji: "💎", label: "值得珍藏的原话",    hint: "可保存到宝库" },
+  { key: "notForLongTermMemory",               emoji: "🍃", label: "只属于这次客厅",   hint: "不建议写入长期记忆" },
+];
+
+// ─── 记忆沉淀草稿面板 ───
+function DiaryMemoryDraftPanel({ draft, diary, char, onClose }) {
+  const [ignored, setIgnored]           = useState(() => new Set());
+  const [copiedSection, setCopiedSection] = useState("");
+
+  const toggleIgnore = (key) => {
+    setIgnored((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const copySection = (sectionKey, items) => {
+    const lines = items
+      .filter((_, i) => !ignored.has(`${sectionKey}-${i}`))
+      .map((t) => `• ${t}`)
+      .join("\n");
+    if (!lines) return;
+    navigator.clipboard.writeText(lines).then(() => {
+      setCopiedSection(sectionKey);
+      setTimeout(() => setCopiedSection(""), 2000);
+    }).catch(() => {});
+  };
+
+  const populated = DRAFT_SECTIONS.filter((s) => (draft[s.key] || []).length > 0);
+  const totalCount = populated.reduce((a, s) => a + (draft[s.key] || []).length, 0);
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 330,
+        background: "rgba(74,69,96,.44)",
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        width: "100%", maxWidth: 480, height: "88vh",
+        background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+        borderRadius: "20px 20px 0 0",
+        display: "flex", flexDirection: "column",
+        overflow: "hidden",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.22)",
+      }}>
+        {/* 顶栏 */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 18px 12px",
+          borderBottom: "1px solid rgba(196,166,184,.2)",
+          flexShrink: 0,
+        }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{
+                width: 24, height: 24, borderRadius: 8, flexShrink: 0,
+                background: "rgba(196,166,184,.2)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 13, overflow: "hidden",
+              }}>
+                {char?.avatarImg
+                  ? <img src={char.avatarImg} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+                  : (char?.emoji || "💜")}
+              </div>
+              <span style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>
+                {diary.charName} · 记忆沉淀草稿
+              </span>
+            </div>
+            <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 3 }}>
+              共 {totalCount} 条建议 · 草稿状态，不会自动写入任何记忆
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
+        </div>
+
+        {/* 说明 */}
+        <div style={{
+          padding: "8px 16px 10px",
+          background: "rgba(120,100,160,.04)",
+          borderBottom: "1px solid rgba(196,166,184,.1)",
+          fontSize: 11, color: "#7a6a8e", lineHeight: 1.8, flexShrink: 0,
+        }}>
+          以下建议来自 AI 分析，<strong>不会自动写入任何长期记忆</strong>。点"忽略"划掉不需要的条目；点"复制"把建议带到对应功能手动操作。
+        </div>
+
+        {/* 各分区 */}
+        <div style={{ flex: 1, overflow: "auto", padding: "12px 16px 16px" }}>
+          {populated.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 0", fontSize: 13, color: "var(--text-faint)", lineHeight: 1.9 }}>
+              <div style={{ fontSize: 28, marginBottom: 10 }}>🌿</div>
+              这篇日记没有找到值得提炼的内容建议。<br />
+              可能这次聊天比较轻松随意，没有需要长期保留的信息。
+            </div>
+          ) : (
+            populated.map((section) => {
+              const items = draft[section.key] || [];
+              const activeCount = items.filter((_, i) => !ignored.has(`${section.key}-${i}`)).length;
+              return (
+                <div key={section.key} style={{ marginBottom: 18 }}>
+                  {/* 分区标题 */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                    <span style={{ fontSize: 14 }}>{section.emoji}</span>
+                    <span style={{ fontSize: 12, color: "#5a4a6a", fontWeight: 500, flex: 1 }}>{section.label}</span>
+                    <span style={{ fontSize: 10, color: "var(--text-faint)", marginRight: 4 }}>{section.hint}</span>
+                    <button
+                      onClick={() => copySection(section.key, items)}
+                      disabled={activeCount === 0}
+                      style={{
+                        padding: "3px 10px", borderRadius: 7, fontSize: 10, flexShrink: 0,
+                        background: copiedSection === section.key ? "rgba(120,100,160,.2)" : "rgba(120,100,160,.08)",
+                        border: "1px solid rgba(120,100,160,.18)",
+                        color: activeCount === 0 ? "var(--text-faint)" : "#6a5a7a",
+                        cursor: activeCount === 0 ? "default" : "pointer",
+                        fontFamily: "var(--font-main)",
+                      }}
+                    >
+                      {copiedSection === section.key ? "✓ 已复制" : "复制"}
+                    </button>
+                  </div>
+                  {/* 条目列表 */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {items.map((item, idx) => {
+                      const itemKey = `${section.key}-${idx}`;
+                      const isIgnored = ignored.has(itemKey);
+                      return (
+                        <div key={idx} style={{
+                          display: "flex", alignItems: "flex-start", gap: 8,
+                          padding: "9px 12px", borderRadius: 10,
+                          background: isIgnored ? "rgba(196,166,184,.06)" : "rgba(255,255,255,.72)",
+                          border: `1px solid ${isIgnored ? "rgba(196,166,184,.15)" : "rgba(196,166,184,.25)"}`,
+                          transition: "all .15s",
+                        }}>
+                          <span style={{
+                            flex: 1, fontSize: 12, color: isIgnored ? "var(--text-faint)" : "#3a2e4a",
+                            lineHeight: 1.75,
+                            textDecoration: isIgnored ? "line-through" : "none",
+                          }}>{item}</span>
+                          <button
+                            onClick={() => toggleIgnore(itemKey)}
+                            style={{
+                              flexShrink: 0, padding: "3px 9px", borderRadius: 7, fontSize: 10,
+                              background: isIgnored ? "rgba(196,166,184,.12)" : "rgba(180,120,120,.08)",
+                              border: `1px solid ${isIgnored ? "rgba(196,166,184,.2)" : "rgba(180,120,120,.2)"}`,
+                              color: isIgnored ? "var(--text-faint)" : "#9a6a6a",
+                              cursor: "pointer", fontFamily: "var(--font-main)",
+                            }}
+                          >{isIgnored ? "恢复" : "忽略"}</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })
+          )}
+
+          {/* 原始输出（折叠查看，调试用）*/}
+          {draft.rawOutput && (
+            <details style={{ marginTop: 4 }}>
+              <summary style={{ fontSize: 10, color: "var(--text-faint)", cursor: "pointer", userSelect: "none" }}>查看 AI 原始输出</summary>
+              <pre style={{
+                fontSize: 10, color: "#7a6a8e", lineHeight: 1.6, marginTop: 6,
+                whiteSpace: "pre-wrap", wordBreak: "break-word",
+                padding: "10px", borderRadius: 8,
+                background: "rgba(255,255,255,.5)", border: "1px solid rgba(196,166,184,.18)",
+              }}>{draft.rawOutput}</pre>
+            </details>
+          )}
+        </div>
+
+        {/* 底部按钮 */}
+        <div style={{
+          padding: "12px 16px calc(16px + env(safe-area-inset-bottom,0px))",
+          borderTop: "1px solid rgba(196,166,184,.15)", flexShrink: 0,
+        }}>
+          <button
+            onClick={onClose}
+            style={{
+              width: "100%", padding: "12px", borderRadius: 14,
+              background: "rgba(120,100,160,.85)", border: "none",
+              color: "white", fontSize: 13, cursor: "pointer",
+              fontFamily: "var(--font-main)", letterSpacing: 0.5,
+            }}
+          >收好了</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── 日记卡 ───
-function DiaryCard({ diary, char, onSaveToTreasure, onSaveToCharTreasure, onDelete }) {
+function DiaryCard({ diary, char, onSaveToTreasure, onSaveToCharTreasure, onDelete, onGenerateDraft, onViewDraft, isGeneratingDraft }) {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [savedFeedback, setSavedFeedback] = useState("");
 
@@ -1333,6 +1622,39 @@ function DiaryCard({ diary, char, onSaveToTreasure, onSaveToCharTreasure, onDele
       <div style={{ padding: "12px 14px", fontSize: 13, color: "#3a2e4a", lineHeight: 1.9, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
         {diary.content}
       </div>
+
+      {/* 提炼记忆草稿入口 */}
+      {!deleteConfirm && (
+        <div style={{ padding: "0 14px 8px" }}>
+          <button
+            onClick={diary.memoryDraft ? onViewDraft : onGenerateDraft}
+            disabled={isGeneratingDraft}
+            style={{
+              width: "100%", padding: "8px 12px", borderRadius: 10, fontSize: 11,
+              background: diary.memoryDraft
+                ? "rgba(120,100,160,.1)"
+                : isGeneratingDraft
+                  ? "rgba(196,166,184,.1)"
+                  : "rgba(255,244,180,.55)",
+              border: `1px solid ${diary.memoryDraft
+                ? "rgba(120,100,160,.22)"
+                : isGeneratingDraft
+                  ? "rgba(196,166,184,.2)"
+                  : "rgba(200,180,80,.3)"}`,
+              color: isGeneratingDraft ? "var(--text-faint)" : "#5a4a5a",
+              cursor: isGeneratingDraft ? "default" : "pointer",
+              fontFamily: "var(--font-main)", letterSpacing: 0.3, textAlign: "left",
+              transition: "all .15s",
+            }}
+          >
+            {isGeneratingDraft
+              ? "💡 正在提炼记忆建议…"
+              : diary.memoryDraft
+                ? "💡 查看记忆草稿"
+                : "💡 看看有什么值得记住"}
+          </button>
+        </div>
+      )}
 
       {/* 操作行 */}
       {deleteConfirm ? (
@@ -1385,6 +1707,9 @@ function LoungeRecordDetailPanel({
   const [genError, setGenError]           = useState("");
   const [diaryFeedback, setDiaryFeedback] = useState("");
   const [showRaw, setShowRaw]             = useState(false);
+  // ── 记忆草稿 ──
+  const [generatingDraftForId, setGeneratingDraftForId] = useState(null);
+  const [viewingDraft, setViewingDraft]   = useState(null); // { diary, draft }
 
   const memberChars = (record.memberIds || [])
     .map((id) => characters.find((c) => c.id === id))
@@ -1458,6 +1783,29 @@ function LoungeRecordDetailPanel({
       })],
     });
     setDiaryFeedback("💎 已保存到我的宝库");
+  };
+
+  // 为单篇日记生成记忆沉淀草稿
+  const handleGenerateDraftForDiary = async (diary) => {
+    if (!config?.apiUrl?.trim() || !config?.apiKey?.trim()) {
+      setGenError("请先配置 API 地址和密钥"); return;
+    }
+    setGeneratingDraftForId(diary.id);
+    setGenError("");
+    try {
+      const draft = await generateDiaryMemoryDraft(diary, record, config, ctxConfig);
+      const updatedDiaries = (record.diaries || []).map((d) =>
+        d.id === diary.id ? { ...d, memoryDraft: draft } : d
+      );
+      const updatedRecord = { ...record, diaries: updatedDiaries };
+      onUpdateRecord?.(updatedRecord);
+      const updatedDiary = updatedDiaries.find((d) => d.id === diary.id);
+      setViewingDraft({ diary: updatedDiary, draft });
+    } catch (err) {
+      setGenError(`记忆草稿生成失败：${err.message}`);
+    } finally {
+      setGeneratingDraftForId(null);
+    }
   };
 
   return (
@@ -1567,6 +1915,9 @@ function LoungeRecordDetailPanel({
                     onSaveToTreasure={() => handleSaveDiaryToTreasure(diary)}
                     onSaveToCharTreasure={null}
                     onDelete={() => handleDeleteDiary(diary.id)}
+                    onGenerateDraft={() => handleGenerateDraftForDiary(diary)}
+                    onViewDraft={() => setViewingDraft({ diary, draft: diary.memoryDraft })}
+                    isGeneratingDraft={generatingDraftForId === diary.id}
                   />
                 );
               })}
@@ -1642,6 +1993,16 @@ function LoungeRecordDetailPanel({
           )}
         </div>
       </div>
+
+      {/* 记忆草稿面板 */}
+      {viewingDraft && (
+        <DiaryMemoryDraftPanel
+          draft={viewingDraft.draft}
+          diary={viewingDraft.diary}
+          char={characters.find((c) => c.id === viewingDraft.diary.charId)}
+          onClose={() => setViewingDraft(null)}
+        />
+      )}
     </div>
   );
 }
