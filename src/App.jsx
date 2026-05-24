@@ -124,6 +124,138 @@ const defaultUserProfile = {
   sharedVault: [],
 };
 
+// ─── 主动便签系统 · 模块级工具 ───────────────────────────────────────────────
+const _PROACTIVE_META_KEY      = "_proactive_note_meta";
+const _PROACTIVE_COOLDOWN_MS   = 24 * 60 * 60 * 1000; // 同类型 24h 冷却
+const _PROACTIVE_IDLE_DAYS     = 3;                    // 超过 N 天未聊触发 idle
+
+function _loadProactiveMeta() {
+  try { return JSON.parse(localStorage.getItem(_PROACTIVE_META_KEY) || "{}"); } catch { return {}; }
+}
+function _saveProactiveMeta(meta) {
+  localStorage.setItem(_PROACTIVE_META_KEY, JSON.stringify(meta));
+}
+function _isOnCooldown(meta, charId, type) {
+  return Date.now() - (meta[`${charId}::${type}`] || 0) < _PROACTIVE_COOLDOWN_MS;
+}
+function _markGenerated(meta, charId, type) {
+  const next = { ...meta, [`${charId}::${type}`]: Date.now() };
+  _saveProactiveMeta(next);
+  return next;
+}
+
+// 找某入住者最近一条真实对话消息的时间戳
+function _lastChatTime(threads, charId) {
+  const charThreads = threads?.[charId] || [];
+  let last = 0;
+  for (const thread of charThreads) {
+    for (const msg of (thread.messages || [])) {
+      if ((msg.role === "user" || msg.role === "bot") && !msg.isSceneOpening) {
+        const t = msg.ts || msg.createdAt || 0;
+        if (t > last) last = t;
+      }
+    }
+  }
+  return last;
+}
+
+// 调用 LLM 生成便签正文
+async function _callLLMForNote(char, type, idleDays, cfg) {
+  const model = (cfg.model === "__custom__" ? cfg.customModel : cfg.model) || "";
+  if (!model || !cfg.apiKey || !cfg.apiUrl) return null;
+
+  const sysPrompt = buildSystemPrompt(char, []);
+
+  const contextHint = type === "idle"
+    ? `你和用户已经 ${Math.floor(idleDays)} 天没有聊天了，你想她了，想给她留一张便签。`
+    : `现在是深夜，你想在她睡前给她留一张便签。`;
+
+  const userMsg = `${contextHint}
+
+请以你自己的身份，用你平时说话的方式，给用户留一张短便签。
+要求：100 字以内，口语化，有你自己的温度和气质。
+只输出便签正文，不要加任何前缀或解释。`;
+
+  try {
+    const resp = await fetch(
+      cfg.apiUrl.replace(/\/+$/, "") + "/chat/completions",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.apiKey}` },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: sysPrompt },
+            { role: "user", content: userMsg },
+          ],
+          temperature: 0.88,
+          max_tokens: 220,
+        }),
+      }
+    );
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return data.choices?.[0]?.message?.content?.trim() || null;
+  } catch { return null; }
+}
+
+// 主检查函数：对所有入住者逐一判断是否触发，最多生成 maxCount 张
+async function _runProactiveNoteCheck(chars, threads, existingNotes, cfg, onNoteReady) {
+  if (!cfg?.apiKey || !cfg?.apiUrl) return;
+  if (!Array.isArray(chars) || chars.length === 0) return;
+
+  const meta = _loadProactiveMeta();
+  const now  = Date.now();
+  const hour = new Date().getHours();
+  const isBedtime = hour >= 21 || hour <= 1;
+  let count = 0;
+  const MAX = 2; // 每次打开最多生成 2 张
+
+  for (const char of chars) {
+    if (count >= MAX) break;
+    if (!char?.id || !char?.name) continue;
+    if (char.proactiveNoteDisabled) continue; // 入住档案可关闭
+
+    // 已有这个入住者的未读便签就跳过，不重复打扰
+    const hasUnread = (existingNotes || []).some(
+      (n) => n.authorId === char.id && !n.read
+    );
+    if (hasUnread) continue;
+
+    const lastChat = _lastChatTime(threads, char.id);
+    const idleDays = lastChat > 0 ? (now - lastChat) / 86400000 : null;
+
+    // 优先判断久未聊天
+    let triggerType = null;
+    if (idleDays !== null && idleDays >= _PROACTIVE_IDLE_DAYS && !_isOnCooldown(meta, char.id, "idle")) {
+      triggerType = "idle";
+    } else if (isBedtime && !_isOnCooldown(meta, char.id, "bedtime")) {
+      triggerType = "bedtime";
+    }
+    if (!triggerType) continue;
+
+    const content = await _callLLMForNote(char, triggerType, idleDays, cfg);
+    if (!content) continue;
+
+    _markGenerated(meta, char.id, triggerType);
+    onNoteReady({
+      id:           `sticky-${now}-${char.id}-${triggerType}`,
+      authorType:   "char",
+      authorId:     char.id,
+      authorName:   char.name,
+      targetType:   "user",
+      targetCharId: null,
+      targetName:   "声声",
+      content,
+      createdAt:    now + count, // 细微偏移保证顺序
+      read:         false,
+      pinned:       false,
+      proactiveType: triggerType, // 标记来源，便于未来过滤
+    });
+    count++;
+  }
+}
+
 export default function App() {
   // ─── 导航 ───
   const [page, setPage] = useState("entrance");
@@ -343,6 +475,18 @@ export default function App() {
       if (d[RESIDENT_JOURNALS_STORAGE_KEY])  setResidentJournals(d[RESIDENT_JOURNALS_STORAGE_KEY]);
 
       setCloudSyncing(false);
+
+      // ── 主动便签：云同步完成后，延迟 1.5s 静默检查 ──
+      // 使用 d 中最新数据（优先），fallback 到 localStorage 初始 state
+      const _chars   = d?.[CHARS_STORAGE_KEY]           || characters;
+      const _threads = d?.[THREADS_STORAGE_KEY]         || chatThreads;
+      const _notes   = d?.[STICKY_NOTES_STORAGE_KEY]    || stickyNotes;
+      const _cfg     = d?.[STORAGE_KEY]                 || config;
+      setTimeout(() => {
+        _runProactiveNoteCheck(_chars, _threads, _notes, _cfg, (note) => {
+          setStickyNotes((prev) => [note, ...prev]);
+        });
+      }, 1500);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
