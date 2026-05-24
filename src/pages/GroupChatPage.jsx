@@ -1217,6 +1217,18 @@ async function generateOneDiary(char, record, config, ctxConfig, allMemories, us
   const systemBase   = buildSystemPrompt(char, charMemories);
   const userCtx      = buildUserContext(userProfile, char.id, homeMemory);
 
+  // 日记模式覆盖：禁用聊天专用格式指令
+  const DIARY_FORMAT_OVERRIDE = `
+
+【当前任务：写日记，不是聊天】
+你现在要写一篇私人日记，请完全忽略以下聊天格式规则：
+- 不要使用 [心声]...[/心声] 标签，直接把内心感受写进日记正文
+- 不要使用 ||| 分隔符，日记是一篇连续的文字
+- 不要用对话格式，用第一人称叙述文体写
+- 写法自然流畅，像真正写给自己看的私人记录`;
+
+  const system = systemBase + (userCtx ? `\n\n${userCtx}` : "") + DIARY_FORMAT_OVERRIDE;
+
   const instruction = `以下是这次小家客厅的完整对话记录：
 
 ${record.rawContent}
@@ -1240,7 +1252,7 @@ ${record.rawContent}
       body: JSON.stringify({
         model,
         messages: [
-          { role: "system", content: systemBase + (userCtx ? `\n\n${userCtx}` : "") },
+          { role: "system", content: system },
           { role: "user", content: instruction },
         ],
         temperature: 0.88,
