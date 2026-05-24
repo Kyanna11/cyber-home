@@ -764,6 +764,17 @@ function UserBubble({ msg, isActive, onToggleActive, onTimeline, onCharTreasure 
           <div style={{ fontSize: 10, color: "var(--text-faint)", textAlign: "right", marginTop: 3 }}>
             {msg.time}
           </div>
+          {msg.designatedCharName && (
+            <div style={{ textAlign: "right", marginTop: 4 }}>
+              <span style={{
+                display: "inline-block", fontSize: 10, color: "#8a7898",
+                background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.18)",
+                borderRadius: 8, padding: "2px 8px", letterSpacing: 0.3,
+              }}>
+                @ {msg.designatedCharName} 先说
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1021,6 +1032,8 @@ export default function GroupChatPage({
   const [showMoreMenu, setShowMoreMenu]   = useState(false);
   const [groupSettleLoading, setGroupSettleLoading] = useState(false);
   const [actionFeedback, setActionFeedback] = useState(""); // 操作完成提示
+  const [designatedCharId, setDesignatedCharId] = useState(null); // P1-1 指定先说
+  const [showAtPicker, setShowAtPicker]   = useState(false);
 
   const roundAbortRef   = useRef(false);
   const liveMessagesRef = useRef([]);
@@ -1085,7 +1098,7 @@ export default function GroupChatPage({
     return apiMsgs;
   };
 
-  const callCharLLM = async (char, historyMessages, userMsg, alreadyReplied) => {
+  const callCharLLM = async (char, historyMessages, userMsg, alreadyReplied, isDesignated = false) => {
     const model = getModel(char.modelOverride);
     if (!model || !config.apiUrl?.trim() || !config.apiKey?.trim()) {
       throw new Error("API 未配置");
@@ -1094,7 +1107,12 @@ export default function GroupChatPage({
     const charMemories = allMemories[char.id] || {};
     const systemBase   = buildSystemPrompt(char, charMemories);
     const userCtx      = buildUserContext(userProfile, char.id, homeMemory);
-    const system       = systemBase + (userCtx ? `\n\n${userCtx}` : "") + GROUP_SYSTEM_ADDITION;
+    const designatedNote = isDesignated
+      ? "\n\n用户指定你先回应这句话。"
+      : alreadyReplied.length > 0
+        ? "\n\n你已经看到前面成员的回复，请接着回应。不要替别人说话。"
+        : "";
+    const system       = systemBase + (userCtx ? `\n\n${userCtx}` : "") + GROUP_SYSTEM_ADDITION + designatedNote;
     const apiMessages  = buildGroupContext(historyMessages, userMsg, alreadyReplied);
 
     const resp = await fetch(
@@ -1138,6 +1156,16 @@ export default function GroupChatPage({
     setSendError("");
     setActiveMsgId(null);
 
+    // P1-1：计算本轮发言顺序（指定者第一，其余按原顺序）
+    const designatedChar = designatedCharId
+      ? characters.find((c) => c.id === designatedCharId)
+      : null;
+    const orderedIds = designatedCharId && group.memberIds.includes(designatedCharId)
+      ? [designatedCharId, ...group.memberIds.filter((id) => id !== designatedCharId)]
+      : [...group.memberIds];
+    setDesignatedCharId(null);
+    setShowAtPicker(false);
+
     const maxRound = messages.reduce((acc, m) => Math.max(acc, m.roundIndex || 0), 0);
     const roundIndex = maxRound + 1;
 
@@ -1151,6 +1179,7 @@ export default function GroupChatPage({
       time:        timeStr(),
       roundIndex,
       sourceRefs:  [],
+      designatedCharName: designatedChar?.name || null,
     };
 
     liveMessagesRef.current = [...messages, userMsg];
@@ -1168,7 +1197,7 @@ export default function GroupChatPage({
 
     const repliedThisRound = [];
 
-    for (const charId of group.memberIds) {
+    for (const charId of orderedIds) {
       if (roundAbortRef.current) break;
 
       const char = characters.find((c) => c.id === charId);
@@ -1180,7 +1209,8 @@ export default function GroupChatPage({
         const historyForContext = liveMessagesRef.current.filter(
           (m) => !(m.id === userMsg.id)
         );
-        const parts = await callCharLLM(char, historyForContext, userMsg, repliedThisRound);
+        const isDesignated = charId === designatedChar?.id;
+        const parts = await callCharLLM(char, historyForContext, userMsg, repliedThisRound, isDesignated);
 
         if (roundAbortRef.current) break;
 
@@ -1658,60 +1688,147 @@ export default function GroupChatPage({
           background: "rgba(240,233,255,.97)",
           borderTop: "1px solid rgba(196,166,184,.2)",
           backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
-          padding: "10px 12px calc(10px + env(safe-area-inset-bottom, 0px))",
-          display: "flex", alignItems: "flex-end", gap: 8,
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <textarea
-          ref={inputRef}
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="跟大家说点什么…"
-          disabled={isProcessing}
-          rows={1}
-          style={{
-            flex: 1, resize: "none", overflowY: "auto", maxHeight: 100,
-            padding: "10px 14px", borderRadius: 14,
-            border: "1px solid rgba(196,166,184,.35)",
-            background: "rgba(255,255,255,.85)",
-            fontSize: "max(16px, 14px)", color: "#3a2e4a", lineHeight: 1.6,
-            fontFamily: "var(--font-main)", outline: "none",
-            opacity: isProcessing ? 0.6 : 1,
-          }}
-        />
+        {/* @ 成员选择器 */}
+        {showAtPicker && (
+          <div style={{
+            padding: "8px 12px 6px",
+            display: "flex", gap: 8, flexWrap: "wrap",
+            borderBottom: "1px solid rgba(196,166,184,.15)",
+          }}>
+            {members.map((char) => {
+              const isSelected = designatedCharId === char.id;
+              return (
+                <div
+                  key={char.id}
+                  onClick={() => {
+                    setDesignatedCharId(isSelected ? null : char.id);
+                    setShowAtPicker(false);
+                  }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "5px 12px", borderRadius: 20, cursor: "pointer",
+                    background: isSelected ? "rgba(120,100,160,.2)" : "rgba(255,255,255,.75)",
+                    border: `1px solid ${isSelected ? "rgba(120,100,160,.4)" : "rgba(196,166,184,.3)"}`,
+                    fontSize: 12, color: isSelected ? "#5a4a6a" : "#7a6a8e",
+                    transition: "all .15s",
+                  }}
+                >
+                  <span style={{ fontSize: 14 }}>{char.emoji || "💜"}</span>
+                  {char.name || "ta"}
+                </div>
+              );
+            })}
+            {designatedCharId && (
+              <div
+                onClick={() => { setDesignatedCharId(null); setShowAtPicker(false); }}
+                style={{
+                  padding: "5px 12px", borderRadius: 20, cursor: "pointer",
+                  background: "rgba(196,166,184,.12)",
+                  border: "1px solid rgba(196,166,184,.25)",
+                  fontSize: 12, color: "var(--text-faint)",
+                }}
+              >
+                取消指定
+              </div>
+            )}
+          </div>
+        )}
 
-        {isProcessing ? (
+        {/* 已指定提示条 */}
+        {designatedCharId && !showAtPicker && (
+          <div style={{ padding: "5px 14px 0", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{
+              fontSize: 10, color: "#8a7898",
+              background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.18)",
+              borderRadius: 8, padding: "2px 8px", letterSpacing: 0.3,
+            }}>
+              @ {members.find((c) => c.id === designatedCharId)?.name || "ta"} 先说
+            </span>
+            <button
+              onClick={() => setDesignatedCharId(null)}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "var(--text-faint)", padding: 0 }}
+            >✕</button>
+          </div>
+        )}
+
+        {/* 输入行 */}
+        <div style={{
+          padding: "10px 12px calc(10px + env(safe-area-inset-bottom, 0px))",
+          display: "flex", alignItems: "flex-end", gap: 8,
+        }}>
+          {/* @ 按钮 */}
           <button
-            onClick={handleStop}
+            onClick={() => setShowAtPicker((v) => !v)}
+            disabled={isProcessing}
+            title="指定先说"
             style={{
-              padding: "10px 14px", borderRadius: 14, flexShrink: 0,
-              background: "rgba(180,100,100,.15)", border: "1px solid rgba(180,100,100,.3)",
-              color: "#9a5050", fontSize: 12, cursor: "pointer",
-              fontFamily: "var(--font-main)", letterSpacing: 0.5,
-              whiteSpace: "nowrap",
-            }}
-          >
-            停止本轮
-          </button>
-        ) : (
-          <button
-            onClick={handleSend}
-            disabled={!inputText.trim()}
-            style={{
-              padding: "10px 16px", borderRadius: 14, flexShrink: 0,
-              background: inputText.trim() ? "rgba(120,100,160,.85)" : "rgba(196,166,184,.3)",
-              border: "none",
-              color: inputText.trim() ? "white" : "#9a8aac",
-              fontSize: 13, cursor: inputText.trim() ? "pointer" : "default",
-              fontFamily: "var(--font-main)", letterSpacing: 0.5,
+              flexShrink: 0, width: 36, height: 36, borderRadius: 12,
+              background: designatedCharId ? "rgba(120,100,160,.22)" : "rgba(196,166,184,.18)",
+              border: `1px solid ${designatedCharId ? "rgba(120,100,160,.35)" : "rgba(196,166,184,.28)"}`,
+              color: designatedCharId ? "#5a4a6a" : "#9a8aac",
+              fontSize: 15, cursor: isProcessing ? "default" : "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontFamily: "var(--font-main)",
+              opacity: isProcessing ? 0.5 : 1,
               transition: "all .15s",
             }}
           >
-            发送
+            @
           </button>
-        )}
+
+          <textarea
+            ref={inputRef}
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="跟大家说点什么…"
+            disabled={isProcessing}
+            rows={1}
+            style={{
+              flex: 1, resize: "none", overflowY: "auto", maxHeight: 100,
+              padding: "10px 14px", borderRadius: 14,
+              border: "1px solid rgba(196,166,184,.35)",
+              background: "rgba(255,255,255,.85)",
+              fontSize: "max(16px, 14px)", color: "#3a2e4a", lineHeight: 1.6,
+              fontFamily: "var(--font-main)", outline: "none",
+              opacity: isProcessing ? 0.6 : 1,
+            }}
+          />
+
+          {isProcessing ? (
+            <button
+              onClick={handleStop}
+              style={{
+                padding: "10px 14px", borderRadius: 14, flexShrink: 0,
+                background: "rgba(180,100,100,.15)", border: "1px solid rgba(180,100,100,.3)",
+                color: "#9a5050", fontSize: 12, cursor: "pointer",
+                fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                whiteSpace: "nowrap",
+              }}
+            >
+              停止本轮
+            </button>
+          ) : (
+            <button
+              onClick={handleSend}
+              disabled={!inputText.trim()}
+              style={{
+                padding: "10px 16px", borderRadius: 14, flexShrink: 0,
+                background: inputText.trim() ? "rgba(120,100,160,.85)" : "rgba(196,166,184,.3)",
+                border: "none",
+                color: inputText.trim() ? "white" : "#9a8aac",
+                fontSize: 13, cursor: inputText.trim() ? "pointer" : "default",
+                fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                transition: "all .15s",
+              }}
+            >
+              发送
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── 切换/新建群聊面板 ── */}
