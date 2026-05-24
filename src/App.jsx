@@ -27,6 +27,7 @@ import {
   loadGroupChats, saveGroupChats,
   loadGroupThreads, saveGroupThreads,
   loadCharTreasures, saveCharTreasures,
+  loadLoungeRecords, saveLoungeRecords,
   loadAllFromCloud,
   loadJSON,
   saveJSON,
@@ -40,7 +41,7 @@ import {
   TIMELINE_EVENTS_STORAGE_KEY, SETTLEMENT_DRAFTS_STORAGE_KEY, PROFILE_DRAFTS_STORAGE_KEY,
   HOME_MEMORY_KEY, MIGRATION_DRAFTS_STORAGE_KEY, MEMORY_CHUNKS_STORAGE_KEY,
   RAW_ARCHIVES_STORAGE_KEY, SELF_CURATION_DRAFTS_STORAGE_KEY, MEMORY_INJECTION_KEY,
-  STORAGE_KEY, CTX_STORAGE_KEY, PENDING_THREADS_KEY,
+  STORAGE_KEY, CTX_STORAGE_KEY, PENDING_THREADS_KEY, LOUNGE_RECORDS_STORAGE_KEY,
 } from "./constants";
 import { genId, estimateTokens, buildSourceRef } from "./utils/helpers";
 import { splitRawTextToChunks } from "./utils/chunker";
@@ -260,6 +261,9 @@ export default function App() {
 
   // ─── 他的宝库 ───
   const [charTreasures, setCharTreasures] = useState(() => loadCharTreasures());
+
+  // ─── 客厅记录册 ───
+  const [loungeRecords, setLoungeRecords] = useState(() => loadLoungeRecords());
   const [charTreasureCharId, setCharTreasureCharId] = useState(null);
 
   // ─── 他的房间 ───
@@ -327,6 +331,7 @@ export default function App() {
       if (d["worldViews"])                   setWorldViews(d["worldViews"]);
       if (d["reflectSettings"])              setReflectSettings(d["reflectSettings"]);
       if (d[PENDING_THREADS_KEY])            setPendingThreads(d[PENDING_THREADS_KEY]);
+      if (d[LOUNGE_RECORDS_STORAGE_KEY])     setLoungeRecords(d[LOUNGE_RECORDS_STORAGE_KEY]);
 
       setCloudSyncing(false);
     });
@@ -357,6 +362,7 @@ export default function App() {
   useEffect(() => { if (isHydrated.current) saveGroupChats(groupChats); }, [groupChats]);
   useEffect(() => { if (isHydrated.current) saveGroupThreads(groupThreads); }, [groupThreads]);
   useEffect(() => { if (isHydrated.current) saveCharTreasures(charTreasures); }, [charTreasures]);
+  useEffect(() => { if (isHydrated.current) saveLoungeRecords(loungeRecords); }, [loungeRecords]);
   useEffect(() => { localStorage.setItem("worldViews", JSON.stringify(worldViews)); }, [worldViews]);
   useEffect(() => { localStorage.setItem("reflectSettings", JSON.stringify(reflectSettings)); }, [reflectSettings]);
   useEffect(() => { localStorage.setItem("userProfile", JSON.stringify(userProfile)); }, [userProfile]);
@@ -3699,6 +3705,8 @@ ${chatLines}
           onAddTimelineEvent={addTimelineEvent}
           onGenerateGroupSettlement={generateGroupSettlement}
           onAddCharTreasure={addCharTreasure}
+          loungeRecords={loungeRecords}
+          setLoungeRecords={setLoungeRecords}
         />
       )}
 

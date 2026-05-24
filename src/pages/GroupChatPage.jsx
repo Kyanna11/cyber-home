@@ -437,8 +437,7 @@ function TimelineEventSheet({ msg, char, group, characters, onConfirm, onCancel 
 }
 
 // ─── 更多菜单 ───
-function MoreMenuSheet({ onClose }) {
-  const [showComingSoon, setShowComingSoon] = useState(false);
+function MoreMenuSheet({ onClose, onSettle, onViewRecords }) {
   return (
     <div
       style={{
@@ -462,7 +461,7 @@ function MoreMenuSheet({ onClose }) {
 
         <div style={{ padding: "4px 16px 32px", display: "flex", flexDirection: "column", gap: 8 }}>
           <button
-            onClick={() => setShowComingSoon(true)}
+            onClick={onSettle}
             style={{
               display: "flex", alignItems: "center", gap: 12,
               width: "100%", padding: "14px 16px", borderRadius: 14,
@@ -472,22 +471,30 @@ function MoreMenuSheet({ onClose }) {
               textAlign: "left", fontFamily: "var(--font-main)",
             }}
           >
-            <span style={{ fontSize: 20 }}>✨</span>
+            <span style={{ fontSize: 20 }}>📚</span>
             <div>
               <div style={{ fontSize: 13, color: "#5a4a6a", fontWeight: 500 }}>整理这次客厅</div>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 1 }}>稍后开放</div>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 1 }}>保存完整对话到记录册</div>
             </div>
           </button>
 
-          {showComingSoon && (
-            <div style={{
-              padding: "12px 14px", borderRadius: 12,
-              background: "rgba(120,100,160,.07)", border: "1px solid rgba(120,100,160,.15)",
-              fontSize: 12, color: "#7a6a8e", lineHeight: 1.75,
-            }}>
-              整理客厅功能还在准备中。之后可以把这次客厅保存进记录册，并生成待确认的沉淀草稿。
+          <button
+            onClick={onViewRecords}
+            style={{
+              display: "flex", alignItems: "center", gap: 12,
+              width: "100%", padding: "14px 16px", borderRadius: 14,
+              background: "rgba(255,255,255,.72)",
+              border: "1px solid rgba(196,166,184,.25)",
+              cursor: "pointer",
+              textAlign: "left", fontFamily: "var(--font-main)",
+            }}
+          >
+            <span style={{ fontSize: 20 }}>🗂</span>
+            <div>
+              <div style={{ fontSize: 13, color: "#5a4a6a", fontWeight: 500 }}>客厅记录册</div>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 1 }}>查看已保存的客厅对话</div>
             </div>
-          )}
+          </button>
 
           <button
             onClick={onClose}
@@ -992,6 +999,298 @@ function GroupCharTreasureSheet({ msg, group, characters, onConfirm, onCancel })
   );
 }
 
+// ─── 生成客厅原文 markdown ───
+function buildRawContent(group, messages, characters) {
+  const memberChars = (group.memberIds || [])
+    .map((id) => characters.find((c) => c.id === id))
+    .filter(Boolean);
+  const memberNames = memberChars.map((c) => c.name || "ta").join("、");
+  const date = new Date().toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" });
+
+  let md = `# ${group.name} · ${date}\n\n`;
+  md += `【成员】\n${memberNames}\n\n`;
+  md += `【完整对话】\n\n`;
+
+  for (const msg of messages) {
+    if (msg.role === "user") {
+      md += `**${msg.authorName || "你"}**：${msg.content}\n\n`;
+    } else if (msg.role === "char") {
+      md += `**${msg.authorName}**：${msg.content}\n\n`;
+    }
+  }
+  return md.trim();
+}
+
+// ─── 整理确认面板 ───
+function SettleConfirmPanel({ group, messages, onConfirm, onCancel }) {
+  const msgCount = (messages || []).filter((m) => m.role === "user" || m.role === "char").length;
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 310,
+        background: "rgba(74,69,96,.38)",
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div style={{
+        width: "100%", maxWidth: 480,
+        background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+        borderRadius: "20px 20px 0 0",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.22)",
+        overflow: "hidden",
+      }}>
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "18px 18px 14px",
+          borderBottom: "1px solid rgba(196,166,184,.2)",
+        }}>
+          <span style={{ fontSize: 15, color: "#5a4a6a", fontWeight: 500, letterSpacing: 1 }}>📚 整理这次客厅</span>
+          <button onClick={onCancel} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
+        </div>
+
+        <div style={{ padding: "20px 18px 32px", display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* 预览信息 */}
+          <div style={{
+            background: "rgba(255,255,255,.65)", border: "1px solid rgba(196,166,184,.22)",
+            borderRadius: 14, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8,
+          }}>
+            <div style={{ fontSize: 13, color: "#5a4a6a", fontWeight: 500 }}>☕ {group?.name}</div>
+            <div style={{ fontSize: 11, color: "var(--text-faint)" }}>共 {msgCount} 条消息</div>
+          </div>
+
+          {/* 说明 */}
+          <div style={{
+            fontSize: 12, color: "#7a6a8e", lineHeight: 1.85,
+            padding: "10px 14px", borderRadius: 12,
+            background: "rgba(120,100,160,.05)", border: "1px solid rgba(120,100,160,.12)",
+          }}>
+            这会把本次客厅的完整对话保存进小家客厅记录册。<br />
+            不会自动写入长期记忆，也不会影响任何入住者的人格档案。
+          </div>
+
+          {msgCount === 0 ? (
+            <div style={{ fontSize: 12, color: "#9a7878", textAlign: "center", padding: "8px 0" }}>
+              这次客厅还没有消息，没有可以整理的内容~
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={onCancel}
+                style={{
+                  flex: 1, padding: "12px", borderRadius: 14,
+                  background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)",
+                  color: "#7a6a8e", fontSize: 13, cursor: "pointer",
+                  fontFamily: "var(--font-main)",
+                }}
+              >取消</button>
+              <button
+                onClick={onConfirm}
+                style={{
+                  flex: 2, padding: "12px", borderRadius: 14,
+                  background: "rgba(120,100,160,.85)", border: "none",
+                  color: "white", fontSize: 13, cursor: "pointer",
+                  fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                }}
+              >📚 保存到记录册</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 客厅记录册列表 ───
+function LoungeRecordListPanel({ loungeRecords, groupChats, onView, onDelete, onClose }) {
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const sorted = [...loungeRecords].sort((a, b) => b.savedAt - a.savedAt);
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 310,
+        background: "rgba(74,69,96,.38)",
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        width: "100%", maxWidth: 480, maxHeight: "88vh",
+        background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+        borderRadius: "20px 20px 0 0",
+        display: "flex", flexDirection: "column",
+        overflow: "hidden",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.22)",
+      }}>
+        {/* 顶栏 */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "18px 18px 14px",
+          borderBottom: "1px solid rgba(196,166,184,.2)",
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 15, color: "#5a4a6a", fontWeight: 500, letterSpacing: 1 }}>🗂 客厅记录册</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
+        </div>
+
+        {/* 列表 */}
+        <div style={{ flex: 1, overflow: "auto", padding: "12px 16px 24px" }}>
+          {sorted.length === 0 ? (
+            <div style={{ padding: "40px 0", textAlign: "center" }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>🗂</div>
+              <div style={{ fontSize: 14, color: "#7a6a8e", marginBottom: 6 }}>还没有记录</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", lineHeight: 1.85, maxWidth: 240, margin: "0 auto" }}>
+                点击客厅更多菜单里的「整理这次客厅」，把当前对话保存进来。
+              </div>
+            </div>
+          ) : (
+            sorted.map((rec) => {
+              if (deleteConfirmId === rec.id) {
+                return (
+                  <div key={rec.id} style={{
+                    marginBottom: 8, padding: "14px 16px", borderRadius: 14,
+                    background: "rgba(180,100,100,.06)", border: "1px solid rgba(180,100,100,.2)",
+                  }}>
+                    <div style={{ fontSize: 12, color: "#7a5a5a", lineHeight: 1.75, marginBottom: 12 }}>
+                      要删除这条记录吗？原文内容将一起删除，无法撤销。
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => { onDelete(rec.id); setDeleteConfirmId(null); }} style={{ flex: 1, padding: "9px", borderRadius: 10, background: "rgba(180,80,80,.85)", border: "none", color: "white", fontSize: 12, cursor: "pointer", fontFamily: "var(--font-main)" }}>确认删除</button>
+                      <button onClick={() => setDeleteConfirmId(null)} style={{ flex: 1, padding: "9px", borderRadius: 10, background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)", color: "#7a6a8e", fontSize: 12, cursor: "pointer", fontFamily: "var(--font-main)" }}>取消</button>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div key={rec.id} style={{
+                  marginBottom: 8, borderRadius: 14, overflow: "hidden",
+                  background: "rgba(255,255,255,.65)", border: "1px solid rgba(196,166,184,.22)",
+                }}>
+                  <div
+                    style={{ padding: "12px 14px", cursor: "pointer" }}
+                    onClick={() => onView(rec)}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+                      <div style={{ fontSize: 13, color: "#5a4a6a", fontWeight: 500 }}>
+                        📚 {rec.groupName}
+                      </div>
+                      <span style={{ fontSize: 10, color: "var(--text-faint)", flexShrink: 0 }}>
+                        {new Date(rec.savedAt).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" })}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#8a7898", marginBottom: 4 }}>
+                      {(rec.memberNames || []).join("、")}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-faint)" }}>
+                      {rec.messageCount} 条消息
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 14px 10px", gap: 6 }}>
+                    <button
+                      onClick={() => onView(rec)}
+                      style={{ padding: "4px 12px", borderRadius: 8, fontSize: 11, background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.2)", color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)" }}
+                    >查看原文</button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(rec.id); }}
+                      style={{ padding: "4px 10px", borderRadius: 8, fontSize: 11, background: "none", border: "1px solid rgba(196,166,184,.3)", color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)" }}
+                    >删除</button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 客厅记录详情 ───
+function LoungeRecordDetailPanel({ record, onClose }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(record.rawContent || "").then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 320,
+        background: "rgba(74,69,96,.42)",
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        width: "100%", maxWidth: 480, height: "90vh",
+        background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+        borderRadius: "20px 20px 0 0",
+        display: "flex", flexDirection: "column",
+        overflow: "hidden",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.22)",
+      }}>
+        {/* 顶栏 */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 18px 12px",
+          borderBottom: "1px solid rgba(196,166,184,.2)",
+          flexShrink: 0,
+        }}>
+          <div>
+            <div style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>📚 {record.groupName}</div>
+            <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>
+              {(record.memberNames || []).join("、")} · {record.messageCount} 条 · {new Date(record.savedAt).toLocaleDateString("zh-CN", { month: "long", day: "numeric" })}整理
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
+        </div>
+
+        {/* 操作栏 */}
+        <div style={{
+          display: "flex", gap: 8, padding: "10px 16px",
+          borderBottom: "1px solid rgba(196,166,184,.12)",
+          flexShrink: 0,
+        }}>
+          <button
+            onClick={handleCopy}
+            style={{
+              padding: "6px 14px", borderRadius: 10, fontSize: 11,
+              background: copied ? "rgba(120,100,160,.2)" : "rgba(120,100,160,.1)",
+              border: "1px solid rgba(120,100,160,.22)",
+              color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)",
+            }}
+          >
+            {copied ? "✓ 已复制" : "复制全文"}
+          </button>
+          <div style={{ flex: 1 }} />
+          <div style={{ fontSize: 10, color: "var(--text-faint)", alignSelf: "center", lineHeight: 1.6 }}>
+            提炼与沉淀功能即将开放
+          </div>
+        </div>
+
+        {/* 原文 */}
+        <div style={{ flex: 1, overflow: "auto", padding: "16px 18px 32px" }}>
+          <pre style={{
+            fontSize: 13, color: "#3a2e4a", lineHeight: 1.9,
+            fontFamily: "var(--font-main)",
+            whiteSpace: "pre-wrap", wordBreak: "break-word", margin: 0,
+          }}>
+            {record.rawContent || "（无内容）"}
+          </pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ═════════════════════════════════════════════
 // ── 主页面 ──
 // ═════════════════════════════════════════════
@@ -1016,6 +1315,9 @@ export default function GroupChatPage({
   onGenerateGroupSettlement,
   // 他的宝库
   onAddCharTreasure,
+  // 客厅记录册
+  loungeRecords = [],
+  setLoungeRecords,
 }) {
   const [showCreate, setShowCreate]       = useState(false);
   const [showGroupList, setShowGroupList] = useState(false);
@@ -1034,6 +1336,10 @@ export default function GroupChatPage({
   const [actionFeedback, setActionFeedback] = useState(""); // 操作完成提示
   const [designatedCharId, setDesignatedCharId] = useState(null); // P1-1 指定先说
   const [showAtPicker, setShowAtPicker]   = useState(false);
+  // ── 客厅记录册 ──
+  const [showSettleConfirm, setShowSettleConfirm] = useState(false);
+  const [showRecordList, setShowRecordList] = useState(false);
+  const [viewRecord, setViewRecord]       = useState(null); // LoungeRecord 详情
 
   const roundAbortRef   = useRef(false);
   const liveMessagesRef = useRef([]);
@@ -1400,7 +1706,7 @@ export default function GroupChatPage({
     }, 900);
   };
 
-  // ── 整理这次客厅 ──
+  // ── 整理这次客厅（旧 AI 生成，保留备用）──
   const handleGroupSettle = async () => {
     if (!onGenerateGroupSettlement || !group || !thread) return;
     setShowMoreMenu(false);
@@ -1410,6 +1716,40 @@ export default function GroupChatPage({
     } finally {
       setGroupSettleLoading(false);
     }
+  };
+
+  // ── 保存到客厅记录册 ──
+  const handleSettleConfirm = () => {
+    if (!group || !thread || !setLoungeRecords) return;
+    const memberChars = (group.memberIds || [])
+      .map((id) => characters.find((c) => c.id === id))
+      .filter(Boolean);
+    const rawContent = buildRawContent(group, messages, characters);
+    const record = {
+      id:               genId(),
+      groupId:          group.id,
+      groupName:        group.name,
+      memberIds:        group.memberIds,
+      memberNames:      memberChars.map((c) => c.name || "ta"),
+      createdAt:        group.createdAt,
+      savedAt:          Date.now(),
+      messageCount:     messages.filter((m) => m.role === "user" || m.role === "char").length,
+      rawContent,
+      sourceMessageIds: messages.map((m) => m.id),
+      status:           "saved",
+      derivedDraftIds:  [],
+      diaryIds:         [],
+      treasureIds:      [],
+    };
+    setLoungeRecords((prev) => [...prev, record]);
+    setShowSettleConfirm(false);
+    setShowMoreMenu(false);
+    setActionFeedback("📚 已保存到客厅记录册");
+  };
+
+  // ── 删除记录 ──
+  const handleDeleteRecord = (recordId) => {
+    setLoungeRecords((prev) => prev.filter((r) => r.id !== recordId));
   };
 
   // ── 渲染消息列表 ──
@@ -1539,6 +1879,39 @@ export default function GroupChatPage({
             characters={characters}
             onConfirm={handleCreate}
             onCancel={() => setShowCreate(false)}
+          />
+        )}
+
+        {/* 记录册入口（空态也可查看） */}
+        {loungeRecords.length > 0 && (
+          <div style={{ padding: "0 24px 24px", textAlign: "center" }}>
+            <button
+              onClick={() => setShowRecordList(true)}
+              style={{
+                padding: "9px 20px", borderRadius: 12, fontSize: 12,
+                background: "rgba(255,255,255,.65)", border: "1px solid rgba(196,166,184,.25)",
+                color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)",
+              }}
+            >
+              🗂 客厅记录册 · {loungeRecords.length} 条
+            </button>
+          </div>
+        )}
+
+        {/* 记录册列表（空态下） */}
+        {showRecordList && (
+          <LoungeRecordListPanel
+            loungeRecords={loungeRecords}
+            groupChats={groupChats}
+            onView={(rec) => setViewRecord(rec)}
+            onDelete={handleDeleteRecord}
+            onClose={() => setShowRecordList(false)}
+          />
+        )}
+        {viewRecord && (
+          <LoungeRecordDetailPanel
+            record={viewRecord}
+            onClose={() => setViewRecord(null)}
           />
         )}
         </div>{/* end content wrapper */}
@@ -1856,7 +2229,40 @@ export default function GroupChatPage({
 
       {/* 更多菜单 */}
       {showMoreMenu && (
-        <MoreMenuSheet onClose={() => setShowMoreMenu(false)} />
+        <MoreMenuSheet
+          onClose={() => setShowMoreMenu(false)}
+          onSettle={() => { setShowMoreMenu(false); setShowSettleConfirm(true); }}
+          onViewRecords={() => { setShowMoreMenu(false); setShowRecordList(true); }}
+        />
+      )}
+
+      {/* 整理确认面板 */}
+      {showSettleConfirm && (
+        <SettleConfirmPanel
+          group={group}
+          messages={messages}
+          onConfirm={handleSettleConfirm}
+          onCancel={() => setShowSettleConfirm(false)}
+        />
+      )}
+
+      {/* 客厅记录册列表 */}
+      {showRecordList && (
+        <LoungeRecordListPanel
+          loungeRecords={loungeRecords}
+          groupChats={groupChats}
+          onView={(rec) => { setViewRecord(rec); }}
+          onDelete={handleDeleteRecord}
+          onClose={() => setShowRecordList(false)}
+        />
+      )}
+
+      {/* 记录详情 */}
+      {viewRecord && (
+        <LoungeRecordDetailPanel
+          record={viewRecord}
+          onClose={() => setViewRecord(null)}
+        />
       )}
 
       {/* 珍藏弹窗 */}

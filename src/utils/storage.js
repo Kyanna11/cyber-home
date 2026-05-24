@@ -27,6 +27,7 @@ import {
   GROUP_CHATS_STORAGE_KEY,
   GROUP_THREADS_STORAGE_KEY,
   CHAR_TREASURES_STORAGE_KEY,
+  LOUNGE_RECORDS_STORAGE_KEY,
   DEFAULT_HOME_MEMORY,
 } from "../constants";
 
@@ -41,6 +42,7 @@ export const CLOUD_KEYS = [
   GROUP_CHATS_STORAGE_KEY,
   GROUP_THREADS_STORAGE_KEY,
   CHAR_TREASURES_STORAGE_KEY,
+  LOUNGE_RECORDS_STORAGE_KEY,
   TIMELINE_EVENTS_STORAGE_KEY,
   SETTLEMENT_DRAFTS_STORAGE_KEY,
   PROFILE_DRAFTS_STORAGE_KEY,
@@ -189,6 +191,10 @@ export function saveGroupThreads(threads) { saveJSON(GROUP_THREADS_STORAGE_KEY, 
 // 他的宝库
 export function loadCharTreasures() { return loadJSON(CHAR_TREASURES_STORAGE_KEY, []); }
 export function saveCharTreasures(items) { saveJSON(CHAR_TREASURES_STORAGE_KEY, items); }
+
+// 小家客厅记录册
+export function loadLoungeRecords() { return loadJSON(LOUNGE_RECORDS_STORAGE_KEY, []); }
+export function saveLoungeRecords(records) { saveJSON(LOUNGE_RECORDS_STORAGE_KEY, records); }
 export function getCharTreasuresByCharId(items, charId) {
   return (items || []).filter((t) => t.charId === charId);
 }
