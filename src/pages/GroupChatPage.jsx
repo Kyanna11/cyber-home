@@ -38,6 +38,7 @@ function dateLabelShort() {
 function CreateGroupForm({ characters, onConfirm, onCancel }) {
   const [name, setName] = useState("小家客厅");
   const [selected, setSelected] = useState([]);
+  const [topic, setTopic] = useState("");
 
   const toggleMember = (id) => {
     setSelected((prev) =>
@@ -94,6 +95,10 @@ function CreateGroupForm({ characters, onConfirm, onCancel }) {
             />
           </div>
 
+          <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7, padding: "8px 10px", background: "rgba(196,166,184,.08)", borderRadius: 8 }}>
+            客厅记录会保存为群聊会话，不会自动写入长期记忆。
+          </div>
+
           <div style={{ marginBottom: 18 }}>
             <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 1, display: "block", marginBottom: 8 }}>
               邀请哪些入住者（至少 2 位）
@@ -143,9 +148,26 @@ function CreateGroupForm({ characters, onConfirm, onCancel }) {
             <div style={{ fontSize: 11, color: "#9a7878", marginBottom: 10 }}>至少再选一位~</div>
           )}
 
+          <div style={{ marginBottom: 18 }}>
+            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 1, display: "block", marginBottom: 6 }}>
+              这次想聊什么 <span style={{ opacity: 0.5 }}>（可选）</span>
+            </label>
+            <textarea
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder="比如：随便聊聊，或者我想吐槽今天发生的事…"
+              style={{
+                width: "100%", padding: "10px 14px", borderRadius: 12, boxSizing: "border-box",
+                border: "1px solid rgba(196,166,184,.4)", background: "rgba(255,255,255,.7)",
+                fontSize: 14, color: "#5a4a6a", fontFamily: "var(--font-main)",
+                outline: "none", resize: "none", lineHeight: 1.75, minHeight: 60,
+              }}
+            />
+          </div>
+
           <button
             disabled={!canCreate}
-            onClick={() => onConfirm({ name: name.trim(), memberIds: selected })}
+            onClick={() => onConfirm({ name: name.trim(), memberIds: selected, topic: topic.trim() })}
             style={{
               width: "100%", padding: "13px", borderRadius: 14,
               background: canCreate ? "rgba(120,100,160,.85)" : "rgba(196,166,184,.3)",
@@ -415,7 +437,8 @@ function TimelineEventSheet({ msg, char, group, characters, onConfirm, onCancel 
 }
 
 // ─── 更多菜单 ───
-function MoreMenuSheet({ onSettle, settling, onClose }) {
+function MoreMenuSheet({ onClose }) {
+  const [showComingSoon, setShowComingSoon] = useState(false);
   return (
     <div
       style={{
@@ -438,29 +461,33 @@ function MoreMenuSheet({ onSettle, settling, onClose }) {
         </div>
 
         <div style={{ padding: "4px 16px 32px", display: "flex", flexDirection: "column", gap: 8 }}>
-          {/* 整理这次客厅 */}
           <button
-            onClick={onSettle}
-            disabled={settling}
+            onClick={() => setShowComingSoon(true)}
             style={{
               display: "flex", alignItems: "center", gap: 12,
               width: "100%", padding: "14px 16px", borderRadius: 14,
-              background: settling ? "rgba(196,166,184,.18)" : "rgba(255,255,255,.72)",
+              background: "rgba(255,255,255,.72)",
               border: "1px solid rgba(196,166,184,.25)",
-              cursor: settling ? "default" : "pointer",
+              cursor: "pointer",
               textAlign: "left", fontFamily: "var(--font-main)",
             }}
           >
             <span style={{ fontSize: 20 }}>✨</span>
             <div>
-              <div style={{ fontSize: 13, color: settling ? "#9a8aac" : "#5a4a6a", fontWeight: 500 }}>
-                {settling ? "正在整理…" : "整理这次客厅"}
-              </div>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 1 }}>
-                生成草稿，不自动写入长期记忆
-              </div>
+              <div style={{ fontSize: 13, color: "#5a4a6a", fontWeight: 500 }}>整理这次客厅</div>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 1 }}>稍后开放</div>
             </div>
           </button>
+
+          {showComingSoon && (
+            <div style={{
+              padding: "12px 14px", borderRadius: 12,
+              background: "rgba(120,100,160,.07)", border: "1px solid rgba(120,100,160,.15)",
+              fontSize: 12, color: "#7a6a8e", lineHeight: 1.75,
+            }}>
+              整理客厅功能还在准备中。之后可以把这次客厅保存进记录册，并生成待确认的沉淀草稿。
+            </div>
+          )}
 
           <button
             onClick={onClose}
@@ -473,6 +500,159 @@ function MoreMenuSheet({ onSettle, settling, onClose }) {
           >
             关上这扇门
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 客厅列表面板 ───
+function LoungeListPanel({ groupChats, groupThreads, characters, activeGroupId, onSelect, onCreate, onDelete, onClose }) {
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  const sorted = [...groupChats].sort((a, b) => b.updatedAt - a.updatedAt);
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "rgba(74,69,96,.38)",
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        width: "100%", maxWidth: 480, maxHeight: "88vh",
+        background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
+        borderRadius: "20px 20px 0 0",
+        display: "flex", flexDirection: "column",
+        overflow: "hidden",
+        boxShadow: "0 -8px 40px rgba(74,69,96,.22)",
+      }}>
+        {/* 顶栏 */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "18px 18px 14px",
+          borderBottom: "1px solid rgba(196,166,184,.2)",
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 15, color: "#5a4a6a", fontWeight: 500, letterSpacing: 1 }}>☕ 客厅列表</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
+        </div>
+
+        {/* 列表 */}
+        <div style={{ flex: 1, overflow: "auto", padding: "12px 16px 12px" }}>
+          {sorted.length === 0 ? (
+            <div style={{ padding: "32px 0", textAlign: "center" }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>☕</div>
+              <div style={{ fontSize: 14, color: "#7a6a8e", marginBottom: 6 }}>还没有客厅</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", lineHeight: 1.8, maxWidth: 240, margin: "0 auto" }}>
+                可以把几个入住者叫到一起，陪你聊一件事。
+              </div>
+            </div>
+          ) : (
+            sorted.map((g) => {
+              const thread = groupThreads.find((t) => t.groupId === g.id);
+              const msgs = thread?.messages || [];
+              const lastMsg = [...msgs].reverse().find((m) => m.role === "user" || m.role === "char");
+              const memberChars = (g.memberIds || []).map((id) => characters.find((c) => c.id === id)).filter(Boolean);
+              const isActive = g.id === activeGroupId;
+
+              if (deleteConfirmId === g.id) {
+                return (
+                  <div key={g.id} style={{
+                    marginBottom: 8, padding: "14px 16px", borderRadius: 14,
+                    background: "rgba(180,100,100,.06)", border: "1px solid rgba(180,100,100,.2)",
+                  }}>
+                    <div style={{ fontSize: 12, color: "#7a5a5a", lineHeight: 1.75, marginBottom: 12 }}>
+                      要删除「{g.name}」吗？客厅里的聊天记录也会一起删除，这个操作不能撤销。
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        onClick={() => { onDelete(g.id); setDeleteConfirmId(null); }}
+                        style={{
+                          flex: 1, padding: "9px", borderRadius: 10,
+                          background: "rgba(180,80,80,.85)", border: "none",
+                          color: "white", fontSize: 12, cursor: "pointer",
+                          fontFamily: "var(--font-main)",
+                        }}
+                      >确认删除</button>
+                      <button
+                        onClick={() => setDeleteConfirmId(null)}
+                        style={{
+                          flex: 1, padding: "9px", borderRadius: 10,
+                          background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)",
+                          color: "#7a6a8e", fontSize: 12, cursor: "pointer",
+                          fontFamily: "var(--font-main)",
+                        }}
+                      >取消</button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={g.id}
+                  style={{
+                    marginBottom: 8, padding: "12px 14px", borderRadius: 14, cursor: "pointer",
+                    background: isActive ? "rgba(120,100,160,.1)" : "rgba(255,255,255,.65)",
+                    border: `1px solid ${isActive ? "rgba(120,100,160,.3)" : "rgba(196,166,184,.22)"}`,
+                    transition: "all .15s",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }} onClick={() => { onSelect(g.id); onClose(); }}>
+                    <span style={{ fontSize: 22, flexShrink: 0 }}>☕</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                        <span style={{ fontSize: 13, color: "#5a4a6a", fontWeight: 500 }}>{g.name}</span>
+                        {isActive && <span style={{ fontSize: 9, color: "#7a6a8e", background: "rgba(120,100,160,.12)", padding: "1px 6px", borderRadius: 6 }}>进行中</span>}
+                      </div>
+                      <div style={{ fontSize: 10, color: "var(--text-faint)", marginBottom: lastMsg ? 4 : 0 }}>
+                        {memberChars.map((c) => c.emoji || "💜").join(" ")} {memberChars.map((c) => c.name || "ta").join("、")}
+                      </div>
+                      {lastMsg && (
+                        <div style={{ fontSize: 11, color: "#8a7898", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {lastMsg.role === "user" ? "你：" : `${lastMsg.authorName}：`}{lastMsg.content?.slice(0, 30)}{(lastMsg.content?.length || 0) > 30 ? "…" : ""}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+                      <span style={{ fontSize: 9, color: "var(--text-faint)" }}>
+                        {new Date(g.updatedAt).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" })}
+                      </span>
+                    </div>
+                  </div>
+                  {/* 删除按钮 */}
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(g.id); }}
+                      style={{
+                        padding: "3px 10px", borderRadius: 8, fontSize: 10,
+                        background: "none", border: "1px solid rgba(196,166,184,.3)",
+                        color: "var(--text-faint)", cursor: "pointer",
+                        fontFamily: "var(--font-main)",
+                      }}
+                    >删除</button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* 底部新建按钮 */}
+        <div style={{ padding: "12px 16px calc(16px + env(safe-area-inset-bottom,0px))", borderTop: "1px solid rgba(196,166,184,.15)", flexShrink: 0 }}>
+          <button
+            onClick={onCreate}
+            style={{
+              width: "100%", padding: "12px", borderRadius: 14,
+              background: "rgba(120,100,160,.85)", border: "none",
+              color: "white", fontSize: 14, cursor: "pointer",
+              fontFamily: "var(--font-main)", letterSpacing: 1,
+            }}
+          >+ 新建客厅</button>
         </div>
       </div>
     </div>
@@ -1066,12 +1246,12 @@ export default function GroupChatPage({
   };
 
   // ── 创建新群聊 ──
-  const handleCreate = ({ name, memberIds }) => {
+  const handleCreate = ({ name, memberIds, topic }) => {
     const now  = Date.now();
     const gId  = genId();
     const tId  = genId();
     const newGroup = {
-      id: gId, name, memberIds,
+      id: gId, name, memberIds, topic: topic || "",
       createdAt: now, updatedAt: now,
       activeThreadId: tId,
     };
@@ -1085,6 +1265,16 @@ export default function GroupChatPage({
     setGroupThreads((prev) => [...prev, newThread]);
     onSelectGroup?.(gId);
     setShowCreate(false);
+  };
+
+  // ── 删除客厅 ──
+  const handleDeleteGroup = (groupId) => {
+    setGroupChats((prev) => prev.filter((g) => g.id !== groupId));
+    setGroupThreads((prev) => prev.filter((t) => t.groupId !== groupId));
+    if (activeGroupId === groupId) {
+      onSelectGroup?.(null);
+    }
+    setShowGroupList(false);
   };
 
   // ── 消息操作：切换激活 ──
@@ -1404,7 +1594,7 @@ export default function GroupChatPage({
             color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)", flexShrink: 0,
           }}
         >
-          换客厅
+          客厅列表
         </button>
       </div>
 
@@ -1526,66 +1716,16 @@ export default function GroupChatPage({
 
       {/* ── 切换/新建群聊面板 ── */}
       {showGroupList && (
-        <div
-          style={{
-            position: "fixed", inset: 0, zIndex: 200,
-            background: "rgba(74,69,96,.35)",
-            backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
-            display: "flex", alignItems: "flex-end", justifyContent: "center",
-          }}
-          onClick={(e) => { if (e.target === e.currentTarget) setShowGroupList(false); }}
-        >
-          <div style={{
-            width: "100%", maxWidth: 480, maxHeight: "70vh",
-            background: "linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%)",
-            borderRadius: "20px 20px 0 0",
-            display: "flex", flexDirection: "column",
-            overflow: "hidden",
-            boxShadow: "0 -8px 40px rgba(74,69,96,.18)",
-          }}>
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              padding: "16px 18px 12px",
-              borderBottom: "1px solid rgba(196,166,184,.2)",
-              flexShrink: 0,
-            }}>
-              <span style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>选择客厅</span>
-              <button onClick={() => setShowGroupList(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: 4 }}>✕</button>
-            </div>
-            <div style={{ flex: 1, overflow: "auto", padding: "12px 16px 24px" }}>
-              {groupChats.map((g) => (
-                <div
-                  key={g.id}
-                  onClick={() => { onSelectGroup?.(g.id); setShowGroupList(false); }}
-                  style={{
-                    padding: "11px 14px", borderRadius: 12, marginBottom: 8, cursor: "pointer",
-                    background: g.id === activeGroupId ? "rgba(120,100,160,.12)" : "rgba(255,255,255,.65)",
-                    border: `1px solid ${g.id === activeGroupId ? "rgba(120,100,160,.28)" : "rgba(196,166,184,.22)"}`,
-                    display: "flex", alignItems: "center", gap: 10,
-                  }}
-                >
-                  <span style={{ fontSize: 18 }}>☕</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, color: "#5a4a6a" }}>{g.name}</div>
-                    <div style={{ fontSize: 10, color: "var(--text-faint)" }}>{g.memberIds.length} 位成员</div>
-                  </div>
-                  {g.id === activeGroupId && <span style={{ fontSize: 10, color: "#7a6a8e" }}>当前</span>}
-                </div>
-              ))}
-              <button
-                onClick={() => { setShowGroupList(false); setShowCreate(true); }}
-                style={{
-                  width: "100%", padding: "11px", borderRadius: 12, marginTop: 4,
-                  background: "transparent", border: "1px dashed rgba(196,166,184,.45)",
-                  color: "#9a8aac", fontSize: 13, cursor: "pointer",
-                  fontFamily: "var(--font-main)",
-                }}
-              >
-                ＋ 新建客厅
-              </button>
-            </div>
-          </div>
-        </div>
+        <LoungeListPanel
+          groupChats={groupChats}
+          groupThreads={groupThreads}
+          characters={characters}
+          activeGroupId={activeGroupId}
+          onSelect={(id) => { onSelectGroup?.(id); setShowGroupList(false); }}
+          onCreate={() => { setShowGroupList(false); setShowCreate(true); }}
+          onDelete={handleDeleteGroup}
+          onClose={() => setShowGroupList(false)}
+        />
       )}
 
       {/* 创建表单 */}
@@ -1599,11 +1739,7 @@ export default function GroupChatPage({
 
       {/* 更多菜单 */}
       {showMoreMenu && (
-        <MoreMenuSheet
-          onSettle={handleGroupSettle}
-          settling={groupSettleLoading}
-          onClose={() => setShowMoreMenu(false)}
-        />
+        <MoreMenuSheet onClose={() => setShowMoreMenu(false)} />
       )}
 
       {/* 珍藏弹窗 */}

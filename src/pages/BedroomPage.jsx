@@ -150,17 +150,6 @@ export default function BedroomPage({
           我的小房间
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {onOpenGroupChat && (
-            <button
-              onClick={() => onOpenGroupChat(null)}
-              title="小家客厅"
-              style={{
-                background: "rgba(255,255,255,.45)", border: "1px solid rgba(255,255,255,.5)",
-                borderRadius: 8, fontSize: 16, cursor: "pointer",
-                padding: "3px 6px", lineHeight: 1,
-              }}
-            >☕</button>
-          )}
           <button
             onClick={() => navigateTo("profiles")}
             title="入住档案"
@@ -230,6 +219,36 @@ export default function BedroomPage({
           position={{ top: "0%", left: "86%" }}
           cardAnchor="right"
         />
+
+        {/* 小家客厅入口卡 */}
+        {onOpenGroupChat && (
+          <div
+            onClick={() => onOpenGroupChat(null)}
+            style={{
+              position: "absolute",
+              bottom: recentNotes.length > 0 ? "calc(8px + env(safe-area-inset-bottom,0px) + 86px)" : "calc(8px + env(safe-area-inset-bottom,0px))",
+              left: 12, right: 12,
+              background: "rgba(255,255,255,.68)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              borderRadius: 14,
+              border: "1px solid rgba(196,166,184,.22)",
+              boxShadow: "0 4px 16px rgba(74,69,96,.08)",
+              padding: "9px 14px",
+              cursor: "pointer", zIndex: 4,
+              display: "flex", alignItems: "center", gap: 10,
+            }}
+          >
+            <span style={{ fontSize: 22, flexShrink: 0 }}>☕</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: "#5a4a6a", letterSpacing: 0.5 }}>小家客厅</div>
+              <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 1 }}>
+                {groupChats?.length > 0 ? `${groupChats.length} 个客厅 · 点击进入` : "把他们叫到一起聊聊"}
+              </div>
+            </div>
+            <span style={{ fontSize: 11, color: "var(--text-faint)" }}>→</span>
+          </div>
+        )}
 
         {/* ── 便签墙预览条 ── */}
         {recentNotes.length > 0 && (
