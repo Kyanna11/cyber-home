@@ -1736,6 +1736,9 @@ export default function ChatPage({
   // 场景补充指示
   sceneNote,
   setSceneNote,
+  // 他的日记
+  onGenerateJournalFromChat,
+  onOpenResidentJournal,
 }) {
   // 返回目标：从他的房间进入时，返回他的房间；否则返回卧室
   const chatBackTarget = prevPage === "charRoom" ? "charRoom" : "bedroom";
@@ -1767,6 +1770,10 @@ export default function ChatPage({
   const [expandedThoughts, setExpandedThoughts] = useState(new Set());
   // 注入面板
   const [showInjectPanel, setShowInjectPanel] = useState(false);
+  // 他的日记生成
+  const [journalGenerating, setJournalGenerating] = useState(false);
+  const [journalResult, setJournalResult] = useState(null);  // 成功后的 entry
+  const [journalError, setJournalError] = useState("");
 
   // ── 场景模式检测 ──（必须在 chatBgStyle 之前）
   const isSceneMode = activeThread?.threadType === "scene" && !activeThread?.sceneClosed;
@@ -3062,6 +3069,7 @@ export default function ChatPage({
           { emoji: "💗",  label: "帮我记住",    active: true,  action: () => setAttachView("memorize") },
           { emoji: "🕰",  label: "记下这一刻",  sub: "留作回忆",    active: true,  action: () => setAttachView("timeline") },
           { emoji: "✨",  label: "整理一下我们", sub: "更新关系理解", active: true,  action: () => setAttachView("settle") },
+          { emoji: "📔", label: "让他记下今天", sub: "生成日记", active: true,  action: () => { setJournalResult(null); setJournalError(""); setAttachView("journal"); } },
         ];
         const PAGE2 = [
           { emoji: "🖼",  label: "发张图给他",  sub: "图片",     active: true,  action: () => setAttachView("image") },
@@ -3507,6 +3515,161 @@ export default function ChatPage({
                   {settlementGenerating ? "生成中…" : recentMsgs.length < 4 ? "聊天太少" : "生成草稿"}
                 </button>
               </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 让他记下今天 · 日记生成面板 ── */}
+      {attachView === "journal" && (() => {
+        const recentMsgs = messages
+          .filter((m) => (m.role === "user" || m.role === "bot") && (m.content || "").trim())
+          .slice(-20);
+        const charName = activeChar?.name || "ta";
+        return (
+          <div
+            className="config-overlay"
+            onClick={(e) => { if (e.target === e.currentTarget) setAttachView("grid"); }}
+          >
+            <div className="config-panel" style={{ maxHeight: "82vh", display: "flex", flexDirection: "column" }}>
+              <div className="config-header">
+                <div className="config-title"><span>📔</span>让他记下今天</div>
+                <button className="config-close" onClick={() => setAttachView(null)}>✕</button>
+              </div>
+
+              <div style={{ flex: 1, overflow: "auto", padding: "4px 16px 8px" }}>
+                {journalResult ? (
+                  /* ── 成功态 ── */
+                  <div style={{ padding: "20px 0", textAlign: "center" }}>
+                    <div style={{ fontSize: 32, marginBottom: 12 }}>📔</div>
+                    <div style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500, marginBottom: 6 }}>
+                      日记写好了
+                    </div>
+                    <div style={{
+                      fontSize: 12, color: "#6a5a7a", lineHeight: 1.75,
+                      marginBottom: 18, padding: "8px 12px", borderRadius: 10,
+                      background: "rgba(255,255,255,.65)", border: "1px solid rgba(196,166,184,.2)",
+                    }}>
+                      「{journalResult.title}」
+                    </div>
+                    <button
+                      onClick={() => { setAttachView(null); onOpenResidentJournal?.(activeChar?.id); }}
+                      style={{
+                        padding: "10px 24px", borderRadius: 12, fontSize: 13,
+                        background: "rgba(120,100,160,.82)", border: "none",
+                        color: "white", cursor: "pointer", fontFamily: "var(--font-main)",
+                      }}
+                    >
+                      去看他的日记
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* 说明 */}
+                    <div style={{
+                      fontSize: 12, color: "#7a6a8e", lineHeight: 1.75,
+                      margin: "8px 0 14px",
+                      padding: "10px 12px", borderRadius: 10,
+                      background: "rgba(196,166,184,.08)", border: "1px solid rgba(196,166,184,.15)",
+                    }}>
+                      以最近聊天为素材，让 {charName} 以自己的第一视角写一篇日记。
+                      不会自动写入记忆，保存在「他的日记」里。
+                    </div>
+
+                    {/* 错误提示 */}
+                    {journalError && (
+                      <div style={{
+                        fontSize: 12, color: "#9a5050", marginBottom: 10,
+                        padding: "8px 12px", borderRadius: 10,
+                        background: "rgba(200,140,140,.08)", border: "1px solid rgba(200,140,140,.18)",
+                      }}>
+                        {journalError}
+                      </div>
+                    )}
+
+                    {/* 消息预览 */}
+                    {recentMsgs.length === 0 ? (
+                      <div style={{ padding: "16px 0", color: "var(--text-faint)", fontSize: 13, textAlign: "center" }}>
+                        还没有聊天记录
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 0.5, marginBottom: 8 }}>
+                          最近 {recentMsgs.length} 条消息将作为素材
+                        </div>
+                        <div>
+                          {recentMsgs.map((msg, i) => (
+                            <div key={i} style={{
+                              display: "flex", gap: 8, alignItems: "flex-start",
+                              padding: "7px 0", borderBottom: "1px solid rgba(196,166,184,.08)",
+                            }}>
+                              <span style={{
+                                fontSize: 10, padding: "2px 7px", borderRadius: 8,
+                                flexShrink: 0, marginTop: 2,
+                                background: msg.role === "user" ? "rgba(120,100,160,.1)" : "rgba(196,166,184,.12)",
+                                color: msg.role === "user" ? "#5a4a8a" : "#7a6a8e",
+                              }}>
+                                {msg.role === "user" ? "你" : charName}
+                              </span>
+                              <span style={{ fontSize: 12, color: "var(--text-mid)", lineHeight: 1.65 }}>
+                                {(msg.content || "").length > 64
+                                  ? msg.content.slice(0, 64) + "…"
+                                  : msg.content}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {!journalResult && (
+                <div style={{
+                  padding: "12px 16px 16px", flexShrink: 0,
+                  display: "flex", gap: 10,
+                  borderTop: "1px solid rgba(196,166,184,.12)",
+                }}>
+                  <button
+                    onClick={() => setAttachView("grid")}
+                    style={{
+                      flex: 1, padding: "10px", borderRadius: 12,
+                      background: "transparent", border: "1px solid rgba(196,166,184,.3)",
+                      fontSize: 13, color: "#9a8aac", cursor: "pointer",
+                      fontFamily: "var(--font-main)",
+                    }}
+                  >取消</button>
+                  <button
+                    onClick={() => {
+                      setJournalError("");
+                      setJournalGenerating(true);
+                      onGenerateJournalFromChat?.(recentMsgs)
+                        .then((entry) => {
+                          setJournalResult(entry);
+                        })
+                        .catch((err) => {
+                          setJournalError(err.message || "生成失败，请稍后再试");
+                        })
+                        .finally(() => setJournalGenerating(false));
+                    }}
+                    disabled={journalGenerating || recentMsgs.length < 2}
+                    style={{
+                      flex: 2, padding: "10px", borderRadius: 12,
+                      background: (journalGenerating || recentMsgs.length < 2)
+                        ? "rgba(196,166,184,.3)"
+                        : "rgba(120,100,160,.85)",
+                      border: "none",
+                      color: (journalGenerating || recentMsgs.length < 2) ? "#9a8aac" : "white",
+                      fontSize: 13,
+                      cursor: (journalGenerating || recentMsgs.length < 2) ? "default" : "pointer",
+                      fontFamily: "var(--font-main)", letterSpacing: 0.5, transition: "all .2s",
+                    }}
+                  >
+                    {journalGenerating ? "正在写日记…" : recentMsgs.length < 2 ? "聊天太少" : "让他记下今天"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         );

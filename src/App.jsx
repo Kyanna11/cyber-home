@@ -28,6 +28,7 @@ import {
   loadGroupThreads, saveGroupThreads,
   loadCharTreasures, saveCharTreasures,
   loadLoungeRecords, saveLoungeRecords,
+  loadResidentJournals, saveResidentJournals,
   loadAllFromCloud,
   loadJSON,
   saveJSON,
@@ -42,6 +43,7 @@ import {
   HOME_MEMORY_KEY, MIGRATION_DRAFTS_STORAGE_KEY, MEMORY_CHUNKS_STORAGE_KEY,
   RAW_ARCHIVES_STORAGE_KEY, SELF_CURATION_DRAFTS_STORAGE_KEY, MEMORY_INJECTION_KEY,
   STORAGE_KEY, CTX_STORAGE_KEY, PENDING_THREADS_KEY, LOUNGE_RECORDS_STORAGE_KEY,
+  RESIDENT_JOURNALS_STORAGE_KEY,
 } from "./constants";
 import { genId, estimateTokens, buildSourceRef } from "./utils/helpers";
 import { splitRawTextToChunks } from "./utils/chunker";
@@ -74,6 +76,7 @@ import StickyNotesPage from "./pages/StickyNotesPage";
 import GroupChatPage from "./pages/GroupChatPage";
 import CharTreasurePage from "./pages/CharTreasurePage";
 import CharRoomPage from "./pages/CharRoomPage";
+import ResidentJournalPage from "./pages/ResidentJournalPage";
 
 // MSG_DELIMITER is used internally by parseResponse in utils/prompt.js
 
@@ -266,6 +269,10 @@ export default function App() {
   const [loungeRecords, setLoungeRecords] = useState(() => loadLoungeRecords());
   const [charTreasureCharId, setCharTreasureCharId] = useState(null);
 
+  // ─── 他的日记 ───
+  const [residentJournals, setResidentJournals] = useState(() => loadResidentJournals());
+  const [residentJournalCharId, setResidentJournalCharId] = useState(null);
+
   // ─── 他的房间 ───
   const [charRoomCharId, setCharRoomCharId] = useState(null);
   const [charRoomFrom, setCharRoomFrom] = useState("bedroom"); // 进入他的房间前所在的页面
@@ -284,6 +291,7 @@ export default function App() {
   // ─── Refs ───
   const messagesEndRef = useRef(null);
   const pendingDiaryRef = useRef(null);
+  const pendingJournalReadRef = useRef(null);
   const pendingTreasureContinueRef = useRef(null);
   const typingTimers = useRef([]);
 
@@ -331,7 +339,8 @@ export default function App() {
       if (d["worldViews"])                   setWorldViews(d["worldViews"]);
       if (d["reflectSettings"])              setReflectSettings(d["reflectSettings"]);
       if (d[PENDING_THREADS_KEY])            setPendingThreads(d[PENDING_THREADS_KEY]);
-      if (d[LOUNGE_RECORDS_STORAGE_KEY])     setLoungeRecords(d[LOUNGE_RECORDS_STORAGE_KEY]);
+      if (d[LOUNGE_RECORDS_STORAGE_KEY])      setLoungeRecords(d[LOUNGE_RECORDS_STORAGE_KEY]);
+      if (d[RESIDENT_JOURNALS_STORAGE_KEY])  setResidentJournals(d[RESIDENT_JOURNALS_STORAGE_KEY]);
 
       setCloudSyncing(false);
     });
@@ -363,6 +372,7 @@ export default function App() {
   useEffect(() => { if (isHydrated.current) saveGroupThreads(groupThreads); }, [groupThreads]);
   useEffect(() => { if (isHydrated.current) saveCharTreasures(charTreasures); }, [charTreasures]);
   useEffect(() => { if (isHydrated.current) saveLoungeRecords(loungeRecords); }, [loungeRecords]);
+  useEffect(() => { if (isHydrated.current) saveResidentJournals(residentJournals); }, [residentJournals]);
   useEffect(() => { localStorage.setItem("worldViews", JSON.stringify(worldViews)); }, [worldViews]);
   useEffect(() => { localStorage.setItem("reflectSettings", JSON.stringify(reflectSettings)); }, [reflectSettings]);
   useEffect(() => { localStorage.setItem("userProfile", JSON.stringify(userProfile)); }, [userProfile]);
@@ -430,6 +440,39 @@ export default function App() {
           ...prev,
           { role: "bot", thought: "呜……读手札的时候出了点问题。", content: `出错了：${err.message}`, time: timeStr },
         ]);
+      });
+  }, [page, activeCharId]);
+
+  // 日记分享：从他的日记页「给他读这篇」后自动发送给入住者
+  useEffect(() => {
+    if (page !== "chat" || !pendingJournalReadRef.current || !activeCharId) return;
+    const journal = pendingJournalReadRef.current;
+    pendingJournalReadRef.current = null;
+    const timeStr = new Date().toTimeString().slice(0, 5);
+    const msg = {
+      role: "user",
+      content: `这是你之前写的一篇日记，我想让你读读——\n\n「${journal.title}」\n\n${journal.content}\n\n---\n读完之后，想跟我说什么吗？`,
+      isJournalShare: true,
+      journalTitle: journal.title,
+      time: timeStr,
+    };
+    const allMsgs = [...messages, msg];
+    setMessages(allMsgs);
+    if (!isConfigReady()) return;
+    setIsSending(true);
+    setIsTyping(true);
+    callLLM(allMsgs, replyMode)
+      .then((raw) => {
+        setIsTyping(false);
+        const cleanedRaw = extractAndSaveMemories(raw, activeCharId, allMemories, setAllMemories);
+        const { thought, parts } = parseResponse(cleanedRaw, replyMode);
+        showMessagesSequentially(thought, parts, timeStr, replyMode);
+        updateMemoryHeat(activeCharId, cleanedRaw);
+      })
+      .catch((err) => {
+        setIsTyping(false);
+        setIsSending(false);
+        setMessages((prev) => [...prev, { role: "bot", content: `读日记时出了点问题：${err.message}`, time: timeStr }]);
       });
   }, [page, activeCharId]);
 
@@ -1372,6 +1415,108 @@ ${chunksText}
   const openCharTreasure = (charId) => {
     setCharTreasureCharId(charId);
     navigateTo("charTreasure");
+  };
+
+  // ── 他的日记 CRUD ──
+  const addResidentJournal = (entry) => {
+    setResidentJournals((prev) => {
+      if (prev.find((j) => j.id === entry.id)) {
+        return prev.map((j) => j.id === entry.id ? entry : j);
+      }
+      return [entry, ...prev];
+    });
+  };
+  const updateResidentJournal = (entry) => {
+    setResidentJournals((prev) => prev.map((j) => j.id === entry.id ? entry : j));
+  };
+  const deleteResidentJournal = (id) => {
+    setResidentJournals((prev) => prev.filter((j) => j.id !== id));
+  };
+  const openResidentJournal = (charId) => {
+    setResidentJournalCharId(charId || null);
+    navigateTo("residentJournal");
+  };
+  const shareJournalToChat = (journal, charId) => {
+    pendingJournalReadRef.current = journal;
+    enterChat(charId);
+  };
+
+  // ── 从单聊生成日记（LLM call）──
+  const generateJournalFromChat = async (recentMsgs) => {
+    if (!activeChar || !activeCharId) throw new Error("请先打开一个入住者的聊天");
+    if (!config.apiUrl?.trim() || !config.apiKey?.trim()) throw new Error("请先配置 API");
+    const model = getActiveModel(activeChar.modelOverride);
+    if (!model) throw new Error("请先配置要使用的模型");
+
+    const validMsgs = (recentMsgs || []).filter(
+      (m) => (m.role === "user" || m.role === "bot") && (m.content || "").trim()
+    );
+    if (validMsgs.length < 2) throw new Error("聊天记录太少，至少需要 2 条");
+
+    const charMemories = getCharMemories(activeCharId);
+    const systemBase   = buildSystemPrompt(activeChar, charMemories);
+    const userCtx      = buildUserContext(userProfile, activeCharId, homeMemory);
+    const DIARY_FORMAT_OVERRIDE = `\n\n【当前任务：写日记，不是聊天】\n你现在要写一篇私人日记，请完全忽略以下聊天格式规则：\n- 不要使用 [心声]...[/心声] 标签，直接把内心感受写进日记正文\n- 不要使用 ||| 分隔符，日记是一篇连续的文字\n- 不要用对话格式，用第一人称叙述文体写\n- 写法自然流畅，像真正写给自己看的私人记录`;
+    const system = systemBase + (userCtx ? `\n\n${userCtx}` : "") + DIARY_FORMAT_OVERRIDE;
+
+    const charName = activeChar.name || "我";
+    const userName  = userProfile?.globalFacts?.name?.trim() || "声声";
+    const chatLines = validMsgs.map((m) => {
+      const who = m.role === "user" ? userName : charName;
+      return `${who}：${(m.content || "").slice(0, 200)}`;
+    }).join("\n");
+
+    const instruction = `以下是我和${userName}最近的一段聊天记录：\n\n${chatLines}\n\n---\n\n请以你（${charName}）的视角，写一篇关于这段聊天的短日记。\n\n写作要求：\n- 只代表你自己，不替声声总结或分析\n- 不要把未经确认的内容写成永久事实，也不要说"我已经永久记住了"\n- 可以写你当时有什么没有直接说出口但想留下的感受\n- 可以写你想珍藏什么、你对声声今天状态的感受、你想以后怎么回应她\n- 字数控制在 200-500 字，保持自然的日记语气，像真正写给自己看的私人记录`;
+
+    const resp = await fetch(
+      config.apiUrl.replace(/\/+$/, "") + "/chat/completions",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: system },
+            { role: "user",   content: instruction },
+          ],
+          temperature: 0.88,
+          max_tokens: ctxConfig?.maxTokens ? Math.min(ctxConfig.maxTokens, 1200) : 1200,
+        }),
+      }
+    );
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${resp.status}`);
+    }
+    const data = await resp.json();
+    const content = data.choices?.[0]?.message?.content?.trim() || "";
+    if (!content) throw new Error("返回为空");
+
+    const now      = Date.now();
+    const dateStr  = new Date(now).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+    const entry = {
+      id:         genId(),
+      charId:     activeCharId,
+      charName:   charName,
+      title:      `${charName} · ${dateStr} · 聊天日记`,
+      content,
+      sourceType: "chat",
+      sourceId:   null,
+      sourceTitle: `聊天 · ${dateStr}`,
+      createdAt:  now,
+      updatedAt:  now,
+      status:     "saved",
+      visibility: "private_to_char",
+      canUseForMemory: false,
+      memoryDraftIds: [],
+      treasureIds:    [],
+      tags:           [],
+      mood:           "",
+      important:      false,
+      memoryDraft:    null,
+    };
+    addResidentJournal(entry);
+    return entry;
   };
 
   const openCharRoom = (charId) => {
@@ -3707,6 +3852,23 @@ ${chatLines}
           onAddCharTreasure={addCharTreasure}
           loungeRecords={loungeRecords}
           setLoungeRecords={setLoungeRecords}
+          onSaveJournal={addResidentJournal}
+        />
+      )}
+
+      {/* 他的日记 */}
+      {page === "residentJournal" && (
+        <ResidentJournalPage
+          navigateTo={navigateTo}
+          characters={characters}
+          residentJournals={residentJournals}
+          onUpdateJournal={updateResidentJournal}
+          onDeleteJournal={deleteResidentJournal}
+          onSaveTreasure={handleSaveTreasure}
+          onShareJournalToChat={shareJournalToChat}
+          config={config}
+          ctxConfig={ctxConfig}
+          initialCharId={residentJournalCharId}
         />
       )}
 
@@ -3857,6 +4019,8 @@ ${chatLines}
           onOpenCharRoom={openCharRoom}
           sceneNote={sceneNote}
           setSceneNote={setSceneNote}
+          onGenerateJournalFromChat={generateJournalFromChat}
+          onOpenResidentJournal={openResidentJournal}
         />
       )}
     </>

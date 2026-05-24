@@ -1753,6 +1753,27 @@ function LoungeRecordDetailPanel({
     setGenerating(false);
     if (newDiaries.length > 0) {
       onUpdateRecord?.({ ...record, diaries: [...diaries, ...newDiaries] });
+      // 同步保存到中央日记本（ResidentJournal）
+      if (onSaveJournal) {
+        const savedAt = record.savedAt || Date.now();
+        const dateStr = new Date(savedAt).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+        newDiaries.forEach((diary) => {
+          onSaveJournal({
+            ...diary,
+            sourceTitle: `客厅 · ${record.groupName} · ${dateStr}`,
+            updatedAt:   diary.createdAt,
+            status:      "saved",
+            visibility:  "private_to_char",
+            canUseForMemory: false,
+            memoryDraftIds: [],
+            treasureIds:    [],
+            tags:           [],
+            mood:           "",
+            important:      false,
+            memoryDraft:    null,
+          });
+        });
+      }
     }
   };
 
@@ -2034,6 +2055,8 @@ export default function GroupChatPage({
   // 客厅记录册
   loungeRecords = [],
   setLoungeRecords,
+  // 他的日记（中央日记本）
+  onSaveJournal,
 }) {
   const [showCreate, setShowCreate]       = useState(false);
   const [showGroupList, setShowGroupList] = useState(false);

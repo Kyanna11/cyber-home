@@ -28,6 +28,7 @@ import {
   GROUP_THREADS_STORAGE_KEY,
   CHAR_TREASURES_STORAGE_KEY,
   LOUNGE_RECORDS_STORAGE_KEY,
+  RESIDENT_JOURNALS_STORAGE_KEY,
   DEFAULT_HOME_MEMORY,
 } from "../constants";
 
@@ -58,6 +59,7 @@ export const CLOUD_KEYS = [
   "worldViews",
   "reflectSettings",
   PENDING_THREADS_KEY,
+  RESIDENT_JOURNALS_STORAGE_KEY,
 ];
 
 // ── 通用本地读写 ──
@@ -198,6 +200,10 @@ export function saveLoungeRecords(records) { saveJSON(LOUNGE_RECORDS_STORAGE_KEY
 export function getCharTreasuresByCharId(items, charId) {
   return (items || []).filter((t) => t.charId === charId);
 }
+
+// 他的日记（入住者日记）
+export function loadResidentJournals() { return loadJSON(RESIDENT_JOURNALS_STORAGE_KEY, []); }
+export function saveResidentJournals(journals) { saveJSON(RESIDENT_JOURNALS_STORAGE_KEY, journals); }
 
 // 伏笔追踪 { [charId]: [{ id, content, from, createdAt, status }] }
 import { PENDING_THREADS_KEY } from "../constants";
