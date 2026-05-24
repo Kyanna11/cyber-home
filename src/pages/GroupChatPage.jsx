@@ -1208,15 +1208,244 @@ function LoungeRecordListPanel({ loungeRecords, groupChats, onView, onDelete, on
   );
 }
 
-// ─── 客厅记录详情 ───
-function LoungeRecordDetailPanel({ record, onClose }) {
-  const [copied, setCopied] = useState(false);
+// ─── 生成入住者日记（LLM call）───
+async function generateOneDiary(char, record, config, ctxConfig, allMemories, userProfile, homeMemory) {
+  const model = char.modelOverride?.trim()
+    || (config.model === "__custom__" ? config.customModel : config.model)
+    || "";
+  const charMemories = allMemories?.[char.id] || {};
+  const systemBase   = buildSystemPrompt(char, charMemories);
+  const userCtx      = buildUserContext(userProfile, char.id, homeMemory);
+
+  const instruction = `以下是这次小家客厅的完整对话记录：
+
+${record.rawContent}
+
+---
+
+请以你（${char.name || "你"}）的视角，写一篇关于这次客厅聚会的短日记。
+
+写作要求：
+- 只写你自己的感受、印象和你想记下来的事
+- 不要替其他入住者总结或代他们发言
+- 不要把未经确认的内容写成永久事实，也不要说"我已经永久记住了"
+- 可以写你想珍藏什么、你对声声今天状态的感受、你想以后怎么回应她
+- 字数控制在 200-500 字，保持自然的日记语气，像真正写给自己看的私人记录`;
+
+  const resp = await fetch(
+    config.apiUrl.replace(/\/+$/, "") + "/chat/completions",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemBase + (userCtx ? `\n\n${userCtx}` : "") },
+          { role: "user", content: instruction },
+        ],
+        temperature: 0.88,
+        max_tokens: ctxConfig?.maxTokens ? Math.min(ctxConfig.maxTokens, 1200) : 1200,
+      }),
+    }
+  );
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${resp.status}`);
+  }
+  const data = await resp.json();
+  const content = data.choices?.[0]?.message?.content?.trim() || "";
+  return {
+    id:         genId(),
+    recordId:   record.id,
+    charId:     char.id,
+    charName:   char.name || "ta",
+    title:      `${char.name || "ta"} · 客厅日记`,
+    content,
+    createdAt:  Date.now(),
+    sourceType: "lounge_record",
+    sourceId:   record.id,
+    status:     "draft",
+    canSaveToTreasure: true,
+  };
+}
+
+// ─── 日记卡 ───
+function DiaryCard({ diary, char, onSaveToTreasure, onSaveToCharTreasure, onDelete }) {
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [savedFeedback, setSavedFeedback] = useState("");
+
+  const handleSave = () => {
+    onSaveToTreasure?.();
+    setSavedFeedback("💎 已保存到我的宝库");
+    setTimeout(() => setSavedFeedback(""), 2200);
+  };
+
+  return (
+    <div style={{
+      borderRadius: 14, overflow: "hidden",
+      background: "rgba(255,255,255,.72)",
+      border: "1px solid rgba(196,166,184,.22)",
+      marginBottom: 12,
+    }}>
+      {/* 日记头 */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "12px 14px 8px",
+        borderBottom: "1px solid rgba(196,166,184,.12)",
+      }}>
+        <div style={{
+          width: 30, height: 30, borderRadius: 10, flexShrink: 0,
+          background: "rgba(196,166,184,.2)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 15, overflow: "hidden",
+          border: "1px solid rgba(196,166,184,.25)",
+        }}>
+          {char?.avatarImg
+            ? <img src={char.avatarImg} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+            : (char?.emoji || "💜")}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, color: "#5a4a6a", fontWeight: 500 }}>{diary.title}</div>
+          <div style={{ fontSize: 10, color: "var(--text-faint)" }}>
+            {new Date(diary.createdAt).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+          </div>
+        </div>
+        <span style={{
+          fontSize: 9, color: "#8a7898", padding: "2px 7px",
+          background: "rgba(120,100,160,.08)", border: "1px solid rgba(120,100,160,.15)",
+          borderRadius: 6,
+        }}>草稿</span>
+      </div>
+
+      {/* 日记内容 */}
+      <div style={{ padding: "12px 14px", fontSize: 13, color: "#3a2e4a", lineHeight: 1.9, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+        {diary.content}
+      </div>
+
+      {/* 操作行 */}
+      {deleteConfirm ? (
+        <div style={{ padding: "8px 14px 12px", display: "flex", gap: 8 }}>
+          <div style={{ fontSize: 11, color: "#7a5a5a", flex: 1, alignSelf: "center" }}>确认删除这篇日记？</div>
+          <button onClick={() => { onDelete(); setDeleteConfirm(false); }} style={{ padding: "5px 12px", borderRadius: 8, fontSize: 11, background: "rgba(180,80,80,.85)", border: "none", color: "white", cursor: "pointer", fontFamily: "var(--font-main)" }}>删除</button>
+          <button onClick={() => setDeleteConfirm(false)} style={{ padding: "5px 12px", borderRadius: 8, fontSize: 11, background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)", color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)" }}>取消</button>
+        </div>
+      ) : (
+        <div style={{ padding: "4px 14px 12px", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          {savedFeedback ? (
+            <span style={{ fontSize: 11, color: "#7a6a8e" }}>{savedFeedback}</span>
+          ) : (
+            <button onClick={handleSave} style={{ padding: "5px 12px", borderRadius: 9, fontSize: 11, background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.2)", color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)" }}>
+              💎 保存到我的宝库
+            </button>
+          )}
+          <button
+            disabled
+            title="他的宝库还在准备中"
+            style={{ padding: "5px 12px", borderRadius: 9, fontSize: 11, background: "rgba(196,166,184,.08)", border: "1px solid rgba(196,166,184,.2)", color: "var(--text-faint)", cursor: "not-allowed", fontFamily: "var(--font-main)" }}
+          >
+            💝 他的宝库（稍后开放）
+          </button>
+          <div style={{ flex: 1 }} />
+          <button onClick={() => setDeleteConfirm(true)} style={{ padding: "4px 10px", borderRadius: 8, fontSize: 10, background: "none", border: "1px solid rgba(196,166,184,.25)", color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)" }}>删除</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── 客厅记录详情（增强版：含日记生成）───
+function LoungeRecordDetailPanel({
+  record,
+  characters,
+  config,
+  ctxConfig,
+  allMemories,
+  userProfile,
+  homeMemory,
+  onSaveTreasure,
+  onAddCharTreasure,
+  onUpdateRecord,
+  onClose,
+}) {
+  const [copied, setCopied]               = useState(false);
+  const [generating, setGenerating]       = useState(false);
+  const [currentGenChar, setCurrentGenChar] = useState(null);
+  const [genError, setGenError]           = useState("");
+  const [diaryFeedback, setDiaryFeedback] = useState("");
+  const [showRaw, setShowRaw]             = useState(false);
+
+  const memberChars = (record.memberIds || [])
+    .map((id) => characters.find((c) => c.id === id))
+    .filter(Boolean);
+  const diaries = record.diaries || [];
+
+  // 自动隐藏 toast
+  useEffect(() => {
+    if (!diaryFeedback) return;
+    const t = setTimeout(() => setDiaryFeedback(""), 2200);
+    return () => clearTimeout(t);
+  }, [diaryFeedback]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(record.rawContent || "").then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }).catch(() => {});
+  };
+
+  // 为全部入住者生成日记
+  const handleGenerateAll = async () => {
+    if (!config?.apiUrl?.trim() || !config?.apiKey?.trim()) {
+      setGenError("请先配置 API 地址和密钥"); return;
+    }
+    setGenerating(true);
+    setGenError("");
+    const newDiaries = [];
+
+    for (const char of memberChars) {
+      setCurrentGenChar(char);
+      try {
+        const d = await generateOneDiary(char, record, config, ctxConfig, allMemories, userProfile, homeMemory);
+        newDiaries.push(d);
+      } catch (err) {
+        setGenError(`${char.name || "ta"} 生成失败：${err.message}`);
+      }
+    }
+
+    setCurrentGenChar(null);
+    setGenerating(false);
+    if (newDiaries.length > 0) {
+      onUpdateRecord?.({ ...record, diaries: [...diaries, ...newDiaries] });
+    }
+  };
+
+  // 删除单篇日记
+  const handleDeleteDiary = (diaryId) => {
+    onUpdateRecord?.({ ...record, diaries: diaries.filter((d) => d.id !== diaryId) });
+  };
+
+  // 把日记保存到我的宝库
+  const handleSaveDiaryToTreasure = (diary) => {
+    onSaveTreasure?.({
+      id:         genId(),
+      title:      diary.title,
+      content:    diary.content,
+      type:       "diary",
+      charId:     diary.charId,
+      charName:   diary.charName,
+      important:  false,
+      tags:       ["客厅日记"],
+      note:       "",
+      createdAt:  Date.now(),
+      updatedAt:  Date.now(),
+      sourceRefs: [buildSourceRef({
+        sourceType:  "resident_diary",
+        sourceId:    diary.id,
+        sourceTitle: diary.title,
+        excerpt:     (diary.content || "").slice(0, 80),
+      })],
+    });
+    setDiaryFeedback("💎 已保存到我的宝库");
   };
 
   return (
@@ -1257,7 +1486,7 @@ function LoungeRecordDetailPanel({ record, onClose }) {
         <div style={{
           display: "flex", gap: 8, padding: "10px 16px",
           borderBottom: "1px solid rgba(196,166,184,.12)",
-          flexShrink: 0,
+          flexShrink: 0, alignItems: "center",
         }}>
           <button
             onClick={handleCopy}
@@ -1270,21 +1499,135 @@ function LoungeRecordDetailPanel({ record, onClose }) {
           >
             {copied ? "✓ 已复制" : "复制全文"}
           </button>
-          <div style={{ flex: 1 }} />
-          <div style={{ fontSize: 10, color: "var(--text-faint)", alignSelf: "center", lineHeight: 1.6 }}>
-            提炼与沉淀功能即将开放
-          </div>
+          <button
+            onClick={handleGenerateAll}
+            disabled={generating}
+            style={{
+              padding: "6px 14px", borderRadius: 10, fontSize: 11,
+              background: generating ? "rgba(196,166,184,.15)" : "rgba(120,100,160,.88)",
+              border: "none",
+              color: generating ? "#9a8aac" : "white",
+              cursor: generating ? "default" : "pointer",
+              fontFamily: "var(--font-main)", letterSpacing: 0.3,
+              transition: "all .15s",
+            }}
+          >
+            {generating ? `${currentGenChar?.name || "…"} 正在写…` : "📓 生成入住者日记"}
+          </button>
+          {diaryFeedback && (
+            <span style={{ fontSize: 11, color: "#7a6a8e", marginLeft: 2 }}>{diaryFeedback}</span>
+          )}
         </div>
 
-        {/* 原文 */}
-        <div style={{ flex: 1, overflow: "auto", padding: "16px 18px 32px" }}>
-          <pre style={{
-            fontSize: 13, color: "#3a2e4a", lineHeight: 1.9,
-            fontFamily: "var(--font-main)",
-            whiteSpace: "pre-wrap", wordBreak: "break-word", margin: 0,
+        {/* 错误提示 */}
+        {genError && (
+          <div style={{
+            padding: "6px 16px", fontSize: 11, color: "#9a5050",
+            background: "rgba(200,140,140,.08)", borderBottom: "1px solid rgba(200,140,140,.12)",
+            flexShrink: 0, display: "flex", alignItems: "center", gap: 8,
           }}>
-            {record.rawContent || "（无内容）"}
-          </pre>
+            <span style={{ flex: 1 }}>{genError}</span>
+            <button onClick={() => setGenError("")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "#9a5050", padding: 0 }}>✕</button>
+          </div>
+        )}
+
+        {/* 主体：日记 + 原文 */}
+        <div style={{ flex: 1, overflow: "auto", padding: "14px 16px 32px" }}>
+
+          {/* ── 他们的日记 ── */}
+          {diaries.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{
+                fontSize: 11, color: "#8a7898", letterSpacing: 1,
+                marginBottom: 10, display: "flex", alignItems: "center", gap: 8,
+              }}>
+                <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
+                他们的日记
+                <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
+              </div>
+              {diaries.map((diary) => {
+                const char = characters.find((c) => c.id === diary.charId);
+                return (
+                  <DiaryCard
+                    key={diary.id}
+                    diary={diary}
+                    char={char}
+                    onSaveToTreasure={() => handleSaveDiaryToTreasure(diary)}
+                    onSaveToCharTreasure={null}
+                    onDelete={() => handleDeleteDiary(diary.id)}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {/* 生成进度占位 */}
+          {generating && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "14px 16px", marginBottom: 14,
+              background: "rgba(255,255,255,.6)", borderRadius: 14,
+              border: "1px solid rgba(196,166,184,.2)",
+            }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: 10, flexShrink: 0,
+                background: "rgba(196,166,184,.18)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 14,
+              }}>
+                {currentGenChar?.avatarImg
+                  ? <img src={currentGenChar.avatarImg} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 10 }} alt="" />
+                  : (currentGenChar?.emoji || "💜")}
+              </div>
+              <div className="typing-indicator" style={{ background: "rgba(255,255,255,.75)", border: "1px solid rgba(196,166,184,.22)", gap: 3, padding: "6px 10px" }}>
+                <div className="typing-dot" /><div className="typing-dot" /><div className="typing-dot" />
+              </div>
+              <span style={{ fontSize: 11, color: "var(--text-faint)" }}>
+                {currentGenChar?.name || "ta"} 正在写日记…
+              </span>
+            </div>
+          )}
+
+          {/* ── 完整对话原文（可折叠）── */}
+          <div>
+            <button
+              onClick={() => setShowRaw((v) => !v)}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 8,
+                background: "none", border: "none", cursor: "pointer",
+                padding: "6px 0", marginBottom: showRaw ? 10 : 0,
+              }}
+            >
+              <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
+              <span style={{ fontSize: 11, color: "#8a7898", letterSpacing: 1, whiteSpace: "nowrap" }}>
+                {showRaw ? "▲ 收起原文" : "▼ 查看完整对话"}
+              </span>
+              <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
+            </button>
+            {showRaw && (
+              <pre style={{
+                fontSize: 12, color: "#3a2e4a", lineHeight: 1.9,
+                fontFamily: "var(--font-main)",
+                whiteSpace: "pre-wrap", wordBreak: "break-word", margin: 0,
+                background: "rgba(255,255,255,.55)", borderRadius: 12,
+                padding: "14px 16px", border: "1px solid rgba(196,166,184,.18)",
+              }}>
+                {record.rawContent || "（无内容）"}
+              </pre>
+            )}
+          </div>
+
+          {/* 空态提示（既无日记也没生成中）*/}
+          {diaries.length === 0 && !generating && (
+            <div style={{
+              textAlign: "center", padding: "32px 16px",
+              fontSize: 12, color: "var(--text-faint)", lineHeight: 1.9,
+            }}>
+              <div style={{ fontSize: 28, marginBottom: 10 }}>📓</div>
+              点击上方「生成入住者日记」，<br />
+              让每位入住者用自己的视角记下这次客厅。
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1750,7 +2093,14 @@ export default function GroupChatPage({
   // ── 删除记录 ──
   const handleDeleteRecord = (recordId) => {
     setLoungeRecords((prev) => prev.filter((r) => r.id !== recordId));
+    if (viewRecord?.id === recordId) setViewRecord(null);
   };
+
+  // ── 更新记录（含日记）──
+  const handleUpdateRecord = useCallback((updatedRecord) => {
+    setLoungeRecords((prev) => prev.map((r) => r.id === updatedRecord.id ? updatedRecord : r));
+    setViewRecord(updatedRecord);
+  }, [setLoungeRecords]);
 
   // ── 渲染消息列表 ──
   const renderMessages = () => {
@@ -1911,6 +2261,15 @@ export default function GroupChatPage({
         {viewRecord && (
           <LoungeRecordDetailPanel
             record={viewRecord}
+            characters={characters}
+            config={config}
+            ctxConfig={ctxConfig}
+            allMemories={allMemories}
+            userProfile={userProfile}
+            homeMemory={homeMemory}
+            onSaveTreasure={onSaveTreasure}
+            onAddCharTreasure={onAddCharTreasure}
+            onUpdateRecord={handleUpdateRecord}
             onClose={() => setViewRecord(null)}
           />
         )}
@@ -2261,6 +2620,15 @@ export default function GroupChatPage({
       {viewRecord && (
         <LoungeRecordDetailPanel
           record={viewRecord}
+          characters={characters}
+          config={config}
+          ctxConfig={ctxConfig}
+          allMemories={allMemories}
+          userProfile={userProfile}
+          homeMemory={homeMemory}
+          onSaveTreasure={onSaveTreasure}
+          onAddCharTreasure={onAddCharTreasure}
+          onUpdateRecord={handleUpdateRecord}
           onClose={() => setViewRecord(null)}
         />
       )}
