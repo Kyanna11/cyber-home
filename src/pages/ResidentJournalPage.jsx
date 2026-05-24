@@ -109,16 +109,17 @@ ${journal.content}
     throw new Error(err.error?.message || `HTTP ${resp.status}`);
   }
   const data = await resp.json();
-  const raw = data.choices?.[0]?.message?.content?.trim() || "";
-  // 解析失败时降级为空草稿，不抛出错误（避免用户看到技术报错）
-  const parsed = parseDraftOutput(raw) || {};
+  const rawText = data.choices?.[0]?.message?.content?.trim() || "";
+  const parsed = parseDraftOutput(rawText);
   return {
-    charMemorySuggestions:             parsed.charMemorySuggestions             || [],
-    userProfileSuggestions:            parsed.userProfileSuggestions            || [],
-    relationshipSettlementSuggestions: parsed.relationshipSettlementSuggestions || [],
-    timelineSuggestions:               parsed.timelineSuggestions               || [],
-    treasureSuggestions:               parsed.treasureSuggestions               || [],
-    notForLongTermMemory:              parsed.notForLongTermMemory              || [],
+    _rawText:  rawText,          // 保留原始输出，供面板展示调试用
+    _parsed:   parsed !== null,  // 是否成功解析为 JSON
+    charMemorySuggestions:             parsed?.charMemorySuggestions             || [],
+    userProfileSuggestions:            parsed?.userProfileSuggestions            || [],
+    relationshipSettlementSuggestions: parsed?.relationshipSettlementSuggestions || [],
+    timelineSuggestions:               parsed?.timelineSuggestions               || [],
+    treasureSuggestions:               parsed?.treasureSuggestions               || [],
+    notForLongTermMemory:              parsed?.notForLongTermMemory              || [],
   };
 }
 
@@ -126,6 +127,7 @@ ${journal.content}
 function JournalMemoryDraftPanel({ draft, journal, char, onClose }) {
   const [ignored, setIgnored] = useState(new Set());
   const [copiedSection, setCopiedSection] = useState(null);
+  const [showRaw, setShowRaw] = useState(false);
 
   const toggle = (key, idx) => {
     const k = `${key}-${idx}`;
@@ -144,6 +146,11 @@ function JournalMemoryDraftPanel({ draft, journal, char, onClose }) {
     setCopiedSection(key);
     setTimeout(() => setCopiedSection(null), 1800);
   };
+
+  // 是否所有区块都没有内容
+  const allEmpty = DRAFT_SECTIONS.every(
+    ({ key }) => !(draft[key] || []).filter((s) => typeof s === "string" && s.trim()).length
+  );
 
   return (
     <div style={{
@@ -266,6 +273,48 @@ function JournalMemoryDraftPanel({ draft, journal, char, onClose }) {
               </div>
             );
           })}
+
+          {/* 全部为空时显示提示 */}
+          {allEmpty && (
+            <div style={{ padding: "32px 0 16px", textAlign: "center" }}>
+              <div style={{ fontSize: 30, marginBottom: 12 }}>🍃</div>
+              <div style={{
+                fontSize: 13, color: "#6a5a7a", lineHeight: 1.9,
+                marginBottom: draft._rawText && !draft._parsed ? 16 : 0,
+              }}>
+                {draft._parsed === false
+                  ? "模型的输出格式无法解析，没有提炼到内容。"
+                  : "这篇日记暂时没有提炼到记忆建议。"}
+              </div>
+              {draft._rawText && !draft._parsed && (
+                <>
+                  <button
+                    onClick={() => setShowRaw((v) => !v)}
+                    style={{
+                      padding: "6px 16px", borderRadius: 10, fontSize: 11,
+                      background: "rgba(120,100,160,.08)",
+                      border: "1px solid rgba(120,100,160,.18)",
+                      color: "#7a5aaa", cursor: "pointer",
+                      fontFamily: "var(--font-main)",
+                    }}
+                  >
+                    {showRaw ? "收起原始输出" : "查看原始输出"}
+                  </button>
+                  {showRaw && (
+                    <pre style={{
+                      marginTop: 12, padding: "12px 14px", borderRadius: 10, textAlign: "left",
+                      background: "rgba(255,255,255,.6)", border: "1px solid rgba(196,166,184,.2)",
+                      fontSize: 11, color: "#5a4a6a", lineHeight: 1.7,
+                      whiteSpace: "pre-wrap", wordBreak: "break-all", overflow: "auto",
+                      maxHeight: 240,
+                    }}>
+                      {draft._rawText}
+                    </pre>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 底部 */}
