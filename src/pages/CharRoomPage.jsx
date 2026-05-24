@@ -100,12 +100,14 @@ export default function CharRoomPage({
   stickyNotes,
   timelineEvents,
   charTreasures,
+  residentJournals,
   onEnterChat,
   onOpenProfile,
   onOpenMemoryPalace,
   onOpenTimeline,
   onOpenWakePreview,
   onOpenCharTreasure,
+  onOpenResidentJournal,
   navigateTo,
   onBack,
 }) {
@@ -163,7 +165,13 @@ export default function CharRoomPage({
     .filter((t) => t.charId === charId)
     .sort((a, b) => b.createdAt - a.createdAt)[0] || null;
 
-  const hasRecentActivity = lastChatMsg || recentTimeline || recentNote || recentCharTreasure;
+  // 最近一篇他的日记
+  const charJournals = (residentJournals || [])
+    .filter((j) => j.charId === charId)
+    .sort((a, b) => b.createdAt - a.createdAt);
+  const recentJournal = charJournals[0] || null;
+
+  const hasRecentActivity = lastChatMsg || recentTimeline || recentNote || recentCharTreasure || recentJournal;
 
   return (
     <div style={{
@@ -330,6 +338,12 @@ export default function CharRoomPage({
               onClick={() => onOpenCharTreasure?.(charId)}
             />
             <ActionCard
+              emoji="📔"
+              label="他的日记"
+              sublabel={charJournals.length > 0 ? `${charJournals.length} 篇` : "第一视角记录"}
+              onClick={() => onOpenResidentJournal?.(charId)}
+            />
+            <ActionCard
               emoji="🖼"
               label="照片回忆"
               sublabel="稍后开放"
@@ -385,6 +399,18 @@ export default function CharRoomPage({
                   : null}
                 sub={recentCharTreasure ? formatDateShort(recentCharTreasure.createdAt) : null}
                 onClick={() => onOpenCharTreasure?.(charId)}
+              />
+
+              <RecentCard
+                icon="📔"
+                label="他的日记"
+                preview={recentJournal
+                  ? recentJournal.content.slice(0, 80)
+                  : null}
+                sub={recentJournal
+                  ? `${recentJournal.title} · ${formatDateShort(recentJournal.createdAt)}`
+                  : null}
+                onClick={() => onOpenResidentJournal?.(charId)}
               />
             </div>
           </div>

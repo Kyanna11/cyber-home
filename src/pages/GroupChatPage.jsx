@@ -1281,13 +1281,29 @@ ${record.rawContent}
   };
 }
 
-// ─── 解析 AI 输出的 JSON ───
+// ─── 解析 AI 输出的 JSON（多重兜底）───
 function parseDraftOutput(raw) {
-  const s = raw.trim();
+  const s = (raw || "").trim();
   try { return JSON.parse(s); } catch {}
   const m = s.match(/\{[\s\S]*\}/);
   if (m) { try { return JSON.parse(m[0]); } catch {} }
-  return null;
+  // 逐字段提取数组
+  const FIELDS = [
+    "charMemorySuggestions", "userProfileSuggestions",
+    "relationshipSettlementSuggestions", "timelineSuggestions",
+    "treasureSuggestions", "notForLongTermMemory",
+  ];
+  const result = {};
+  let found = false;
+  for (const field of FIELDS) {
+    const re = new RegExp(`"${field}"\\s*:\\s*(\\[[\\s\\S]*?\\])`, "m");
+    const fm = s.match(re);
+    if (fm) {
+      try { result[field] = JSON.parse(fm[1]); found = true; continue; } catch {}
+    }
+    result[field] = [];
+  }
+  return found ? result : null;
 }
 
 // ─── 生成记忆沉淀草稿（LLM call）───

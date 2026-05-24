@@ -24,13 +24,31 @@ const DRAFT_SECTIONS = [
   { key: "notForLongTermMemory",              emoji: "🍃", label: "只属于这篇日记",    hint: "不建议写入长期记忆" },
 ];
 
-// ─── 解析 AI JSON 输出 ───
+// ─── 解析 AI JSON 输出（多重兜底）───
 function parseDraftOutput(raw) {
   const s = (raw || "").trim();
+  // 1. 直接解析
   try { return JSON.parse(s); } catch {}
+  // 2. 提取 { ... } 块（处理 markdown 代码块包裹）
   const m = s.match(/\{[\s\S]*\}/);
   if (m) { try { return JSON.parse(m[0]); } catch {} }
-  return null;
+  // 3. 逐字段提取数组（兜底：模型返回了部分 JSON）
+  const FIELDS = [
+    "charMemorySuggestions", "userProfileSuggestions",
+    "relationshipSettlementSuggestions", "timelineSuggestions",
+    "treasureSuggestions", "notForLongTermMemory",
+  ];
+  const result = {};
+  let found = false;
+  for (const field of FIELDS) {
+    const re = new RegExp(`"${field}"\\s*:\\s*(\\[[\\s\\S]*?\\])`, "m");
+    const fm = s.match(re);
+    if (fm) {
+      try { result[field] = JSON.parse(fm[1]); found = true; continue; } catch {}
+    }
+    result[field] = [];
+  }
+  return found ? result : null;
 }
 
 // ─── 生成记忆沉淀草稿（LLM call）───
@@ -38,9 +56,9 @@ async function generateJournalMemoryDraft(journal, char, config, ctxConfig) {
   const model = (config.model === "__custom__" ? config.customModel : config.model) || "";
 
   const systemPrompt = `你是一个记忆整理助手，帮助用户从入住者日记中提炼值得保存的内容建议。
-你的输出必须是纯 JSON，不要加任何代码块标记（不要写 \`\`\`json）。`;
+仅输出纯 JSON，不要输出任何其他文字，不要加 markdown 代码块（不要写 \`\`\`json）。`;
 
-  const taskPrompt = `以下是入住者「${char?.name || "ta"}」写的一篇日记：
+  const taskPrompt = `入住者「${char?.name || "ta"}」写的一篇日记如下：
 
 标题：${journal.title}
 来源：${SOURCE_LABELS[journal.sourceType]?.label || journal.sourceType}
@@ -50,15 +68,24 @@ ${journal.content}
 
 ---
 
-请从这篇日记中提炼内容，严格按以下 JSON 格式输出（每个字段是字符串数组，没有内容填 []）：
+请判断这篇日记中哪些内容值得提炼为待确认的记忆建议，按以下说明填写 JSON：
+- charMemorySuggestions：ta 自己应该记住的（事实/感受/觉察），每条 20 字以内
+- userProfileSuggestions：关于声声（用户）的新信息，每条 20 字以内
+- relationshipSettlementSuggestions：关系变化或新默契，每条 20 字以内
+- timelineSuggestions：值得记到时间线的时刻，每条 30 字以内
+- treasureSuggestions：值得珍藏的原话或片段（可较长）
+- notForLongTermMemory：只属于这次/不该写进长期记忆的内容，每条 20 字以内
 
+注意：不要把整篇日记写入长期记忆；不要把临时玩笑误写成永久事实；没有内容的字段留空数组。
+
+请直接输出 JSON，不要有任何前言后语：
 {
-  "charMemorySuggestions": ["ta自己应该记住的事实、感受或觉察，每条20字以内"],
-  "userProfileSuggestions": ["关于声声（用户）的信息，每条20字以内"],
-  "relationshipSettlementSuggestions": ["关系变化或新默契，每条20字以内"],
-  "timelineSuggestions": ["值得记到时间线的时刻，每条30字以内"],
-  "treasureSuggestions": ["值得珍藏的原话或片段，可较长"],
-  "notForLongTermMemory": ["只属于这次、不该写进长期记忆的内容，每条20字以内"]
+  "charMemorySuggestions": [],
+  "userProfileSuggestions": [],
+  "relationshipSettlementSuggestions": [],
+  "timelineSuggestions": [],
+  "treasureSuggestions": [],
+  "notForLongTermMemory": []
 }`;
 
   const resp = await fetch(
@@ -73,7 +100,7 @@ ${journal.content}
           { role: "user", content: taskPrompt },
         ],
         temperature: 0.5,
-        max_tokens: ctxConfig?.maxTokens ? Math.min(ctxConfig.maxTokens, 1000) : 1000,
+        max_tokens: ctxConfig?.maxTokens ? Math.min(ctxConfig.maxTokens, 1500) : 1500,
       }),
     }
   );
@@ -83,9 +110,16 @@ ${journal.content}
   }
   const data = await resp.json();
   const raw = data.choices?.[0]?.message?.content?.trim() || "";
-  const parsed = parseDraftOutput(raw);
-  if (!parsed) throw new Error("AI 返回格式无法解析");
-  return parsed;
+  // 解析失败时降级为空草稿，不抛出错误（避免用户看到技术报错）
+  const parsed = parseDraftOutput(raw) || {};
+  return {
+    charMemorySuggestions:             parsed.charMemorySuggestions             || [],
+    userProfileSuggestions:            parsed.userProfileSuggestions            || [],
+    relationshipSettlementSuggestions: parsed.relationshipSettlementSuggestions || [],
+    timelineSuggestions:               parsed.timelineSuggestions               || [],
+    treasureSuggestions:               parsed.treasureSuggestions               || [],
+    notForLongTermMemory:              parsed.notForLongTermMemory              || [],
+  };
 }
 
 // ─── 记忆草稿面板 ───

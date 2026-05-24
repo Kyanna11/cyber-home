@@ -3824,6 +3824,8 @@ ${chatLines}
           onOpenTimeline={(charId) => openTimeline(charId)}
           onOpenWakePreview={(charId) => { setWakePreviewCharId(charId); navigateTo("wakePreview"); }}
           onOpenCharTreasure={(charId) => { setMemEntryFrom("charRoom"); openCharTreasure(charId); }}
+          residentJournals={residentJournals}
+          onOpenResidentJournal={openResidentJournal}
           navigateTo={navigateTo}
           onBack={() => navigateTo(charRoomFrom || "bedroom")}
         />
