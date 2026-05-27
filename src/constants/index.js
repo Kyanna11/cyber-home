@@ -35,6 +35,7 @@ export const GROUP_THREADS_STORAGE_KEY = "cyber-home-group-threads";
 export const CHAR_TREASURES_STORAGE_KEY = "cyber-home-char-treasures";
 export const LOUNGE_RECORDS_STORAGE_KEY = "cyber-home-lounge-records";
 export const RESIDENT_JOURNALS_STORAGE_KEY = "cyber-home-resident-journals";
+export const RESIDENT_INITIATIVES_STORAGE_KEY = "cyber-home-resident-initiatives";
 
 // 消息分隔符（AI 回复中用来拆成多条消息）
 export const MSG_DELIMITER = "|||";

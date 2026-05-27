@@ -93,6 +93,72 @@ function formatDateShort(ts) {
 // ═══════════════════════════════════
 // ── 主页面 ──
 // ═══════════════════════════════════
+// ─── initiative 类型元数据 ───
+const INITIATIVE_META = {
+  settlement_suggestion: { emoji: "💫", actionLabel: "去整理" },
+  treasure_request:      { emoji: "💝", actionLabel: "同意收藏" },
+  memory_suggestion:     { emoji: "🧠", actionLabel: "生成草稿" },
+  diary:                 { emoji: "📔", actionLabel: "让他写" },
+  follow_up:             { emoji: "🔖", actionLabel: "去聊聊" },
+};
+
+// ─── 单条提案卡片 ───
+function InitiativeCard({ initiative, onAccept, onDismiss, onSnooze }) {
+  const meta = INITIATIVE_META[initiative.type] || { emoji: "💬", actionLabel: "同意" };
+  return (
+    <div style={{
+      background: "rgba(255,255,255,.72)",
+      border: "1px solid rgba(196,166,184,.25)",
+      borderRadius: 14,
+      padding: "12px 14px",
+      marginBottom: 10,
+    }}>
+      {/* 标题行 */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+        <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{meta.emoji}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, color: "#4a3a5e", fontWeight: 500, lineHeight: 1.5 }}>
+            {initiative.title}
+          </div>
+          {initiative.description && (
+            <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2, lineHeight: 1.6 }}>
+              {initiative.description}
+            </div>
+          )}
+        </div>
+      </div>
+      {/* 操作按钮 */}
+      <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+        <button
+          onClick={() => onAccept(initiative.id)}
+          style={{
+            flex: 2, padding: "7px 10px", borderRadius: 9, fontSize: 11,
+            background: "rgba(120,100,160,.82)", border: "none",
+            color: "white", cursor: "pointer", fontFamily: "var(--font-main)",
+            letterSpacing: 0.3,
+          }}
+        >{meta.actionLabel}</button>
+        <button
+          onClick={() => onSnooze(initiative.id)}
+          style={{
+            flex: 1, padding: "7px 10px", borderRadius: 9, fontSize: 11,
+            background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.28)",
+            color: "#8a7898", cursor: "pointer", fontFamily: "var(--font-main)",
+          }}
+        >稍后</button>
+        <button
+          onClick={() => onDismiss(initiative.id)}
+          style={{
+            flex: 1, padding: "7px 10px", borderRadius: 9, fontSize: 11,
+            background: "none", border: "1px solid rgba(196,166,184,.2)",
+            color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)",
+          }}
+        >不用了</button>
+      </div>
+    </div>
+  );
+}
+
 export default function CharRoomPage({
   char,
   charId,
@@ -101,6 +167,10 @@ export default function CharRoomPage({
   timelineEvents,
   charTreasures,
   residentJournals,
+  residentInitiatives,
+  onAcceptInitiative,
+  onDismissInitiative,
+  onSnoozeInitiative,
   onEnterChat,
   onOpenProfile,
   onOpenMemoryPalace,
@@ -172,6 +242,15 @@ export default function CharRoomPage({
   const recentJournal = charJournals[0] || null;
 
   const hasRecentActivity = lastChatMsg || recentTimeline || recentNote || recentCharTreasure || recentJournal;
+
+  // 他想做的事：只展示 pending 且未过期的提案
+  const now = Date.now();
+  const pendingInitiatives = (residentInitiatives || []).filter(
+    (i) => i.charId === charId &&
+      i.status === "pending" &&
+      !i.snoozedAt &&
+      (!i.expiresAt || i.expiresAt > now)
+  );
 
   return (
     <div style={{
@@ -269,6 +348,33 @@ export default function CharRoomPage({
             这里收着{charName}和你一起带回来的记忆。
           </div>
         </div>
+
+        {/* ── 他想做的事 ── */}
+        {pendingInitiatives.length > 0 && (
+          <div style={{ padding: "0 14px 16px" }}>
+            <div style={{
+              fontSize: 11, color: "#9a8aac", letterSpacing: 1,
+              marginBottom: 10, paddingLeft: 4,
+              display: "flex", alignItems: "center", gap: 6,
+            }}>
+              他想做的事
+              <span style={{
+                fontSize: 10, background: "rgba(180,100,120,.12)",
+                color: "#9a5060", padding: "1px 7px", borderRadius: 8,
+                border: "1px solid rgba(180,100,120,.18)",
+              }}>{pendingInitiatives.length}</span>
+            </div>
+            {pendingInitiatives.map((initiative) => (
+              <InitiativeCard
+                key={initiative.id}
+                initiative={initiative}
+                onAccept={onAcceptInitiative || (() => {})}
+                onDismiss={onDismissInitiative || (() => {})}
+                onSnooze={onSnoozeInitiative || (() => {})}
+              />
+            ))}
+          </div>
+        )}
 
         {/* ── 快捷入口卡片 ── */}
         <div style={{ padding: "0 14px 20px" }}>

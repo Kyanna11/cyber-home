@@ -29,6 +29,7 @@ import {
   loadCharTreasures, saveCharTreasures,
   loadLoungeRecords, saveLoungeRecords,
   loadResidentJournals, saveResidentJournals,
+  loadResidentInitiatives, saveResidentInitiatives,
   loadAllFromCloud,
   loadJSON,
   saveJSON,
@@ -405,6 +406,9 @@ export default function App() {
   const [residentJournals, setResidentJournals] = useState(() => loadResidentJournals());
   const [residentJournalCharId, setResidentJournalCharId] = useState(null);
 
+  // ─── 他想做的事（主动性提案）───
+  const [residentInitiatives, setResidentInitiatives] = useState(() => loadResidentInitiatives());
+
   // ─── 他的房间 ───
   const [charRoomCharId, setCharRoomCharId] = useState(null);
   const [charRoomFrom, setCharRoomFrom] = useState("bedroom"); // 进入他的房间前所在的页面
@@ -517,6 +521,7 @@ export default function App() {
   useEffect(() => { if (isHydrated.current) saveCharTreasures(charTreasures); }, [charTreasures]);
   useEffect(() => { if (isHydrated.current) saveLoungeRecords(loungeRecords); }, [loungeRecords]);
   useEffect(() => { if (isHydrated.current) saveResidentJournals(residentJournals); }, [residentJournals]);
+  useEffect(() => { saveResidentInitiatives(residentInitiatives); }, [residentInitiatives]);
   useEffect(() => { localStorage.setItem("worldViews", JSON.stringify(worldViews)); }, [worldViews]);
   useEffect(() => { localStorage.setItem("reflectSettings", JSON.stringify(reflectSettings)); }, [reflectSettings]);
   useEffect(() => { localStorage.setItem("userProfile", JSON.stringify(userProfile)); }, [userProfile]);
@@ -1663,6 +1668,54 @@ ${chunksText}
     return entry;
   };
 
+  // ── 主动性提案 CRUD ──
+
+  // 添加提案（有去重：同一 charId + type 只保留一条 pending）
+  const addResidentInitiative = (initiative) => {
+    setResidentInitiatives((prev) => {
+      const deduped = prev.filter(
+        (i) => !(i.charId === initiative.charId && i.type === initiative.type && i.status === "pending")
+      );
+      return [initiative, ...deduped];
+    });
+  };
+
+  // 接受（执行对应动作 + 标记 accepted）
+  const acceptResidentInitiative = (id) => {
+    const initiative = residentInitiatives.find((i) => i.id === id);
+    if (!initiative) return;
+    setResidentInitiatives((prev) =>
+      prev.map((i) => i.id === id ? { ...i, status: "accepted" } : i)
+    );
+    if (initiative.type === "settlement_suggestion") {
+      // 清除本 session 的 dismissed 标记，进入聊天后提醒会重新出现
+      settleDismissedRef.current.delete(initiative.charId);
+      enterChat(initiative.charId);
+    }
+  };
+
+  // 稍后（不改变 status，关闭 UI 展示即可；外层可以按时间过滤）
+  const snoozeResidentInitiative = (id) => {
+    setResidentInitiatives((prev) =>
+      prev.map((i) => i.id === id ? { ...i, snoozedAt: Date.now() } : i)
+    );
+  };
+
+  // 不用了（永久关闭）
+  const dismissResidentInitiative = (id) => {
+    setResidentInitiatives((prev) =>
+      prev.map((i) => i.id === id ? { ...i, status: "dismissed" } : i)
+    );
+  };
+
+  // 清理过期 / 已处理的旧提案（超过 14 天的 accepted/dismissed 自动清除）
+  const pruneOldInitiatives = () => {
+    const cutoff = Date.now() - 14 * 86400000;
+    setResidentInitiatives((prev) =>
+      prev.filter((i) => i.status === "pending" || (i.createdAt || 0) > cutoff)
+    );
+  };
+
   // ── 从亲密邀请场景生成日记（LLM call）──
   const generateJournalFromScene = async (sceneMsgs, sceneConfig) => {
     if (!activeChar || !activeCharId) throw new Error("找不到入住者");
@@ -2232,13 +2285,39 @@ ${recentLines}
     );
     if (realMsgs.length === 0) return;
 
+    // 内部辅助：触发提醒 + 创建 initiative
+    const fireReminder = (text, description) => {
+      // 聊天内 toast
+      setSettleReminderText(text);
+      setShowSettleReminder(true);
+      // 同时在"他想做的事"里创建一条（已有 pending 则去重）
+      const alreadyPending = residentInitiatives.some(
+        (i) => i.charId === charId && i.type === "settlement_suggestion" && i.status === "pending"
+      );
+      if (!alreadyPending) {
+        addResidentInitiative({
+          id:          `initiative-settle-${charId}-${Date.now()}`,
+          charId,
+          charName:    char.name || "ta",
+          type:        "settlement_suggestion",
+          title:       `${char.name || "ta"}想整理一下最近的变化`,
+          description,
+          content:     null,
+          sourceType:  "chat",
+          sourceId:    null,
+          status:      "pending",
+          createdAt:   Date.now(),
+          expiresAt:   Date.now() + 14 * 86400000,
+        });
+      }
+    };
+
     // 时间触发：距上次沉淀超过 N 天
     if (autoSettleDays > 0 && lastSettled > 0) {
       const daysSince = (Date.now() - lastSettled) / 86400000;
       if (daysSince >= autoSettleDays) {
         const d = Math.floor(daysSince);
-        setSettleReminderText(`你们已经 ${d} 天没有整理了`);
-        setShowSettleReminder(true);
+        fireReminder(`你们已经 ${d} 天没有整理了`, `你们已经 ${d} 天没整理过关系变化了`);
         return;
       }
     }
@@ -2249,8 +2328,7 @@ ${recentLines}
         ? realMsgs.filter((m) => (m.ts || 0) > lastSettled).length
         : realMsgs.length;
       if (newCount >= autoSettleMsgs) {
-        setSettleReminderText(`你们聊了 ${newCount} 条还没整理过`);
-        setShowSettleReminder(true);
+        fireReminder(`你们聊了 ${newCount} 条还没整理过`, `聊了 ${newCount} 条消息，觉得可以整理一下了`);
       }
     }
   };
@@ -4061,6 +4139,10 @@ ${chatLines}
           onOpenCharTreasure={(charId) => { setMemEntryFrom("charRoom"); openCharTreasure(charId); }}
           residentJournals={residentJournals}
           onOpenResidentJournal={openResidentJournal}
+          residentInitiatives={residentInitiatives}
+          onAcceptInitiative={acceptResidentInitiative}
+          onDismissInitiative={dismissResidentInitiative}
+          onSnoozeInitiative={snoozeResidentInitiative}
           navigateTo={navigateTo}
           onBack={() => navigateTo(charRoomFrom || "bedroom")}
         />

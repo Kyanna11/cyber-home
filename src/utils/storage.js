@@ -29,6 +29,7 @@ import {
   CHAR_TREASURES_STORAGE_KEY,
   LOUNGE_RECORDS_STORAGE_KEY,
   RESIDENT_JOURNALS_STORAGE_KEY,
+  RESIDENT_INITIATIVES_STORAGE_KEY,
   DEFAULT_HOME_MEMORY,
 } from "../constants";
 
@@ -204,6 +205,17 @@ export function getCharTreasuresByCharId(items, charId) {
 // 他的日记（入住者日记）
 export function loadResidentJournals() { return loadJSON(RESIDENT_JOURNALS_STORAGE_KEY, []); }
 export function saveResidentJournals(journals) { saveJSON(RESIDENT_JOURNALS_STORAGE_KEY, journals); }
+
+// 他想做的事（主动性提案，localStorage only，不同步云端）
+export function loadResidentInitiatives() {
+  try {
+    const r = localStorage.getItem(RESIDENT_INITIATIVES_STORAGE_KEY);
+    return r ? JSON.parse(r) : [];
+  } catch { return []; }
+}
+export function saveResidentInitiatives(initiatives) {
+  try { localStorage.setItem(RESIDENT_INITIATIVES_STORAGE_KEY, JSON.stringify(initiatives)); } catch {}
+}
 
 // 伏笔追踪 { [charId]: [{ id, content, from, createdAt, status }] }
 import { PENDING_THREADS_KEY } from "../constants";
