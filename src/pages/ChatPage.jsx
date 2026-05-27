@@ -690,31 +690,7 @@ function SceneInfoCard({ msg }) {
   );
 }
 
-function SceneEndCard({ onSaveTreasure, messages }) {
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = () => {
-    if (!onSaveTreasure) return;
-    // 把场景内所有 bot 消息合并为宝库条目
-    const sceneMsgs = messages.filter(
-      (m) => m.role === "bot" && (m.content || "").trim()
-    );
-    if (sceneMsgs.length === 0) return;
-    const combined = sceneMsgs.map((m) => m.content).join("\n\n---\n\n");
-    const now = Date.now();
-    onSaveTreasure({
-      id:        `treasure-${now}-${Math.random().toString(36).slice(2, 6)}`,
-      title:     "亲密邀请场景",
-      content:   combined,
-      type:      "scene",
-      tagsRaw:   "场景,亲密邀请",
-      note:      "",
-      important: false,
-      createdAt: now,
-    });
-    setSaved(true);
-  };
-
+function SceneEndCard() {
   return (
     <div style={{
       padding: "16px 20px 24px",
@@ -723,7 +699,7 @@ function SceneEndCard({ onSaveTreasure, messages }) {
       {/* 结束分隔线 */}
       <div style={{
         display: "flex", alignItems: "center", gap: 10,
-        marginBottom: 16,
+        marginBottom: 14,
       }}>
         <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, transparent, rgba(140,90,220,.15))" }} />
         <span style={{ fontSize: 14, opacity: 0.45 }}>🌠</span>
@@ -735,19 +711,6 @@ function SceneEndCard({ onSaveTreasure, messages }) {
         <br />
         <span style={{ fontSize: 11, opacity: 0.65 }}>这段时光已经安静地留下来了。</span>
       </div>
-
-      {!saved ? (
-        <button onClick={handleSave} style={{
-          marginTop: 12, padding: "5px 16px", borderRadius: 20, fontSize: 11,
-          background: "rgba(100,65,180,.12)", border: "1px solid rgba(130,90,220,.18)",
-          color: "rgba(175,145,235,.7)", cursor: "pointer", fontFamily: "var(--font-main)",
-          letterSpacing: 0.5,
-        }}>
-          💎 收藏到宝库
-        </button>
-      ) : (
-        <div style={{ marginTop: 12, fontSize: 11, color: "rgba(155,130,210,.5)" }}>已收藏 ✓</div>
-      )}
     </div>
   );
 }
@@ -1739,6 +1702,7 @@ export default function ChatPage({
   // 他的日记
   onGenerateJournalFromChat,
   onOpenResidentJournal,
+  onGenerateJournalFromScene,
 }) {
   // 返回目标：从他的房间进入时，返回他的房间；否则返回卧室
   const chatBackTarget = prevPage === "charRoom" ? "charRoom" : "bedroom";
@@ -1774,6 +1738,10 @@ export default function ChatPage({
   const [journalGenerating, setJournalGenerating] = useState(false);
   const [journalResult, setJournalResult] = useState(null);  // 成功后的 entry
   const [journalError, setJournalError] = useState("");
+
+  // 场景结束：日记生成状态
+  const [sceneJournalLoading, setSceneJournalLoading] = useState(false);
+  const [sceneJournalError,   setSceneJournalError]   = useState("");
 
   // ── 场景模式检测 ──（必须在 chatBgStyle 之前）
   const isSceneMode = activeThread?.threadType === "scene" && !activeThread?.sceneClosed;
@@ -2732,7 +2700,7 @@ export default function ChatPage({
           }
           // ── 系统消息：亲密场景结束卡片 ──
           if (msg.role === "system" && msg.type === "scene_end") {
-            return <SceneEndCard key={i} onSaveTreasure={onSaveTreasure} messages={messages} />;
+            return <SceneEndCard key={i} />;
           }
           // ── 隐藏：场景开场触发消息 ──
           if (msg.isSceneOpening) {
@@ -3876,6 +3844,51 @@ export default function ChatPage({
                     <span>记下这一刻</span>
                   </button>
 
+                  {/* 让他写日记 */}
+                  <button
+                    disabled={sceneJournalLoading}
+                    onClick={async () => {
+                      setSceneJournalError("");
+                      setSceneJournalLoading(true);
+                      try {
+                        await onGenerateJournalFromScene?.(messages, cfg);
+                        doClose();
+                        setSceneEndStep("journal_done");
+                      } catch (err) {
+                        setSceneJournalError(err.message || "生成失败，请稍后再试");
+                      } finally {
+                        setSceneJournalLoading(false);
+                      }
+                    }}
+                    style={{
+                      width: "100%", padding: "13px", marginBottom: 10, borderRadius: 14,
+                      background: sceneJournalLoading
+                        ? "rgba(60,40,100,.12)"
+                        : "rgba(60,40,120,.16)",
+                      border: "1px solid rgba(100,70,180,.2)",
+                      color: sceneJournalLoading
+                        ? "rgba(150,125,205,.5)"
+                        : "rgba(185,160,245,.85)",
+                      fontSize: 14, cursor: sceneJournalLoading ? "default" : "pointer",
+                      fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                      transition: "all .15s",
+                    }}
+                  >
+                    <span>{sceneJournalLoading ? "✦" : "📔"}</span>
+                    <span>{sceneJournalLoading ? "他正在写…" : "让他写一篇日记"}</span>
+                  </button>
+
+                  {/* 日记生成错误提示 */}
+                  {sceneJournalError && (
+                    <div style={{
+                      fontSize: 11, color: "rgba(220,140,140,.75)",
+                      textAlign: "center", marginBottom: 10, lineHeight: 1.7,
+                    }}>
+                      {sceneJournalError}
+                    </div>
+                  )}
+
                   {/* 只结束 */}
                   <button
                     onClick={() => {
@@ -3892,7 +3905,7 @@ export default function ChatPage({
 
                   {/* 取消 */}
                   <button
-                    onClick={() => setSceneEndStep(null)}
+                    onClick={() => { setSceneEndStep(null); setSceneJournalError(""); }}
                     style={{
                       width: "100%", padding: "9px", borderRadius: 12,
                       background: "none", border: "none",
@@ -3956,6 +3969,39 @@ export default function ChatPage({
                         fontFamily: "var(--font-main)", letterSpacing: 0.5,
                       }}
                     >去时间线看看</button>
+                    <button
+                      onClick={() => setSceneEndStep(null)}
+                      style={{
+                        flex: 1, padding: "11px", borderRadius: 12, fontSize: 12,
+                        background: "rgba(255,255,255,.04)", border: "1px solid rgba(150,120,220,.15)",
+                        color: "rgba(165,140,210,.6)", cursor: "pointer",
+                        fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                      }}
+                    >留在这里</button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── 步骤：journal_done ── */}
+              {sceneEndStep === "journal_done" && (
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 22, marginBottom: 12, opacity: 0.7 }}>📔</div>
+                  <div style={{ fontSize: 14, color: "rgba(220,200,255,.85)", letterSpacing: 1, marginBottom: 8 }}>
+                    他已经把今晚写进日记了。
+                  </div>
+                  <div style={{ fontSize: 11, color: "rgba(155,130,210,.5)", lineHeight: 1.9, marginBottom: 24 }}>
+                    在"他的日记"里可以找到它，<br />也可以从那里生成记忆草稿。
+                  </div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button
+                      onClick={() => { setSceneEndStep(null); onOpenResidentJournal?.(activeChar?.id); }}
+                      style={{
+                        flex: 1, padding: "11px", borderRadius: 12, fontSize: 12,
+                        background: "rgba(60,40,120,.22)", border: "1px solid rgba(100,70,180,.25)",
+                        color: "rgba(190,165,240,.85)", cursor: "pointer",
+                        fontFamily: "var(--font-main)", letterSpacing: 0.5,
+                      }}
+                    >去看他的日记</button>
                     <button
                       onClick={() => setSceneEndStep(null)}
                       style={{

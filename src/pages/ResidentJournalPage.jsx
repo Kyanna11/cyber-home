@@ -12,6 +12,7 @@ const SOURCE_LABELS = {
   chat:           { emoji: "💬", label: "聊天" },
   intimate_scene: { emoji: "🌙", label: "亲密邀请" },
   manual:         { emoji: "✏️", label: "手写" },
+  unknown:        { emoji: "📓", label: "日记" },
 };
 
 // ─── 记忆草稿分区定义 ───

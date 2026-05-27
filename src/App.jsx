@@ -1663,6 +1663,97 @@ ${chunksText}
     return entry;
   };
 
+  // ── 从亲密邀请场景生成日记（LLM call）──
+  const generateJournalFromScene = async (sceneMsgs, sceneConfig) => {
+    if (!activeChar || !activeCharId) throw new Error("找不到入住者");
+    if (!config.apiUrl?.trim() || !config.apiKey?.trim()) throw new Error("请先配置 API");
+    const model = getActiveModel(activeChar.modelOverride);
+    if (!model) throw new Error("请先配置要使用的模型");
+
+    const validMsgs = (sceneMsgs || []).filter(
+      (m) => !m.isSceneOpening && (m.role === "user" || m.role === "bot") && (m.content || "").trim()
+    );
+
+    const charMemories  = getCharMemories(activeCharId);
+    const systemBase    = buildSystemPrompt(activeChar, charMemories);
+    const userCtx       = buildUserContext(userProfile, activeCharId, homeMemory);
+    const DIARY_FORMAT_OVERRIDE = `\n\n【当前任务：写日记，不是聊天】\n你现在要写一篇私人日记，请完全忽略以下聊天格式规则：\n- 不要使用 [心声]...[/心声] 标签，直接把内心感受写进日记正文\n- 不要使用 ||| 分隔符，日记是一篇连续的文字\n- 不要用对话格式，用第一人称叙述文体写\n- 写法自然流畅，像真正写给自己看的私人记录`;
+    const system = systemBase + (userCtx ? `\n\n${userCtx}` : "") + DIARY_FORMAT_OVERRIDE;
+
+    const charName = activeChar.name || "我";
+    const userName = userProfile?.globalFacts?.name?.trim() || "声声";
+    const cfg = sceneConfig || {};
+
+    const sceneContext = [
+      cfg.scene      && `场景：${cfg.scene}`,
+      cfg.mood       && `氛围：${cfg.mood}`,
+      cfg.preface    && `前情提要：${cfg.preface}`,
+      cfg.invitation && `邀请内容：${cfg.invitation}`,
+    ].filter(Boolean).join("\n");
+
+    const chatLines = validMsgs.map((m) => {
+      const who = m.role === "user" ? userName : charName;
+      return `${who}：${(m.content || "").slice(0, 200)}`;
+    }).join("\n");
+
+    const instruction = [
+      sceneContext && `这是一次亲密邀请场景：\n${sceneContext}`,
+      chatLines    && `场景中的对话如下：\n\n${chatLines}`,
+      `---\n\n请以你（${charName}）的视角，写一篇关于这次亲密邀请的私人日记。\n\n写作要求：\n- 只代表你自己的感受和觉察，不替声声总结\n- 可以写你在场景中真实的心境、想留住的画面、没有说出口的话\n- 不要把临时感受写成永久承诺或事实\n- 字数控制在 200-500 字，保持自然的日记语气，像真正写给自己看的私人记录`,
+    ].filter(Boolean).join("\n\n");
+
+    const resp = await fetch(
+      config.apiUrl.replace(/\/+$/, "") + "/chat/completions",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: system },
+            { role: "user",   content: instruction },
+          ],
+          temperature: 0.88,
+          max_tokens: ctxConfig?.maxTokens ? Math.min(ctxConfig.maxTokens, 1200) : 1200,
+        }),
+      }
+    );
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${resp.status}`);
+    }
+    const data = await resp.json();
+    const content = data.choices?.[0]?.message?.content?.trim() || "";
+    if (!content) throw new Error("返回为空");
+
+    const now      = Date.now();
+    const dateStr  = new Date(now).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+    const sceneName = cfg.scene || "亲密邀请";
+    const entry = {
+      id:          genId(),
+      charId:      activeCharId,
+      charName,
+      title:       `${charName} · ${dateStr} · ${sceneName}`,
+      content,
+      sourceType:  "intimate_scene",
+      sourceId:    activeThreadId || null,
+      sourceTitle: sceneName,
+      createdAt:   now,
+      updatedAt:   now,
+      status:      "saved",
+      visibility:  "private_to_char",
+      canUseForMemory: false,
+      memoryDraftIds: [],
+      treasureIds:    [],
+      tags:           [],
+      mood:           "",
+      important:      false,
+      memoryDraft:    null,
+    };
+    addResidentJournal(entry);
+    return entry;
+  };
+
   const openCharRoom = (charId) => {
     setCharRoomFrom(page); // 记录进入前的页面，不受子页返回的 prevPage 污染
     setCharRoomCharId(charId);
@@ -4166,6 +4257,7 @@ ${chatLines}
           sceneNote={sceneNote}
           setSceneNote={setSceneNote}
           onGenerateJournalFromChat={generateJournalFromChat}
+          onGenerateJournalFromScene={generateJournalFromScene}
           onOpenResidentJournal={openResidentJournal}
         />
       )}
