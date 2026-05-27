@@ -220,91 +220,98 @@ export default function BedroomPage({
           cardAnchor="right"
         />
 
-        {/* 小家客厅入口卡 */}
-        {onOpenGroupChat && (
-          <div
-            onClick={() => onOpenGroupChat(null)}
-            style={{
-              position: "absolute",
-              bottom: recentNotes.length > 0 ? "calc(8px + env(safe-area-inset-bottom,0px) + 86px)" : "calc(8px + env(safe-area-inset-bottom,0px))",
-              left: 12, right: 12,
-              background: "rgba(255,255,255,.68)",
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
-              borderRadius: 14,
-              border: "1px solid rgba(196,166,184,.22)",
-              boxShadow: "0 4px 16px rgba(74,69,96,.08)",
-              padding: "9px 14px",
-              cursor: "pointer", zIndex: 4,
-              display: "flex", alignItems: "center", gap: 10,
-            }}
-          >
-            <span style={{ fontSize: 22, flexShrink: 0 }}>☕</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 500, color: "#5a4a6a", letterSpacing: 0.5 }}>小家客厅</div>
-              <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 1 }}>
-                {groupChats?.length > 0 ? `${groupChats.length} 个客厅 · 点击进入` : "把他们叫到一起聊聊"}
-              </div>
-            </div>
-            <span style={{ fontSize: 11, color: "var(--text-faint)" }}>→</span>
-          </div>
-        )}
+        {/* ── 底部浮动区：小家客厅 + 便签预览，flex 堆叠避免遮挡 ── */}
+        {(onOpenGroupChat || recentNotes.length > 0) && (
+          <div style={{
+            position: "absolute",
+            bottom: "calc(8px + env(safe-area-inset-bottom,0px))",
+            left: 12, right: 12,
+            zIndex: 4,
+            display: "flex", flexDirection: "column", gap: 8,
+          }}>
 
-        {/* ── 便签墙预览条 ── */}
-        {recentNotes.length > 0 && (
-          <div
-            onClick={() => navigateTo("stickyNotes")}
-            style={{
-              position: "absolute",
-              bottom: "calc(8px + env(safe-area-inset-bottom,0px))",
-              left: 12, right: 12,
-              background: "rgba(255,255,255,.68)",
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
-              borderRadius: 14,
-              border: "1px solid rgba(196,166,184,.22)",
-              boxShadow: "0 4px 16px rgba(74,69,96,.08)",
-              padding: "9px 14px",
-              cursor: "pointer", zIndex: 4,
-            }}
-          >
-            <div style={{
-              display:"flex", alignItems:"center", justifyContent:"space-between",
-              marginBottom: 6,
-            }}>
-              <span style={{ fontSize:10, color:"#6a5a78", letterSpacing:1 }}>📝 便签墙</span>
-              <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                {unreadNotes.length > 0 && (
-                  <span style={{
-                    fontSize:10, color:"#9a5060",
-                    background:"rgba(180,100,120,.12)",
-                    padding:"1px 8px", borderRadius:8,
-                    border:"1px solid rgba(180,100,120,.2)",
-                  }}>{unreadNotes.length} 未读</span>
-                )}
-                <span style={{ fontSize:10, color:"var(--text-faint)" }}>查看全部 →</span>
-              </div>
-            </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-              {recentNotes.map(note => (
-                <div key={note.id} style={{ display:"flex", alignItems:"baseline", gap:8 }}>
-                  <span style={{
-                    fontSize:9, color:"#8a7898", flexShrink:0,
-                    background:"rgba(196,166,184,.15)",
-                    padding:"1px 6px", borderRadius:6,
-                    maxWidth:52, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-                  }}>{note.authorName}</span>
-                  <span style={{
-                    fontSize:11, color: note.read ? "#9a8aac" : "#5a4a6a",
-                    overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-                    flex:1, fontWeight: note.read ? 300 : 400,
-                  }}>{note.content}</span>
-                  {!note.read && (
-                    <div style={{ width:5, height:5, borderRadius:"50%", background:"#c87898", flexShrink:0 }} />
-                  )}
+            {/* 小家客厅入口卡 */}
+            {onOpenGroupChat && (
+              <div
+                onClick={() => onOpenGroupChat(null)}
+                style={{
+                  background: "rgba(255,255,255,.68)",
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
+                  borderRadius: 14,
+                  border: "1px solid rgba(196,166,184,.22)",
+                  boxShadow: "0 4px 16px rgba(74,69,96,.08)",
+                  padding: "9px 14px",
+                  cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 10,
+                }}
+              >
+                <span style={{ fontSize: 22, flexShrink: 0 }}>☕</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: "#5a4a6a", letterSpacing: 0.5 }}>小家客厅</div>
+                  <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 1 }}>
+                    {groupChats?.length > 0 ? `${groupChats.length} 个客厅 · 点击进入` : "把他们叫到一起聊聊"}
+                  </div>
                 </div>
-              ))}
-            </div>
+                <span style={{ fontSize: 11, color: "var(--text-faint)" }}>→</span>
+              </div>
+            )}
+
+            {/* 便签墙预览条 */}
+            {recentNotes.length > 0 && (
+              <div
+                onClick={() => navigateTo("stickyNotes")}
+                style={{
+                  background: "rgba(255,255,255,.68)",
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
+                  borderRadius: 14,
+                  border: "1px solid rgba(196,166,184,.22)",
+                  boxShadow: "0 4px 16px rgba(74,69,96,.08)",
+                  padding: "9px 14px",
+                  cursor: "pointer",
+                }}
+              >
+                <div style={{
+                  display:"flex", alignItems:"center", justifyContent:"space-between",
+                  marginBottom: 6,
+                }}>
+                  <span style={{ fontSize:10, color:"#6a5a78", letterSpacing:1 }}>📝 便签墙</span>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    {unreadNotes.length > 0 && (
+                      <span style={{
+                        fontSize:10, color:"#9a5060",
+                        background:"rgba(180,100,120,.12)",
+                        padding:"1px 8px", borderRadius:8,
+                        border:"1px solid rgba(180,100,120,.2)",
+                      }}>{unreadNotes.length} 未读</span>
+                    )}
+                    <span style={{ fontSize:10, color:"var(--text-faint)" }}>查看全部 →</span>
+                  </div>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                  {recentNotes.map(note => (
+                    <div key={note.id} style={{ display:"flex", alignItems:"baseline", gap:8 }}>
+                      <span style={{
+                        fontSize:9, color:"#8a7898", flexShrink:0,
+                        background:"rgba(196,166,184,.15)",
+                        padding:"1px 6px", borderRadius:6,
+                        maxWidth:52, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                      }}>{note.authorName}</span>
+                      <span style={{
+                        fontSize:11, color: note.read ? "#9a8aac" : "#5a4a6a",
+                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                        flex:1, fontWeight: note.read ? 300 : 400,
+                      }}>{note.content}</span>
+                      {!note.read && (
+                        <div style={{ width:5, height:5, borderRadius:"50%", background:"#c87898", flexShrink:0 }} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
           </div>
         )}
       </div>
