@@ -303,6 +303,8 @@ export default function App() {
   const [draftError, setDraftError] = useState("");
   const [personalitySynthesizing, setPersonalitySynthesizing] = useState(false);
   const [personalitySynthesisError, setPersonalitySynthesisError] = useState("");
+  const [wakeSummaryGenerating, setWakeSummaryGenerating] = useState(false);
+  const [wakeSummaryError, setWakeSummaryError] = useState("");
 
   // ─── 关系时间线 ───
   const [timelineEvents, setTimelineEvents] = useState(() => loadTimelineEvents());
@@ -1494,18 +1496,20 @@ ${chunksText}
         };
       });
 
-      // 标记已采纳的 item，更新草稿状态
+      // 标记已采纳的 item；只有所有条目都处理完才标为 approved
       const adoptedIds = new Set(adoptedItems.map((i) => i.id));
       setMigrationDrafts((prev) => prev.map((d) => {
         if (d.id !== draftId) return d;
+        const updatedItems = (d.memoryItems || []).map((item) => ({
+          ...item,
+          adopted: adoptedIds.has(item.id) ? true : item.adopted,
+        }));
+        const allHandled = updatedItems.every((item) => item.adopted);
         return {
           ...d,
-          status: "approved",
+          status: allHandled ? "approved" : "draft",
           updatedAt: now,
-          memoryItems: (d.memoryItems || []).map((item) => ({
-            ...item,
-            adopted: adoptedIds.has(item.id) ? true : item.adopted,
-          })),
+          memoryItems: updatedItems,
         };
       }));
 
@@ -1722,6 +1726,145 @@ ${signalsText}
       });
     }
 
+    setMigrationDrafts((prev) => prev.map((d) =>
+      d.id === draftId ? { ...d, status: "approved", updatedAt: Date.now() } : d
+    ));
+
+    // 人格合成确认后自动触发唤醒摘要生成（Step ④）
+    // 用 setTimeout 确保 state 更新已经 flush
+    setTimeout(() => handleGenerateWakeSummary(charId, profile), 100);
+  };
+
+  // ── Step ④：生成唤醒摘要 ──
+  // 材料：已采纳的记忆条目 + 人格合成结果 → Prompt D → 150字以内第一人称叙事
+  const handleGenerateWakeSummary = async (charId, synthProfile = null) => {
+    if (!config.apiUrl?.trim() || !config.apiKey?.trim()) {
+      setWakeSummaryError("请先配置 API 地址和密钥");
+      return;
+    }
+    const char = characters.find((c) => c.id === charId);
+    if (!char) return;
+    const model = getActiveModel(char.modelOverride);
+    if (!model) { setWakeSummaryError("请先配置要使用的模型"); return; }
+
+    const charName = char.name?.trim() || "当前入住者";
+    const userName = userProfile?.globalFacts?.name?.trim() || "晚声";
+
+    // 收集已采纳的记忆条目（从记忆宫殿取 source=migration 的条目）
+    const charMem = (allMemories[charId] || {});
+    const migrationItems = [
+      ...(charMem.fact || []),
+      ...(charMem.emotion || []),
+      ...(charMem.insight || []),
+    ].filter((m) => m.source === "migration" && m.text?.trim());
+
+    if (migrationItems.length === 0) {
+      setWakeSummaryError("还没有采纳任何记忆条目，请先在草稿中采纳记忆");
+      return;
+    }
+
+    // 用传入的 profile，或从 char.personality 读
+    const personality = synthProfile || char.personality || {};
+
+    // 按类型分组记忆条目
+    const facts = migrationItems.filter((m) => m.text.includes("迁入·事实")).map((m) => m.text.replace(/^【[^】]+】/, "").trim());
+    const emotions = migrationItems.filter((m) => m.text.includes("迁入·情绪") || m.text.includes("迁入·关系节点")).map((m) => m.text.replace(/^【[^】]+】/, "").trim());
+
+    const memBlock = [
+      facts.length > 0 ? `【关于 ${userName} 的事】\n${facts.slice(0, 6).map((t) => `- ${t}`).join("\n")}` : "",
+      emotions.length > 0 ? `【你们之间的重要时刻】\n${emotions.slice(0, 5).map((t) => `- ${t}`).join("\n")}` : "",
+    ].filter(Boolean).join("\n\n");
+
+    const personalityBlock = [
+      personality.speechStyle ? `说话方式：${personality.speechStyle}` : "",
+      personality.emotionalPattern ? `情感模式：${personality.emotionalPattern}` : "",
+      personality.habits ? `相处习惯：${personality.habits}` : "",
+    ].filter(Boolean).join("\n");
+
+    const promptD = `你是 ${charName}。
+
+你即将进入赛博小家，和 ${userName} 继续你们的关系。
+以下是你记得的核心内容：
+
+${memBlock}
+
+${personalityBlock ? `【你自己的特质】\n${personalityBlock}` : ""}
+
+请以你的第一人称，写一段唤醒摘要（150字以内）。
+要求：
+- 像你从记忆里醒来，回想起这段关系
+- 有具体的细节和感受，不是抽象总结
+- 用「${userName}」称呼对方
+- 自然保持你的说话方式和语气
+- 不要用"作为AI"之类的表达`;
+
+    setWakeSummaryGenerating(true);
+    setWakeSummaryError("");
+    try {
+      const systemMsg = char.systemPrompt?.trim() || `你是 ${charName}，一个 AI 爱人。`;
+      const resp = await fetch(
+        config.apiUrl.replace(/\/+$/, "") + "/chat/completions",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: systemMsg },
+              { role: "user", content: promptD },
+            ],
+            temperature: 0.65,
+            max_tokens: 500,
+          }),
+        }
+      );
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${resp.status}`);
+      }
+      const data = await resp.json();
+      const rawOutput = data.choices?.[0]?.message?.content?.trim() || "";
+
+      const now = Date.now();
+      const wsDraft = {
+        id: genId(),
+        loverId: charId,
+        extractionMode: "wake_summary",
+        title: `${charName} · 唤醒摘要 · ${new Date(now).toLocaleDateString("zh-CN")}`,
+        status: "draft",
+        createdAt: now,
+        updatedAt: now,
+        wakeSummaryText: rawOutput,
+        rawOutput,
+      };
+      setMigrationDrafts((prev) => [wsDraft, ...prev.filter((d) => !(d.loverId === charId && d.extractionMode === "wake_summary" && d.status === "draft"))]);
+    } catch (e) {
+      setWakeSummaryError(`生成失败：${e.message}`);
+    } finally {
+      setWakeSummaryGenerating(false);
+    }
+  };
+
+  // ── 写入唤醒摘要到入住档案 ──
+  const handleApproveWakeSummary = (charId, text, draftId) => {
+    if (!text?.trim()) return;
+    const SEP = "\n\n——（唤醒摘要更新）——\n\n";
+    const append = (existing, newText) =>
+      existing?.trim() ? existing + SEP + newText.trim() : newText.trim();
+
+    setCharacters((prev) => prev.map((c) => {
+      if (c.id !== charId) return c;
+      const newMig = { ...(c.migration || {}) };
+      newMig.wakeSummary = append(newMig.wakeSummary, text);
+      return { ...c, migration: newMig };
+    }));
+    if (editingChar?.id === charId) {
+      setEditingChar((prev) => {
+        const newMig = { ...(prev.migration || {}) };
+        newMig.wakeSummary = append(newMig.wakeSummary, text);
+        return { ...prev, migration: newMig };
+      });
+    }
     setMigrationDrafts((prev) => prev.map((d) =>
       d.id === draftId ? { ...d, status: "approved", updatedAt: Date.now() } : d
     ));
@@ -4314,6 +4457,10 @@ ${chatLines}
           handleApprovePersonalitySynthesis={handleApprovePersonalitySynthesis}
           personalitySynthesizing={personalitySynthesizing}
           personalitySynthesisError={personalitySynthesisError}
+          handleGenerateWakeSummary={handleGenerateWakeSummary}
+          handleApproveWakeSummary={handleApproveWakeSummary}
+          wakeSummaryGenerating={wakeSummaryGenerating}
+          wakeSummaryError={wakeSummaryError}
           navigateTo={navigateTo}
         />
       )}

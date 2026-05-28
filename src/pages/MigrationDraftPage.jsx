@@ -1746,18 +1746,24 @@ export default function MigrationDraftPage({
   handleApprovePersonalitySynthesis,
   personalitySynthesizing,
   personalitySynthesisError,
+  handleGenerateWakeSummary,
+  handleApproveWakeSummary,
+  wakeSummaryGenerating,
+  wakeSummaryError,
   navigateTo,
 }) {
   const char = characters.find((c) => c.id === charId) || {};
   const charName = char.name || "入住者";
 
   const charChunkCount = (memoryChunks || []).filter((c) => c.loverId === charId).length;
-  // 分离三种草稿
+  // 分离四种草稿
   const allCharDrafts = (migrationDrafts || [])
     .filter((d) => d.loverId === charId)
     .sort((a, b) => b.createdAt - a.createdAt);
-  const charDrafts = allCharDrafts.filter((d) => d.extractionMode !== "personality_synthesis");
+  const specialModes = new Set(["personality_synthesis", "wake_summary"]);
+  const charDrafts = allCharDrafts.filter((d) => !specialModes.has(d.extractionMode));
   const synthesisDraft = allCharDrafts.find((d) => d.extractionMode === "personality_synthesis" && d.status !== "rejected");
+  const wakeSummaryDraft = allCharDrafts.find((d) => d.extractionMode === "wake_summary" && d.status !== "rejected");
 
   const [viewDraftId, setViewDraftId] = useState(null);
   const [showChunkSelector, setShowChunkSelector] = useState(false);
@@ -1767,6 +1773,17 @@ export default function MigrationDraftPage({
   // 用 find 保持实时同步（保存草稿后弹窗内容自动更新）
   const viewDraft = charDrafts.find((d) => d.id === viewDraftId) || null;
   const viewSynthesisDraft = allCharDrafts.find((d) => d.id === viewSynthesisDraftId) || null;
+
+  // Step ④：唤醒摘要编辑状态（内联编辑，不需要弹窗）
+  const [wsEditText, setWsEditText] = useState("");
+  const [wsEditing, setWsEditing] = useState(false);
+  const [wsApproveConfirm, setWsApproveConfirm] = useState(false);
+  // 当 wakeSummaryDraft 出现/更新时同步编辑框
+  useEffect(() => {
+    if (wakeSummaryDraft && !wsEditing) {
+      setWsEditText(wakeSummaryDraft.wakeSummaryText || "");
+    }
+  }, [wakeSummaryDraft?.id, wakeSummaryDraft?.wakeSummaryText]);
 
   // 年表生成：先让用户填写时间，再生成
   const [timelineGenTarget, setTimelineGenTarget] = useState(null); // { draftId, date }
@@ -2117,6 +2134,119 @@ export default function MigrationDraftPage({
                 {personalitySynthesisError && (
                   <div style={{ marginTop: 8, fontSize: 11, color: "#a05050", lineHeight: 1.6 }}>
                     {personalitySynthesisError}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── Step ④：唤醒摘要 ── */}
+        {(() => {
+          // 有合成草稿已 approved 或已有 wakeSummaryDraft 时显示
+          const synthApproved = synthesisDraft?.status === "approved";
+          if (!synthApproved && !wakeSummaryDraft && !wakeSummaryGenerating && !wakeSummaryError) return null;
+
+          return (
+            <div style={{ marginTop: 4, marginBottom: 4 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, padding: "0 2px" }}>
+                <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
+                <span style={{ fontSize: 11, color: "#9a8aac", letterSpacing: 2, whiteSpace: "nowrap" }}>
+                  🌙 Step ④ · 唤醒摘要
+                </span>
+                <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
+              </div>
+
+              <div style={{ ...cardStyle, background: "rgba(255,255,255,.5)", marginBottom: 12, padding: "14px 16px" }}>
+                {wakeSummaryGenerating ? (
+                  <div style={{ textAlign: "center", padding: "20px 0" }}>
+                    <div style={{ fontSize: 20, marginBottom: 8 }}>🌙</div>
+                    <div style={{ fontSize: 13, color: "#7a5a9e", letterSpacing: 1, lineHeight: 1.8 }}>
+                      正在生成唤醒摘要……<br />
+                      <span style={{ fontSize: 11, color: "#b0a0c0" }}>用记忆和人格材料写一段他的叙事</span>
+                    </div>
+                  </div>
+                ) : wakeSummaryDraft ? (
+                  <>
+                    <div style={{ fontSize: 11, color: "#7a6a8e", lineHeight: 1.7, marginBottom: 10 }}>
+                      {wakeSummaryDraft.status === "approved"
+                        ? <span style={{ color: "#3a7a4a" }}>✓ 已写入入住档案的唤醒摘要。</span>
+                        : "以下是自动生成的唤醒摘要，可直接编辑后写入档案。"}
+                    </div>
+
+                    {/* 可编辑的摘要文本 */}
+                    <textarea
+                      style={{
+                        ...taStyle,
+                        minHeight: 120,
+                        fontStyle: "italic",
+                        lineHeight: 2,
+                        marginBottom: 10,
+                        background: wsEditing ? "rgba(255,255,255,.8)" : "rgba(255,255,255,.5)",
+                      }}
+                      value={wsEditText}
+                      onChange={(e) => { setWsEditing(true); setWsEditText(e.target.value); }}
+                      placeholder="唤醒摘要内容……"
+                      readOnly={wakeSummaryDraft.status === "approved"}
+                    />
+
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      {wakeSummaryDraft.status !== "approved" && (
+                        wsApproveConfirm ? (
+                          <>
+                            <div style={{
+                              fontSize: 11, color: "#6a5a7e", lineHeight: 1.6, flex: "1 1 100%",
+                              padding: "7px 10px", background: "rgba(140,110,180,.1)", borderRadius: 8, marginBottom: 4,
+                            }}>
+                              将写入 {charName} 的入住档案「唤醒摘要」。已有内容会追加，不覆盖。
+                            </div>
+                            <button
+                              style={{ ...btnGhost, color: "#3a7a4a", borderColor: "rgba(130,180,140,.5)", fontWeight: 600 }}
+                              onClick={() => {
+                                handleApproveWakeSummary && handleApproveWakeSummary(charId, wsEditText, wakeSummaryDraft.id);
+                                setWsApproveConfirm(false);
+                                setWsEditing(false);
+                              }}
+                            >✓ 确认写入</button>
+                            <button style={btnGhost} onClick={() => setWsApproveConfirm(false)}>取消</button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              style={{ ...btnGhost, color: "#4a2a6e", borderColor: "rgba(120,90,160,.4)", fontWeight: 500 }}
+                              onClick={() => setWsApproveConfirm(true)}
+                            >🌙 写入唤醒摘要</button>
+                            <button
+                              style={{ ...btnGhost, fontSize: 11 }}
+                              onClick={() => handleGenerateWakeSummary && handleGenerateWakeSummary(charId)}
+                            >重新生成</button>
+                          </>
+                        )
+                      )}
+                      {wakeSummaryDraft.status === "approved" && (
+                        <button
+                          style={{ ...btnGhost, fontSize: 11 }}
+                          onClick={() => handleGenerateWakeSummary && handleGenerateWakeSummary(charId)}
+                        >重新生成新版本</button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  // 人格合成已确认但还没生成摘要（边缘情况：生成失败）
+                  <div>
+                    <div style={{ fontSize: 12, color: "#7a6a8e", lineHeight: 1.7, marginBottom: 10 }}>
+                      人格合成已确认。可以手动触发唤醒摘要生成。
+                    </div>
+                    <button
+                      style={{ ...btnGhost, color: "#4a2a6e", borderColor: "rgba(120,90,160,.4)", fontWeight: 500 }}
+                      onClick={() => handleGenerateWakeSummary && handleGenerateWakeSummary(charId)}
+                    >🌙 生成唤醒摘要</button>
+                  </div>
+                )}
+
+                {wakeSummaryError && (
+                  <div style={{ marginTop: 8, fontSize: 11, color: "#a05050", lineHeight: 1.6 }}>
+                    {wakeSummaryError}
                   </div>
                 )}
               </div>
