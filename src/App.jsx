@@ -48,7 +48,7 @@ import {
 } from "./constants";
 import { genId, estimateTokens, buildSourceRef } from "./utils/helpers";
 import { splitRawTextToChunks } from "./utils/chunker";
-import { extractAndSaveMemories, getTopMemories } from "./utils/memory";
+import { extractAndSaveMemories, getTopMemories, updateMemoryHeat as updateMemoryHeatUtil, autoArchiveCheck } from "./utils/memory";
 import {
   buildSystemPrompt,
   buildUserContext,
@@ -491,6 +491,22 @@ export default function App() {
           setStickyNotes((prev) => [note, ...prev]);
         });
       }, 1500);
+
+      // ── 记忆自动归档：app 打开时对每个角色执行一次 90天归档检查 ──
+      const _memories = d?.[MEMORIES_STORAGE_KEY] || allMemories;
+      const updatedMemories = { ..._memories };
+      let archiveChanged = false;
+      Object.keys(updatedMemories).forEach(charId => {
+        const before = updatedMemories[charId];
+        const after  = autoArchiveCheck(before);
+        if (after !== before) {
+          updatedMemories[charId] = after;
+          archiveChanged = true;
+        }
+      });
+      if (archiveChanged) {
+        setAllMemories(updatedMemories);
+      }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -3480,27 +3496,18 @@ ${chatLines}
     }
   };
 
-  const updateMemoryHeat = (charId, aiResponse) => {
-    if (!aiResponse || !charId) return;
+  // 更新记忆热度：双向检查用户消息 + AI回复，要求 ≥2 关键词才算命中
+  const updateMemoryHeat = (charId, aiResponse, userMessage = "") => {
+    if (!charId) return;
     const mem = getCharMemories(charId);
-    let changed = false;
-    ["fact", "emotion", "insight"].forEach((type) => {
-      (mem[type] || []).forEach((entry) => {
-        if (typeof entry === "object" && entry.text) {
-          const keywords = entry.text
-            .replace(/[，。！？、：；""''（）【】\s]/g, " ")
-            .split(" ")
-            .filter((w) => w.length >= 2);
-          const matched = keywords.some((kw) => aiResponse.includes(kw));
-          if (matched) {
-            entry.mentions = (entry.mentions || 0) + 1;
-            entry.lastMentioned = Date.now();
-            changed = true;
-          }
-        }
-      });
-    });
-    if (changed) setAllMemories((prev) => ({ ...prev, [charId]: mem }));
+    // 如果没有传入 userMessage，从当前消息列表里取最后一条用户消息
+    const lastUserMsg = userMessage ||
+      [...(messages || [])].reverse().find(m => m.role === "user")?.content || "";
+
+    const updatedMem = updateMemoryHeatUtil(lastUserMsg, aiResponse, mem);
+    if (updatedMem !== mem) {
+      setAllMemories((prev) => ({ ...prev, [charId]: updatedMem }));
+    }
   };
 
   // ═══ 聊天 ═══
@@ -3581,11 +3588,20 @@ ${chatLines}
     const now = new Date();
     const timeInfo = `【当前时间】${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${now.toLocaleString("zh-CN", { weekday: "long" })} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
     const memoryInstruction = `\n\n【记忆写入指令】
-  当你在对话中发现以下类型的重要信息时，请在回复末尾用特殊标签写入记忆（用户看不到这些标签）：
-  - 用户提到的新事实（生活事件、人物关系、重要变化等）→ [记忆:事实]内容[/记忆]
-  - 对话中产生的重要情绪感受 → [记忆:情绪]内容[/记忆]
-  - 你从对话中获得的觉察和理解 → [记忆:觉察]内容[/记忆]
-  每条记忆控制在30字以内，简洁准确。不是每次都需要写入，只在确实有值得记住的内容时才写。一次最多写入2条。`;
+在回复末尾，你可以用隐藏标签记录值得永久记住的信息（用户看不到这些标签）。
+
+写入标准（必须同时满足）：
+- 这是一个具体的事实、事件或态度，不是模糊的感受描述
+- 这个信息在未来的对话中可能被需要
+- 你目前的记忆中没有这条信息
+
+不要写入：
+- 当下的情绪状态（"她今天开心"）——这是瞬时的，不是记忆
+- 你已经知道的事实——不要重复记录
+- 太宽泛的描述（"她工作很累"）——要具体（"她说部长又因为请求书的格式挑刺了"）
+
+格式：[记忆:事实|情绪|觉察]具体内容，不超过30字[/记忆]
+每次最多1条。宁可不写，也不要写没有信息量的。`;
     const modeInstruction = mode === "long"
       ? "\n\n【回复格式】请不要使用 ||| 分隔消息。请把回复写成一篇完整内容，可以自然分段，不要拆成多条短消息。"
       : "\n\n【回复格式】请像聊天软件一样自然回复。可以使用 ||| 分隔成多条短消息，每条保持简短自然。";
@@ -3603,7 +3619,7 @@ ${chatLines}
       : [];
     const sysPrompt =
       timeInfo + "\n\n" +
-      buildSystemPrompt(activeChar, charMemories, openPendingThreads) +
+      buildSystemPrompt(activeChar, charMemories, openPendingThreads, ctx) +
       (activeChar && worldViews[activeChar.id] ? `\n\n【你的世界观与核心认知】\n${worldViews[activeChar.id]}` : "") +
       (userCtx ? `\n\n${userCtx}` : "") +
       sceneAddition +

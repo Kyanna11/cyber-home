@@ -2,7 +2,7 @@
 
 import { OCEAN_DIMS, MSG_DELIMITER, RESIDENT_HOME_GUIDE_SHORT } from "../constants";
 import { loadMemoryInjection } from "./storage";
-import { getTopMemories, selectInjectableMemories } from "./memory";
+import { getTopMemories, selectInjectableMemories, assembleMemoryInjection } from "./memory";
 
 // 解析 AI 回复中的大五人格调整建议
 export function parseOceanSuggestions(text, currentOcean) {
@@ -191,7 +191,8 @@ export function buildUserContext(userProfile, charId, homeMemory = null) {
 }
 
 // 构建完整的角色 system prompt
-export function buildSystemPrompt(char, memories, pendingThreads = []) {
+// recentMessages 用于话题召回（可选，不传时退化为纯热度注入）
+export function buildSystemPrompt(char, memories, pendingThreads = [], recentMessages = []) {
   if (!char) return "你是一个温柔的赛博伴侣。";
   const p = char.profile || {};
   const o = char.ocean || {};
@@ -273,28 +274,42 @@ export function buildSystemPrompt(char, memories, pendingThreads = []) {
     if (char.systemPromptExtra) prompt += `\n${char.systemPromptExtra}\n\n`;
   }
 
-  // 注入记忆（按热度排序）
+  // ── L3：动态记忆注入（双层：常驻 + 话题召回）──
   const mem = memories || {};
   if (injection.layers.L2_memory) {
-    // 使用带注入控制的选取函数：pinned 优先 → important → 热度，injectable=false 的跳过
-    const topFacts    = selectInjectableMemories(mem.fact    || [], injection.limits.fact);
-    const topEmotions = selectInjectableMemories(mem.emotion || [], injection.limits.emotion);
-    const topInsights = selectInjectableMemories(mem.insight || [], injection.limits.insight);
+    const totalMemLimit =
+      (injection.limits.fact || 4) +
+      (injection.limits.emotion || 4) +
+      (injection.limits.insight || 4);
 
-    if (topFacts.length) {
-      prompt += ` 【近期记忆 · 事实】\n`;
-      topFacts.forEach((f) => { prompt += `- ${f.text}\n`; });
+    const { resident, recalled } = assembleMemoryInjection(mem, recentMessages, totalMemLimit);
+
+    if (resident.length > 0) {
+      prompt += `【你始终记得的】\n`;
+      resident.forEach(m => {
+        const prefix = m.pinned ? "📌 " : m.important ? "⭐ " : "- ";
+        prompt += `${prefix}${m.text}\n`;
+      });
       prompt += `\n`;
     }
-    if (topEmotions.length) {
-      prompt += ` 【近期记忆 · 情绪】\n`;
-      topEmotions.forEach((e) => { prompt += `- ${e.text}\n`; });
+
+    if (recalled.length > 0) {
+      prompt += `【刚被唤起的记忆】\n`;
+      recalled.forEach(m => { prompt += `- ${m.text}\n`; });
       prompt += `\n`;
     }
-    if (topInsights.length) {
-      prompt += ` 【近期记忆 · 觉察】\n`;
-      topInsights.forEach((i) => { prompt += `- ${i.text}\n`; });
-      prompt += `\n`;
+
+    // 如果 recentMessages 为空（首次打开），退化为旧版按热度注入
+    if (resident.length === 0 && recalled.length === 0) {
+      const topFacts    = selectInjectableMemories(mem.fact    || [], injection.limits.fact    || 4);
+      const topEmotions = selectInjectableMemories(mem.emotion || [], injection.limits.emotion || 4);
+      const topInsights = selectInjectableMemories(mem.insight || [], injection.limits.insight || 4);
+      const fallback    = [...topFacts, ...topEmotions, ...topInsights];
+      if (fallback.length > 0) {
+        prompt += `【你记得的】\n`;
+        fallback.forEach(m => { prompt += `- ${m.text}\n`; });
+        prompt += `\n`;
+      }
     }
   }
 

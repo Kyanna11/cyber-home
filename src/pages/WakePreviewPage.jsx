@@ -7,7 +7,7 @@ import BackButton from "../components/BackButton";
 import { buildSystemPrompt, buildUserContext } from "../utils/prompt";
 import { estimateTokens } from "../utils/helpers";
 import { loadMemoryInjection } from "../utils/storage";
-import { selectInjectableMemories } from "../utils/memory";
+import { selectInjectableMemories, assembleMemoryInjection } from "../utils/memory";
 
 // ── 样式常量 ──
 const preStyle = {
@@ -200,14 +200,17 @@ export default function WakePreviewPage({
 
   const tokenCount = estimateTokens(fullPrompt);
 
-  // ── 记忆注入统计（与 buildSystemPrompt 使用相同函数） ──
+  // ── 记忆注入统计（双层：常驻 + 话题召回）──
   const memInjection = loadMemoryInjection();
-  const topFacts    = selectInjectableMemories(charMemories?.fact    || [], memInjection.limits.fact);
-  const topEmotions = selectInjectableMemories(charMemories?.emotion || [], memInjection.limits.emotion);
-  const topInsights = selectInjectableMemories(charMemories?.insight || [], memInjection.limits.insight);
-  const memCount = topFacts.length + topEmotions.length + topInsights.length;
+  const totalMemLimit =
+    (memInjection.limits.fact || 4) +
+    (memInjection.limits.emotion || 4) +
+    (memInjection.limits.insight || 4);
+  const { resident: residentMems, recalled: recalledMems } =
+    assembleMemoryInjection(charMemories || {}, [], totalMemLimit);
+  const memCount = residentMems.length + recalledMems.length;
 
-  // pinned / blocked 统计（所有类型合并）
+  // pinned / blocked / archived 统计（所有类型合并）
   const normalize = (items) => (items || []).map((m) => ({
     ...m,
     pinned:     m.pinned     ?? false,
@@ -215,12 +218,15 @@ export default function WakePreviewPage({
     source:     m.source     || (m.isAutoMemory ? "auto" : "manual"),
   }));
   const allItems = [
-    ...normalize(charMemories?.fact    || []),
-    ...normalize(charMemories?.emotion || []),
-    ...normalize(charMemories?.insight || []),
+    ...normalize(charMemories?.fact        || []),
+    ...normalize(charMemories?.emotion     || []),
+    ...normalize(charMemories?.insight     || []),
+    ...normalize(charMemories?.consolidated || []),
   ];
-  const pinnedCount  = allItems.filter((m) => m.pinned).length;
-  const blockedCount = allItems.filter((m) => m.injectable === false).length;
+  const pinnedCount    = allItems.filter((m) => m.pinned).length;
+  const blockedCount   = allItems.filter((m) => m.injectable === false).length;
+  const archivedCount  = (charMemories?.archived || []).length;
+  const consolidatedCount = (charMemories?.consolidated || []).length;
 
   const charName = char?.name || "未知入住者";
 
@@ -268,11 +274,13 @@ export default function WakePreviewPage({
         {/* 统计卡片 */}
         <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
           {[
-            { label: "估算 Token", value: tokenCount.toLocaleString() },
-            { label: "本次注入",   value: `${memCount} 条` },
-            { label: "固定锚点",   value: `${pinnedCount} 条` },
-            { label: "暂停注入",   value: blockedCount > 0 ? `${blockedCount} 条` : "—" },
-            { label: "上下文上限", value: ctxConfig?.maxTokens ?? "—" },
+            { label: "估算 Token",   value: tokenCount.toLocaleString() },
+            { label: "常驻记忆",     value: `${residentMems.length} 条` },
+            { label: "话题召回",     value: `${recalledMems.length} 条` },
+            { label: "已浓缩",       value: consolidatedCount > 0 ? `${consolidatedCount} 条` : "—" },
+            { label: "已归档",       value: archivedCount > 0 ? `${archivedCount} 条` : "—" },
+            { label: "暂停注入",     value: blockedCount > 0 ? `${blockedCount} 条` : "—" },
+            { label: "上下文上限",   value: ctxConfig?.maxTokens ?? "—" },
           ].map(({ label, value }) => (
             <div key={label} style={{
               flex: "1 1 60px", padding: "10px 6px",
@@ -393,36 +401,56 @@ export default function WakePreviewPage({
               padding: "6px 10px", marginBottom: 10,
               background: "rgba(100,100,160,.05)", borderRadius: 7,
             }}>
-              📌 固定锚点优先进入 · 🔕 暂停唤醒的记忆不出现在此列表
-              {blockedCount > 0 && `（已屏蔽 ${blockedCount} 条）`}
+              💗 常驻层（pinned + important）· 🔍 话题召回层（聊天时动态激活）
+              {blockedCount > 0 && ` · 🔕 已屏蔽 ${blockedCount} 条`}
+              {archivedCount > 0 && ` · 📦 已归档 ${archivedCount} 条（话题触发时可唤回）`}
             </div>
 
-            {[
-              { label: "📋 事实", items: topFacts },
-              { label: "💗 情绪", items: topEmotions },
-              { label: "✨ 觉察", items: topInsights },
-            ].filter(({ items }) => items.length > 0).map(({ label, items }) => (
-              <div key={label} style={{ marginBottom: 10 }}>
-                <div style={sectionLabelStyle}>{label}（{items.length} 条）</div>
-                {items.map((m, i) => {
+            {/* 常驻记忆 */}
+            {residentMems.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={sectionLabelStyle}>💗 常驻记忆（{residentMems.length} 条）</div>
+                {residentMems.map((m, i) => {
                   const srcMap = { migration: "迁入", auto: "AI", diary: "日记", manual: "手动" };
                   const src = srcMap[m.source] || "";
                   return (
                     <div key={i} style={{ ...memItemStyle, display: "flex", alignItems: "flex-start", gap: 4 }}>
-                      <span style={{ color: (m.pinned ?? false) ? "#6070c8" : "#c0b0d0", flexShrink: 0 }}>
-                        {(m.pinned ?? false) ? "📌" : "·"}
+                      <span style={{ color: m.pinned ? "#6070c8" : "#c8a060", flexShrink: 0 }}>
+                        {m.pinned ? "📌" : "⭐"}
                       </span>
                       <span style={{ flex: 1 }}>
-                        {src && (
-                          <span style={{ fontSize: 10, color: "#9a8aac", marginRight: 4 }}>[{src}]</span>
-                        )}
+                        {src && <span style={{ fontSize: 10, color: "#9a8aac", marginRight: 4 }}>[{src}]</span>}
                         {m.text}
                       </span>
                     </div>
                   );
                 })}
               </div>
-            ))}
+            )}
+
+            {/* 话题召回（开始聊天后才有） */}
+            {recalledMems.length > 0 ? (
+              <div style={{ marginBottom: 8 }}>
+                <div style={sectionLabelStyle}>🔍 话题召回（{recalledMems.length} 条）</div>
+                {recalledMems.map((m, i) => {
+                  const srcMap = { migration: "迁入", auto: "AI", diary: "日记", manual: "手动" };
+                  const src = srcMap[m.source] || "";
+                  return (
+                    <div key={i} style={{ ...memItemStyle, display: "flex", alignItems: "flex-start", gap: 4 }}>
+                      <span style={{ color: "#9aaecc", flexShrink: 0 }}>·</span>
+                      <span style={{ flex: 1 }}>
+                        {src && <span style={{ fontSize: 10, color: "#9a8aac", marginRight: 4 }}>[{src}]</span>}
+                        {m.text}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ fontSize: 11, color: "#9a8aac", fontStyle: "italic", padding: "4px 0" }}>
+                🔍 话题召回层将在对话开始后，根据聊天内容动态激活相关记忆
+              </div>
+            )}
           </div>
         </Block>
 
