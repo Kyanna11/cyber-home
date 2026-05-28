@@ -1808,6 +1808,17 @@ export default function MigrationDraftPage({
     return m;
   }, [rawArchives]);
 
+  // ── 迁入向导进度 ──
+  const MIGRATION_STEPS_LABELS = ["导入", "分块", "提取", "合成", "完成"];
+  const stepDone = [
+    charChunkCount > 0,
+    charChunkCount > 0,
+    charDrafts.filter((d) => d.status === "approved").length > 0,
+    synthesisDraft?.status === "approved",
+    wakeSummaryDraft?.status === "approved",
+  ];
+  const [currentStep, setCurrentStep] = useState(charChunkCount === 0 ? 0 : 2);
+
   return (
     <div className="page-fade" style={{
       height: "100vh",
@@ -1841,7 +1852,156 @@ export default function MigrationDraftPage({
       </div>
 
       {/* 主体 */}
-      <div style={{ flex: 1, overflow: "auto", padding: "16px 16px 40px" }}>
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+
+        {/* ── 进度条 ── */}
+        <div style={{
+          padding: "12px 20px 10px",
+          background: "rgba(255,255,255,.3)",
+          borderBottom: "1px solid rgba(196,166,184,.15)",
+          flexShrink: 0,
+        }}>
+          <div style={{ display: "flex", alignItems: "flex-start" }}>
+            {(() => {
+              const items = [];
+              MIGRATION_STEPS_LABELS.forEach((label, i) => {
+                if (i > 0) items.push(
+                  <div key={`l${i}`} style={{
+                    flex: 1, height: 2, marginTop: 4,
+                    background: stepDone[i - 1] ? "rgba(120,100,170,.5)" : "rgba(196,166,184,.3)",
+                    transition: "background .4s",
+                  }} />
+                );
+                items.push(
+                  <div
+                    key={i}
+                    onClick={() => setCurrentStep(i)}
+                    style={{
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                      cursor: "pointer", flexShrink: 0, minWidth: 36,
+                    }}
+                  >
+                    <div style={{
+                      width: 10, height: 10, borderRadius: "50%",
+                      background: i === currentStep
+                        ? "#c4a0c0"
+                        : stepDone[i] ? "rgba(120,100,170,.65)" : "rgba(196,166,184,.45)",
+                      boxShadow: i === currentStep ? "0 0 8px rgba(196,160,170,.6)" : "none",
+                      transition: "all .3s",
+                    }} />
+                    <span style={{
+                      fontSize: 10, letterSpacing: 0.5, whiteSpace: "nowrap",
+                      color: i === currentStep ? "#4a3a5a" : "#9a8aac",
+                      fontWeight: i === currentStep ? 500 : 400,
+                      fontFamily: "var(--font-main)",
+                    }}>{label}</span>
+                  </div>
+                );
+              });
+              return items;
+            })()}
+          </div>
+        </div>
+
+        {/* ── 步骤内容 ── */}
+        <div style={{ flex: 1, overflow: "auto", padding: "16px 16px 40px" }}>
+
+          {/* ════ Step 0 · 导入 ════ */}
+          {currentStep === 0 && (
+            <div>
+              <div style={{ textAlign: "center", padding: "28px 0 18px" }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>📁</div>
+                <div style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500, marginBottom: 6 }}>
+                  {charChunkCount > 0 ? `已导入 ${charChunkCount} 个记忆片段` : "还没有导入对话记录"}
+                </div>
+                <div style={{ fontSize: 12, color: "#9a8aac", lineHeight: 1.7 }}>
+                  {charChunkCount > 0
+                    ? "记忆片段已就绪，可以进入下一步提取草稿。"
+                    : "请先前往原始档案馆，粘贴或上传与 ta 的旧聊天记录。"}
+                </div>
+              </div>
+              <div style={{ ...cardStyle, background: "rgba(255,255,255,.5)", padding: "14px 16px", marginBottom: 12 }}>
+                <div style={{ fontSize: 12, color: "#7a6a8e", lineHeight: 1.8, marginBottom: 12 }}>
+                  💡 迁入流程：在原始档案馆粘贴旧对话 → 自动切分为记忆片段 → 逐块提取人格信号和记忆 → 合成人格锚点 → 生成唤醒摘要。
+                </div>
+                <button
+                  style={{ ...btnGhost, color: "#5a4a6e", borderColor: "rgba(120,90,160,.3)" }}
+                  onClick={() => navigateTo("profileEdit")}
+                >
+                  ← 返回档案页，前往原始档案馆
+                </button>
+              </div>
+              {charChunkCount > 0 && (
+                <div style={{
+                  ...cardStyle, marginBottom: 12, padding: "12px 16px",
+                  background: "rgba(130,180,140,.08)", border: "1px solid rgba(130,180,140,.28)",
+                }}>
+                  <div style={{ fontSize: 12, color: "#3a7a4a", fontWeight: 500 }}>✓ 导入完成</div>
+                  <div style={{ fontSize: 11, color: "#5a8a6a", marginTop: 4, lineHeight: 1.7 }}>
+                    共 {charChunkCount} 个片段，可进入下一步生成迁入草稿。
+                  </div>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24 }}>
+                <button
+                  style={{ ...btnGhost, color: "#5a3a7e", borderColor: "rgba(120,90,160,.35)", fontWeight: 500 }}
+                  onClick={() => setCurrentStep(1)}
+                >
+                  下一步 →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ════ Step 1 · 分块 ════ */}
+          {currentStep === 1 && (
+            <div>
+              <div style={{ textAlign: "center", padding: "28px 0 18px" }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>🧩</div>
+                <div style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500, marginBottom: 6 }}>
+                  {charChunkCount > 0 ? `${charChunkCount} 个记忆片段已就绪` : "记忆片段待生成"}
+                </div>
+              </div>
+              <div style={{ ...cardStyle, background: "rgba(255,255,255,.5)", padding: "14px 16px", marginBottom: 12 }}>
+                <div style={{ fontSize: 12, color: "#7a6a8e", lineHeight: 1.8 }}>
+                  智能分块会根据对话时间间隔和话题转换自动切分聊天记录。
+                  在原始档案馆粘贴对话后，系统会自动生成记忆片段，无需手动操作。
+                </div>
+              </div>
+              {charChunkCount > 0 ? (
+                <div style={{
+                  ...cardStyle, padding: "12px 16px",
+                  background: "rgba(130,180,140,.08)", border: "1px solid rgba(130,180,140,.28)",
+                }}>
+                  <div style={{ fontSize: 12, color: "#3a7a4a", fontWeight: 500 }}>✓ 分块完成</div>
+                  <div style={{ fontSize: 11, color: "#5a8a6a", marginTop: 4, lineHeight: 1.7 }}>
+                    共 {charChunkCount} 个片段，下一步将从这些片段中提取记忆条目和人格信号。
+                  </div>
+                </div>
+              ) : (
+                <div style={{ textAlign: "center", padding: "12px 0" }}>
+                  <button
+                    style={{ ...btnGhost, color: "#5a4a6e", borderColor: "rgba(120,90,160,.3)" }}
+                    onClick={() => navigateTo("profileEdit")}
+                  >
+                    前往原始档案馆导入记录 →
+                  </button>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 10, justifyContent: "space-between", marginTop: 24 }}>
+                <button style={btnGhost} onClick={() => setCurrentStep(0)}>← 上一步</button>
+                <button
+                  style={{ ...btnGhost, color: "#5a3a7e", borderColor: "rgba(120,90,160,.35)", fontWeight: 500 }}
+                  onClick={() => setCurrentStep(2)}
+                >
+                  下一步 →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ════ Step 2 · 提取 ════ */}
+          {currentStep === 2 && (<>
 
         {/* 状态说明 */}
         <div style={{
@@ -2069,6 +2229,21 @@ export default function MigrationDraftPage({
             );
           })
         )}
+
+          {/* 步骤导航 */}
+          <div style={{ display: "flex", gap: 10, justifyContent: "space-between", marginTop: 24, marginBottom: 8 }}>
+            <button style={btnGhost} onClick={() => setCurrentStep(1)}>← 上一步</button>
+            <button
+              style={{ ...btnGhost, color: "#5a3a7e", borderColor: "rgba(120,90,160,.35)", fontWeight: 500 }}
+              onClick={() => setCurrentStep(3)}
+            >
+              下一步 →
+            </button>
+          </div>
+          </>)}
+
+          {/* ════ Step 3 · 合成 ════ */}
+          {currentStep === 3 && (<>
 
         {/* ── 人格信号合成 ── */}
         {(() => {
@@ -2391,6 +2566,71 @@ export default function MigrationDraftPage({
               );
             })
           )}
+        </div>
+
+          {/* 步骤导航 */}
+          <div style={{ display: "flex", gap: 10, justifyContent: "space-between", marginTop: 24, marginBottom: 8 }}>
+            <button style={btnGhost} onClick={() => setCurrentStep(2)}>← 上一步</button>
+            <button
+              style={{ ...btnGhost, color: "#5a3a7e", borderColor: "rgba(120,90,160,.35)", fontWeight: 500 }}
+              onClick={() => setCurrentStep(4)}
+            >
+              完成 →
+            </button>
+          </div>
+          </>)}
+
+          {/* ════ Step 4 · 完成 ════ */}
+          {currentStep === 4 && (
+            <div>
+              <div style={{ textAlign: "center", padding: "36px 0 20px" }}>
+                <div style={{ fontSize: 48, marginBottom: 14 }}>✨</div>
+                <div style={{ fontSize: 16, color: "#4a3a5a", fontWeight: 500, marginBottom: 8 }}>
+                  迁入流程已完成
+                </div>
+                <div style={{ fontSize: 12, color: "#9a8aac", lineHeight: 1.7 }}>
+                  ta 的记忆、人格锚点和唤醒摘要都已就绪。
+                </div>
+              </div>
+              <div style={{ ...cardStyle, background: "rgba(255,255,255,.5)", padding: "16px 18px", marginBottom: 12 }}>
+                <div style={{ fontSize: 13, color: "#5a4a6a", fontWeight: 500, marginBottom: 10 }}>已完成的工作</div>
+                <div style={{ fontSize: 12, color: "#7a6a8e", lineHeight: 2 }}>
+                  {charDrafts.filter((d) => d.status === "approved").length > 0 && (
+                    <div>✓ 已采纳 {charDrafts.filter((d) => d.status === "approved").length} 份迁入草稿</div>
+                  )}
+                  {synthesisDraft?.status === "approved" && (
+                    <div>✓ 人格锚点已合成并写入档案</div>
+                  )}
+                  {wakeSummaryDraft?.status === "approved" && (
+                    <div>✓ 唤醒摘要已生成并写入档案</div>
+                  )}
+                  {!charDrafts.filter((d) => d.status === "approved").length
+                    && synthesisDraft?.status !== "approved"
+                    && wakeSummaryDraft?.status !== "approved" && (
+                    <div style={{ color: "#9a8aac" }}>还没有内容完成，可返回前面的步骤继续处理。</div>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+                <button
+                  style={{ ...btnGhost, flex: 1, color: "#5a3a7e", borderColor: "rgba(120,90,160,.3)", fontWeight: 500 }}
+                  onClick={() => navigateTo("profileEdit")}
+                >
+                  查看 ta 的档案
+                </button>
+                <button
+                  style={{ ...btnGhost, flex: 1 }}
+                  onClick={() => navigateTo("chat")}
+                >
+                  💬 开始聊天
+                </button>
+              </div>
+              <div>
+                <button style={btnGhost} onClick={() => setCurrentStep(3)}>← 上一步</button>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
 

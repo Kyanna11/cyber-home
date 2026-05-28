@@ -72,7 +72,7 @@ export default function ProfileEditPage({
   const TABS = [
     { key: "basic",       label: "入住档案" },
     { key: "personality", label: "人格锚点" },
-    { key: "memory",      label: "记忆宫殿" },
+    { key: "wake",        label: "唤醒预览" },
     { key: "extra",       label: "系统设置" },
   ];
 
@@ -259,17 +259,59 @@ export default function ProfileEditPage({
                     style={{ minHeight: 100 }}
                   />
                 </div>
-                <div className="field-group">
-                  <label className="field-label">唤醒摘要</label>
-                  <textarea
-                    className="field-textarea"
-                    placeholder="每次对话开始时，ta 应该内化的背景——你们是谁，有什么约定……"
-                    value={mig.wakeSummary || ""}
-                    onChange={(e) => updateEditMigration("wakeSummary", e.target.value)}
-                    style={{ minHeight: 100 }}
-                  />
-                </div>
               </div>
+
+              {/* 工具入口 */}
+              <div style={{
+                fontSize: 11, color: "var(--text-faint)", letterSpacing: 1,
+                padding: "12px 4px 8px",
+              }}>
+                📂 记忆与工具
+              </div>
+
+              <EntryCard
+                emoji="🏛️"
+                title="记忆宫殿"
+                subtitle="查看和管理 ta 的事实 / 情绪 / 觉察记忆"
+                onClick={() => {
+                  saveEditingChar();
+                  openMemoryPalace && openMemoryPalace(editingChar.id, "profileEdit");
+                }}
+                accent="160,130,180"
+              />
+
+              <EntryCard
+                emoji="📁"
+                title="原始档案馆"
+                subtitle="粘贴你们以前的对话记录，切成记忆片段"
+                onClick={() => {
+                  saveEditingChar();
+                  openRawArchive && openRawArchive(editingChar.id);
+                }}
+                accent="130,160,180"
+              />
+
+              <EntryCard
+                emoji="✨"
+                title="迁入提炼草稿"
+                subtitle="让 AI 从记忆片段里整理 ta 的人格锚点"
+                onClick={() => {
+                  saveEditingChar();
+                  openMigrationDraft && openMigrationDraft(editingChar.id);
+                }}
+                accent="120,90,170"
+              />
+
+              <EntryCard
+                emoji="📅"
+                title="关系时间线"
+                subtitle="记录你们之间重要的故事节点"
+                onClick={() => {
+                  saveEditingChar();
+                  openTimeline && openTimeline(editingChar.id);
+                }}
+                accent="106,122,174"
+              />
             </>
           )}
 
@@ -463,65 +505,35 @@ export default function ProfileEditPage({
           )}
 
           {/* ══════════════════════════════════════
-              记忆宫殿（功能总入口）
+              唤醒预览
               ══════════════════════════════════════ */}
-          {editSection === "memory" && (
+          {(editSection === "wake" || editSection === "memory") && (
             <>
-              <div style={{
-                fontSize: 12, color: "var(--text-faint)", lineHeight: 1.9,
-                padding: "10px 4px 16px",
-              }}>
-                关于 ta 的一切记忆都存放在这里——从过去带来的档案，到日积月累的点滴，再到每次唤醒时的锚点。
+              <div style={{ fontSize: 12, color: "var(--text-faint)", lineHeight: 1.9, padding: "10px 4px 16px" }}>
+                每次对话开始前，ta 会携带这些内容进入场景——这是 ta 和你之间关系的"热启动"。
               </div>
 
-              <EntryCard
-                emoji="🏛️"
-                title="记忆宫殿"
-                subtitle="查看和管理 ta 的事实 / 情绪 / 觉察记忆"
-                onClick={() => {
-                  saveEditingChar();
-                  openMemoryPalace && openMemoryPalace(editingChar.id, "profileEdit");
-                }}
-                accent="160,130,180"
-              />
+              {/* 唤醒摘要预览 */}
+              <div className="section-card">
+                <div className="section-title">🌙 唤醒摘要</div>
+                <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7 }}>
+                  ta 每次开口前内化的叙事——你们是谁，发生过什么，有什么约定。
+                  可手动编辑，也可以通过迁入流程自动生成。
+                </div>
+                <textarea
+                  className="field-textarea"
+                  placeholder="每次对话开始时，ta 应该内化的背景——你们是谁，有什么约定……"
+                  value={mig.wakeSummary || ""}
+                  onChange={(e) => updateEditMigration("wakeSummary", e.target.value)}
+                  style={{ minHeight: 120 }}
+                />
+              </div>
 
-              <EntryCard
-                emoji="📁"
-                title="原始档案馆"
-                subtitle="粘贴你们以前的对话记录，切成记忆片段"
-                onClick={() => {
-                  saveEditingChar();
-                  openRawArchive && openRawArchive(editingChar.id);
-                }}
-                accent="130,160,180"
-              />
-
-              <EntryCard
-                emoji="✨"
-                title="迁入提炼草稿"
-                subtitle="让 AI 从记忆片段里整理 ta 的人格锚点"
-                onClick={() => {
-                  saveEditingChar();
-                  openMigrationDraft && openMigrationDraft(editingChar.id);
-                }}
-                accent="120,90,170"
-              />
-
-              <EntryCard
-                emoji="📅"
-                title="关系时间线"
-                subtitle="记录你们之间重要的故事节点"
-                onClick={() => {
-                  saveEditingChar();
-                  openTimeline && openTimeline(editingChar.id);
-                }}
-                accent="106,122,174"
-              />
-
+              {/* 完整唤醒预览入口 */}
               <EntryCard
                 emoji="🌙"
-                title="唤醒预览"
-                subtitle="查看每次对话开始时 ta 记得什么"
+                title="查看完整唤醒预览"
+                subtitle="看看每次对话开始时 ta 实际携带了什么"
                 onClick={() => {
                   saveEditingChar();
                   openWakePreview && openWakePreview(editingChar.id);
