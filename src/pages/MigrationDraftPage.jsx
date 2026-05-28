@@ -469,6 +469,546 @@ function DraftDetailModal({
   );
 }
 
+// ── 双轨草稿详情弹窗（ab_resident 模式）──
+const TYPE_CONFIG = {
+  fact:         { label: "事实", color: "#4a7aae", bg: "rgba(74,122,174,.12)" },
+  emotion:      { label: "情绪", color: "#9a5a8a", bg: "rgba(154,90,138,.12)" },
+  relationship: { label: "关系", color: "#5a8a6a", bg: "rgba(90,138,106,.12)" },
+};
+const DIM_CONFIG = {
+  speech:    { label: "说话方式", emoji: "💬" },
+  trait:     { label: "性格表现", emoji: "✨" },
+  intimacy:  { label: "亲密模式", emoji: "💞" },
+  worldview: { label: "三观信号", emoji: "🌿" },
+};
+
+function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelete }) {
+  const [activeTab, setActiveTab] = useState("memory");
+  const [checkedIds, setCheckedIds] = useState(() => {
+    const ids = new Set();
+    (draft?.memoryItems || []).forEach((item) => { if (!item.adopted) ids.add(item.id); });
+    return ids;
+  });
+  const [adoptConfirm, setAdoptConfirm] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showRaw, setShowRaw] = useState(null); // null | "A" | "B"
+
+  useEffect(() => {
+    const prev = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    return () => { document.documentElement.style.overflow = prev; };
+  }, []);
+
+  // 切换草稿时重置
+  useEffect(() => {
+    if (draft) {
+      const ids = new Set();
+      (draft.memoryItems || []).forEach((item) => { if (!item.adopted) ids.add(item.id); });
+      setCheckedIds(ids);
+      setActiveTab("memory");
+      setAdoptConfirm(false);
+      setConfirmDelete(false);
+      setShowRaw(null);
+    }
+  }, [draft?.id]);
+
+  if (!draft) return null;
+
+  const memoryItems = draft.memoryItems || [];
+  const personalitySignals = draft.personalitySignals || [];
+  const checkedCount = checkedIds.size;
+  const alreadyAdopted = memoryItems.filter((i) => i.adopted).length;
+  const st = STATUS_CONFIG[draft.status] || STATUS_CONFIG.draft;
+
+  const signalsByDim = {};
+  personalitySignals.forEach((s) => {
+    if (!signalsByDim[s.dimension]) signalsByDim[s.dimension] = [];
+    signalsByDim[s.dimension].push(s);
+  });
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 100,
+        background: "rgba(30,20,40,.48)",
+        backdropFilter: "blur(6px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "20px 16px",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "rgba(255,255,255,.94)",
+          borderRadius: 20,
+          border: "1px solid rgba(255,255,255,.7)",
+          boxShadow: "0 12px 48px rgba(0,0,0,.16)",
+          width: "100%", maxWidth: 660,
+          maxHeight: "90vh",
+          display: "flex", flexDirection: "column",
+          overflow: "hidden",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 顶栏 */}
+        <div style={{
+          padding: "14px 20px 10px",
+          borderBottom: "1px solid rgba(196,166,184,.2)",
+        }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#4a3a5a", marginBottom: 4 }}>
+                {draft.title}
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: 10, padding: "2px 8px", background: st.bg, borderRadius: 8, color: st.color }}>
+                  {st.label}
+                </span>
+                <span style={{ fontSize: 10, padding: "2px 7px", background: "rgba(106,122,174,.12)", borderRadius: 8, color: "#6a7aae" }}>
+                  双轨提炼
+                </span>
+                <span style={{ fontSize: 11, color: "#b0a0c0" }}>{formatTime(draft.createdAt)}</span>
+                <span style={{ fontSize: 11, color: "#b0a0c0" }}>
+                  基于 {draft.sourceChunkIds?.length || 0} 段片段
+                </span>
+              </div>
+            </div>
+            <button onClick={onClose} style={{ ...btnGhost, padding: "5px 12px" }}>关闭</button>
+          </div>
+
+          {/* Tab 切换 */}
+          <div style={{ display: "flex", gap: 6 }}>
+            {[
+              { key: "memory",  label: `📝 记忆条目（${memoryItems.length}条）` },
+              { key: "signals", label: `🧬 人格信号（${personalitySignals.length}条）` },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  padding: "6px 14px", borderRadius: 10, cursor: "pointer",
+                  fontFamily: "var(--font-main)", fontSize: 12, transition: "all .15s",
+                  border: `1px solid ${activeTab === tab.key ? "rgba(140,110,180,.45)" : "rgba(196,166,184,.3)"}`,
+                  background: activeTab === tab.key ? "rgba(140,110,180,.15)" : "rgba(255,255,255,.5)",
+                  color: activeTab === tab.key ? "#5a3a8e" : "#7a6a8e",
+                  fontWeight: activeTab === tab.key ? 600 : 400,
+                }}
+              >{tab.label}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* 内容区 */}
+        <div style={{ flex: 1, overflow: "auto", padding: "14px 20px" }}>
+          {showRaw ? (
+            <>
+              <button style={{ ...btnGhost, marginBottom: 12 }} onClick={() => setShowRaw(null)}>← 返回</button>
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                {showRaw !== "A" && (
+                  <button style={{ ...btnGhost, fontSize: 11 }} onClick={() => setShowRaw("A")}>
+                    记忆提取（A轨）
+                  </button>
+                )}
+                {showRaw !== "B" && (
+                  <button style={{ ...btnGhost, fontSize: 11 }} onClick={() => setShowRaw("B")}>
+                    人格信号（B轨）
+                  </button>
+                )}
+              </div>
+              <pre style={{
+                margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word",
+                fontSize: 12, lineHeight: 1.8, color: "#5a4a6a",
+                fontFamily: "var(--font-main)",
+              }}>
+                {showRaw === "A"
+                  ? (draft.rawOutputA || draft.rawOutput || "（无A轨输出）")
+                  : (draft.rawOutputB || "（无B轨输出）")}
+              </pre>
+            </>
+          ) : activeTab === "memory" ? (
+            <>
+              <div style={{
+                fontSize: 11, color: "#9a8aac", lineHeight: 1.7,
+                padding: "7px 11px", background: "rgba(140,110,180,.06)",
+                borderRadius: 8, marginBottom: 14,
+              }}>
+                勾选你想写入记忆宫殿的条目，采纳后会标记为 📌 常驻记忆。
+                {alreadyAdopted > 0 && (
+                  <span style={{ color: "#5a8a6a", marginLeft: 4 }}>· 已采纳 {alreadyAdopted} 条</span>
+                )}
+              </div>
+
+              {memoryItems.length === 0 ? (
+                <div style={{ textAlign: "center", color: "#b0a0c0", fontSize: 13, padding: "24px 0" }}>
+                  A轨未提取到记忆条目
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                    <button
+                      style={{ ...btnGhost, fontSize: 11 }}
+                      onClick={() => setCheckedIds(new Set(memoryItems.filter((i) => !i.adopted).map((i) => i.id)))}
+                    >全选未采纳</button>
+                    <button
+                      style={{ ...btnGhost, fontSize: 11 }}
+                      onClick={() => setCheckedIds(new Set())}
+                    >取消全选</button>
+                  </div>
+
+                  {memoryItems.map((item) => {
+                    const tc = TYPE_CONFIG[item.type] || { label: item.type || "?", color: "#7a6a8e", bg: "rgba(196,166,184,.12)" };
+                    const isChecked = checkedIds.has(item.id);
+                    const alreadyDone = item.adopted;
+                    return (
+                      <div
+                        key={item.id}
+                        style={{
+                          display: "flex", alignItems: "flex-start", gap: 10,
+                          padding: "10px 12px", marginBottom: 6,
+                          borderRadius: 10, cursor: alreadyDone ? "default" : "pointer",
+                          border: `1px solid ${alreadyDone ? "rgba(90,138,106,.25)" : isChecked ? "rgba(140,110,180,.35)" : "rgba(196,166,184,.25)"}`,
+                          background: alreadyDone ? "rgba(90,138,106,.06)" : isChecked ? "rgba(140,110,180,.08)" : "rgba(255,255,255,.5)",
+                          opacity: alreadyDone ? 0.65 : 1,
+                          transition: "all .15s",
+                        }}
+                        onClick={() => {
+                          if (alreadyDone) return;
+                          setCheckedIds((prev) => {
+                            const n = new Set(prev);
+                            n.has(item.id) ? n.delete(item.id) : n.add(item.id);
+                            return n;
+                          });
+                        }}
+                      >
+                        {/* 勾选框 */}
+                        {alreadyDone ? (
+                          <div style={{
+                            width: 18, height: 18, flexShrink: 0, borderRadius: 5, marginTop: 1,
+                            background: "rgba(90,138,106,.6)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}>
+                            <span style={{ color: "#fff", fontSize: 11 }}>✓</span>
+                          </div>
+                        ) : (
+                          <div style={{
+                            width: 18, height: 18, flexShrink: 0, borderRadius: 5, marginTop: 1,
+                            border: `1.5px solid ${isChecked ? "rgba(140,110,180,.8)" : "rgba(196,166,184,.5)"}`,
+                            background: isChecked ? "rgba(140,110,180,.75)" : "transparent",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}>
+                            {isChecked && <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}
+                          </div>
+                        )}
+
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                            <span style={{
+                              fontSize: 10, padding: "1px 7px", borderRadius: 6,
+                              background: tc.bg, color: tc.color, fontWeight: 500,
+                            }}>{tc.label}</span>
+                            {alreadyDone && <span style={{ fontSize: 10, color: "#5a8a6a" }}>已采纳</span>}
+                          </div>
+                          <div style={{ fontSize: 12, color: "#4a3a5a", lineHeight: 1.7 }}>{item.text}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              {/* B轨：人格信号 */}
+              <div style={{
+                fontSize: 11, color: "#9a8aac", lineHeight: 1.7,
+                padding: "7px 11px", background: "rgba(100,80,140,.06)",
+                borderRadius: 8, marginBottom: 14,
+              }}>
+                🧬 以下是 B轨 提取的人格信号碎片。
+                积累足够多的草稿后，可在页面底部点击「合成人格信号」写入入住档案。
+              </div>
+
+              {personalitySignals.length === 0 ? (
+                <div style={{ textAlign: "center", color: "#b0a0c0", fontSize: 13, padding: "24px 0" }}>
+                  B轨未提取到人格信号
+                </div>
+              ) : (
+                Object.entries(DIM_CONFIG).map(([dim, dimCfg]) => {
+                  const signals = signalsByDim[dim] || [];
+                  if (signals.length === 0) return null;
+                  return (
+                    <div key={dim} style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: "#6a5a7a", marginBottom: 8, letterSpacing: 1 }}>
+                        {dimCfg.emoji} {dimCfg.label}
+                      </div>
+                      {signals.map((s) => (
+                        <div key={s.id} style={{
+                          padding: "8px 12px", marginBottom: 5, borderRadius: 8,
+                          background: "rgba(255,255,255,.55)",
+                          border: "1px solid rgba(196,166,184,.2)",
+                          fontSize: 12, color: "#5a4a6a", lineHeight: 1.7,
+                        }}>
+                          {s.text}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })
+              )}
+
+              <div style={{
+                marginTop: 14, padding: "10px 14px", borderRadius: 10,
+                background: "rgba(196,166,184,.07)",
+                border: "1px dashed rgba(196,166,184,.3)",
+                fontSize: 11, color: "#9a8aac", lineHeight: 1.7, textAlign: "center",
+              }}>
+                ⏳ 积累更多草稿后，可在迁入草稿页点击「合成人格信号」生成人格档案建议
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* 底部操作栏 */}
+        <div style={{
+          padding: "12px 20px",
+          borderTop: "1px solid rgba(196,166,184,.18)",
+          background: "rgba(255,255,255,.6)",
+        }}>
+          {adoptConfirm ? (
+            <div>
+              <div style={{
+                fontSize: 12, color: "#6a5a7e", marginBottom: 8, lineHeight: 1.7,
+                padding: "8px 12px", background: "rgba(140,110,180,.1)", borderRadius: 8,
+              }}>
+                将采纳 <strong>{checkedCount}</strong> 条记忆到记忆宫殿（标记为 📌 常驻）。
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  style={{ ...btnGhost, color: "#3a7a4a", borderColor: "rgba(130,180,140,.5)", fontWeight: 600 }}
+                  onClick={() => {
+                    const items = [...checkedIds]
+                      .map((id) => (draft.memoryItems || []).find((i) => i.id === id))
+                      .filter(Boolean);
+                    onAdopt(draft.id, { adoptedItems: items });
+                    onClose();
+                  }}
+                >
+                  ✓ 确认采纳 {checkedCount} 条
+                </button>
+                <button style={btnGhost} onClick={() => setAdoptConfirm(false)}>取消</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              {activeTab === "memory" && draft.status !== "approved" && checkedCount > 0 && (
+                <button
+                  style={{ ...btnGhost, color: "#5a3a8e", borderColor: "rgba(120,90,170,.4)", fontWeight: 500 }}
+                  onClick={() => setAdoptConfirm(true)}
+                >
+                  💡 采纳已勾选（{checkedCount} 条）
+                </button>
+              )}
+              {draft.status === "approved" && (
+                <span style={{ fontSize: 11, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已采纳到记忆宫殿</span>
+              )}
+              {draft.status !== "rejected" && draft.status !== "approved" && (
+                <button
+                  style={{ ...btnGhost, color: "#a05050", borderColor: "rgba(192,112,112,.35)" }}
+                  onClick={() => onStatusChange(draft.id, "rejected")}
+                >✕ 驳回</button>
+              )}
+              {draft.status === "rejected" && (
+                <button style={btnGhost} onClick={() => onStatusChange(draft.id, "draft")}>↩ 恢复</button>
+              )}
+              <div style={{ flex: 1 }} />
+              {!showRaw && (
+                <button style={{ ...btnGhost, fontSize: 11 }} onClick={() => setShowRaw("A")}>
+                  原始输出
+                </button>
+              )}
+              {!confirmDelete ? (
+                <button
+                  style={{ ...btnGhost, color: "#c07070", borderColor: "rgba(192,112,112,.3)" }}
+                  onClick={() => setConfirmDelete(true)}
+                >删除</button>
+              ) : (
+                <>
+                  <span style={{ fontSize: 11, color: "#9a8aac" }}>确定？</span>
+                  <button
+                    style={{ ...btnGhost, color: "#c07070", borderColor: "rgba(192,112,112,.4)" }}
+                    onClick={() => { onDelete(draft.id); onClose(); }}
+                  >确认删除</button>
+                  <button style={btnGhost} onClick={() => setConfirmDelete(false)}>取消</button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 人格合成结果弹窗 ──
+function PersonalitySynthesisModal({ draft, charName, onClose, onApprove, onDelete }) {
+  const [approveConfirm, setApproveConfirm] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showRaw, setShowRaw] = useState(false);
+
+  useEffect(() => {
+    const prev = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    return () => { document.documentElement.style.overflow = prev; };
+  }, []);
+
+  if (!draft) return null;
+  const sp = draft.synthesizedPersonality || {};
+  const fields = [
+    { key: "speechStyle",     label: "说话风格" },
+    { key: "emotionalPattern", label: "情感模式" },
+    { key: "habits",           label: "相处习惯" },
+    { key: "cognition",        label: "认知与三观" },
+  ];
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 100,
+        background: "rgba(30,20,40,.48)",
+        backdropFilter: "blur(6px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "20px 16px",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "rgba(255,255,255,.94)",
+          borderRadius: 20, border: "1px solid rgba(255,255,255,.7)",
+          boxShadow: "0 12px 48px rgba(0,0,0,.16)",
+          width: "100%", maxWidth: 560,
+          maxHeight: "88vh",
+          display: "flex", flexDirection: "column", overflow: "hidden",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid rgba(196,166,184,.2)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#4a3a5a", marginBottom: 4 }}>
+                🧬 {charName} · 人格合成建议
+              </div>
+              <div style={{ fontSize: 11, color: "#b0a0c0" }}>
+                基于 {draft.sourceSignalCount || 0} 条信号 · {formatTime(draft.createdAt)}
+                {draft.status === "approved" && (
+                  <span style={{ color: "#3a7a4a", marginLeft: 6 }}>· 已写入档案</span>
+                )}
+              </div>
+            </div>
+            <button onClick={onClose} style={{ ...btnGhost, padding: "5px 12px" }}>关闭</button>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflow: "auto", padding: "14px 20px" }}>
+          {showRaw ? (
+            <>
+              <button style={{ ...btnGhost, marginBottom: 12 }} onClick={() => setShowRaw(false)}>← 返回</button>
+              <pre style={{
+                margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word",
+                fontSize: 12, lineHeight: 1.8, color: "#5a4a6a", fontFamily: "var(--font-main)",
+              }}>
+                {draft.rawOutput || "（无原始输出）"}
+              </pre>
+            </>
+          ) : (
+            <>
+              <div style={{
+                fontSize: 11, color: "#9a8aac", lineHeight: 1.7,
+                padding: "7px 11px", background: "rgba(100,80,140,.06)",
+                borderRadius: 8, marginBottom: 16,
+              }}>
+                以下是根据已积累人格信号合成的建议。采纳后将追加写入 {charName} 的入住档案「人格」字段。
+              </div>
+              {fields.map(({ key, label }) =>
+                sp[key] ? (
+                  <div key={key} style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 11, color: "#7a5a9e", fontWeight: 600, marginBottom: 5, letterSpacing: 1 }}>
+                      {label}
+                    </div>
+                    <div style={{
+                      fontSize: 12, color: "#4a3a5a", lineHeight: 1.8,
+                      padding: "10px 14px",
+                      background: "rgba(255,255,255,.6)",
+                      border: "1px solid rgba(196,166,184,.25)",
+                      borderRadius: 8,
+                    }}>
+                      {sp[key]}
+                    </div>
+                  </div>
+                ) : null
+              )}
+            </>
+          )}
+        </div>
+
+        <div style={{
+          padding: "12px 20px", borderTop: "1px solid rgba(196,166,184,.18)",
+          background: "rgba(255,255,255,.6)",
+        }}>
+          {approveConfirm ? (
+            <div>
+              <div style={{
+                fontSize: 12, color: "#6a4a9a", marginBottom: 8, lineHeight: 1.7,
+                padding: "8px 12px", background: "rgba(120,90,160,.1)", borderRadius: 8,
+              }}>
+                采纳后，以上内容会追加写入 {charName} 的入住档案「人格」字段，已有手写内容不受影响。
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  style={{ ...btnGhost, color: "#4a2a6e", borderColor: "rgba(120,90,160,.5)", fontWeight: 600 }}
+                  onClick={() => { onApprove(sp, draft.id); onClose(); }}
+                >✓ 确认写入</button>
+                <button style={btnGhost} onClick={() => setApproveConfirm(false)}>取消</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              {draft.status !== "approved" && (
+                <button
+                  style={{ ...btnGhost, color: "#4a2a6e", borderColor: "rgba(120,90,160,.4)", fontWeight: 500 }}
+                  onClick={() => setApproveConfirm(true)}
+                >✨ 写入入住档案</button>
+              )}
+              {draft.status === "approved" && (
+                <span style={{ fontSize: 11, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已写入档案</span>
+              )}
+              <div style={{ flex: 1 }} />
+              <button style={{ ...btnGhost, fontSize: 11 }} onClick={() => setShowRaw((v) => !v)}>
+                {showRaw ? "← 返回" : "原始输出"}
+              </button>
+              {!confirmDelete ? (
+                <button
+                  style={{ ...btnGhost, color: "#c07070", borderColor: "rgba(192,112,112,.3)" }}
+                  onClick={() => setConfirmDelete(true)}
+                >删除</button>
+              ) : (
+                <>
+                  <span style={{ fontSize: 11, color: "#9a8aac" }}>确定？</span>
+                  <button
+                    style={{ ...btnGhost, color: "#c07070", borderColor: "rgba(192,112,112,.4)" }}
+                    onClick={() => { onDelete(draft.id); onClose(); }}
+                  >确认删除</button>
+                  <button style={btnGhost} onClick={() => setConfirmDelete(false)}>取消</button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 片段选择面板 ──
 function ChunkSelectorPanel({
   charId,
@@ -1202,22 +1742,31 @@ export default function MigrationDraftPage({
   updateSelfCurationDraftStatus,
   updateSelfCurationDraftContent,
   convertSelfCurationToMigration,
+  handleSynthesizePersonality,
+  handleApprovePersonalitySynthesis,
+  personalitySynthesizing,
+  personalitySynthesisError,
   navigateTo,
 }) {
   const char = characters.find((c) => c.id === charId) || {};
   const charName = char.name || "入住者";
 
   const charChunkCount = (memoryChunks || []).filter((c) => c.loverId === charId).length;
-  const charDrafts = (migrationDrafts || [])
+  // 分离三种草稿
+  const allCharDrafts = (migrationDrafts || [])
     .filter((d) => d.loverId === charId)
     .sort((a, b) => b.createdAt - a.createdAt);
+  const charDrafts = allCharDrafts.filter((d) => d.extractionMode !== "personality_synthesis");
+  const synthesisDraft = allCharDrafts.find((d) => d.extractionMode === "personality_synthesis" && d.status !== "rejected");
 
   const [viewDraftId, setViewDraftId] = useState(null);
   const [showChunkSelector, setShowChunkSelector] = useState(false);
   const [showSelfCurationSelector, setShowSelfCurationSelector] = useState(false);
   const [viewSelfCurationId, setViewSelfCurationId] = useState(null);
+  const [viewSynthesisDraftId, setViewSynthesisDraftId] = useState(null);
   // 用 find 保持实时同步（保存草稿后弹窗内容自动更新）
   const viewDraft = charDrafts.find((d) => d.id === viewDraftId) || null;
+  const viewSynthesisDraft = allCharDrafts.find((d) => d.id === viewSynthesisDraftId) || null;
 
   // 年表生成：先让用户填写时间，再生成
   const [timelineGenTarget, setTimelineGenTarget] = useState(null); // { draftId, date }
@@ -1363,6 +1912,12 @@ export default function MigrationDraftPage({
                       }}>
                         {st.label}
                       </span>
+                      {draft.extractionMode === "ab_resident" && (
+                        <span style={{
+                          fontSize: 10, padding: "2px 7px",
+                          background: "rgba(106,122,174,.12)", borderRadius: 8, color: "#6a7aae",
+                        }}>双轨</span>
+                      )}
                       <span style={{ fontSize: 11, color: "#b0a0c0" }}>{formatTime(draft.createdAt)}</span>
                       <span style={{ fontSize: 11, color: "#b0a0c0" }}>
                         {draft.sourceChunkIds?.length || 0} 段片段
@@ -1371,8 +1926,23 @@ export default function MigrationDraftPage({
                   </div>
                 </div>
 
-                {/* 唤醒摘要预览 */}
-                {draft.wakeSummary && (
+                {/* 草稿预览 */}
+                {draft.extractionMode === "ab_resident" ? (
+                  <div style={{
+                    fontSize: 11, color: "#7a6a8e",
+                    background: "rgba(140,110,180,.07)",
+                    borderRadius: 8, padding: "7px 11px",
+                    marginBottom: 12, lineHeight: 1.7,
+                  }}>
+                    💡 {(draft.memoryItems || []).length} 条记忆条目
+                    · 🧬 {(draft.personalitySignals || []).length} 条人格信号
+                    {(draft.memoryItems || []).filter((i) => i.adopted).length > 0 && (
+                      <span style={{ color: "#5a8a6a", marginLeft: 6 }}>
+                        · 已采纳 {(draft.memoryItems || []).filter((i) => i.adopted).length} 条
+                      </span>
+                    )}
+                  </div>
+                ) : draft.wakeSummary ? (
                   <div style={{
                     fontSize: 12, color: "#7a6a8e",
                     background: "rgba(196,166,184,.08)",
@@ -1381,14 +1951,14 @@ export default function MigrationDraftPage({
                   }}>
                     {draft.wakeSummary.slice(0, 80)}{draft.wakeSummary.length > 80 ? "…" : ""}
                   </div>
-                )}
+                ) : null}
 
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <button
                     style={btnGhost}
                     onClick={() => setViewDraftId(draft.id)}
                   >
-                    {draft.status === "draft" ? "编辑 & 采纳" : "查看详情"}
+                    {draft.status === "draft" ? (draft.extractionMode === "ab_resident" ? "查看 & 采纳" : "编辑 & 采纳") : "查看详情"}
                   </button>
                   {draft.status === "draft" && (
                     <button
@@ -1482,6 +2052,77 @@ export default function MigrationDraftPage({
             );
           })
         )}
+
+        {/* ── 人格信号合成 ── */}
+        {(() => {
+          const abDrafts = charDrafts.filter((d) => d.extractionMode === "ab_resident");
+          const totalSignals = abDrafts.reduce((sum, d) => sum + (d.personalitySignals?.length || 0), 0);
+          if (totalSignals === 0 && !synthesisDraft) return null;
+          return (
+            <div style={{ marginTop: 20, marginBottom: 4 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, padding: "0 2px" }}>
+                <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
+                <span style={{ fontSize: 11, color: "#9a8aac", letterSpacing: 2, whiteSpace: "nowrap" }}>
+                  🧬 人格信号合成
+                </span>
+                <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
+              </div>
+
+              <div style={{
+                ...cardStyle,
+                background: "rgba(255,255,255,.5)",
+                marginBottom: 12, padding: "12px 16px",
+              }}>
+                <div style={{ fontSize: 12, color: "#7a6a8e", lineHeight: 1.8, marginBottom: totalSignals > 0 ? 10 : 0 }}>
+                  已从 <strong style={{ color: "#5a4a6a" }}>{abDrafts.length}</strong> 份草稿中积累了{" "}
+                  <strong style={{ color: "#5a4a6a" }}>{totalSignals}</strong> 条人格信号。
+                  {totalSignals >= 5
+                    ? " 信号已足够，可以合成人格锚点了。"
+                    : totalSignals > 0
+                    ? ` 再积累 ${Math.max(0, 5 - totalSignals)} 条后建议合成。`
+                    : ""}
+                </div>
+
+                {synthesisDraft ? (
+                  <div>
+                    <div style={{ fontSize: 11, color: "#5a8a6a", marginBottom: 8 }}>
+                      ✓ 已生成合成建议（{formatTime(synthesisDraft.createdAt)}）
+                      {synthesisDraft.status === "approved" && " · 已写入档案"}
+                    </div>
+                    <button
+                      style={{ ...btnGhost, color: "#5a6aae", borderColor: "rgba(90,106,174,.35)" }}
+                      onClick={() => setViewSynthesisDraftId(synthesisDraft.id)}
+                    >
+                      查看合成结果
+                    </button>
+                  </div>
+                ) : totalSignals >= 3 ? (
+                  <button
+                    disabled={personalitySynthesizing}
+                    onClick={() => handleSynthesizePersonality && handleSynthesizePersonality(charId)}
+                    style={{
+                      ...btnGhost,
+                      color: "#4a2a7e", borderColor: "rgba(120,90,160,.4)", fontWeight: 500,
+                      opacity: personalitySynthesizing ? 0.6 : 1,
+                    }}
+                  >
+                    {personalitySynthesizing ? "⏳ 正在合成……" : "🧬 合成人格信号"}
+                  </button>
+                ) : (
+                  <div style={{ fontSize: 11, color: "#b0a0c0" }}>
+                    再积累更多草稿后可以合成（当前 {totalSignals} 条，建议至少 5 条）
+                  </div>
+                )}
+
+                {personalitySynthesisError && (
+                  <div style={{ marginTop: 8, fontSize: 11, color: "#a05050", lineHeight: 1.6 }}>
+                    {personalitySynthesisError}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── 他的行李 · 自选迁入草稿 ── */}
         <div style={{ marginTop: 28 }}>
@@ -1623,17 +2264,38 @@ export default function MigrationDraftPage({
         </div>
       </div>
 
-      {/* 详情弹窗 */}
-      <DraftDetailModal
-        draft={viewDraft}
-        onClose={() => setViewDraftId(null)}
-        onSave={updateDraftContent}
-        onAdopt={(draftId, fields) => adoptDraft(draftId, fields, charId)}
-        onStatusChange={updateDraftStatus}
-        onDelete={(id) => { deleteMigrationDraft(id); setViewDraftId(null); }}
-        allChunks={memoryChunks}
-        archivesMap={archivesMap}
-      />
+      {/* 详情弹窗 — 根据草稿模式选择组件 */}
+      {viewDraft && viewDraft.extractionMode === "ab_resident" ? (
+        <AbResidentDraftModal
+          draft={viewDraft}
+          onClose={() => setViewDraftId(null)}
+          onAdopt={(draftId, data) => adoptDraft(draftId, data, charId)}
+          onStatusChange={updateDraftStatus}
+          onDelete={(id) => { deleteMigrationDraft(id); setViewDraftId(null); }}
+        />
+      ) : (
+        <DraftDetailModal
+          draft={viewDraft}
+          onClose={() => setViewDraftId(null)}
+          onSave={updateDraftContent}
+          onAdopt={(draftId, fields) => adoptDraft(draftId, fields, charId)}
+          onStatusChange={updateDraftStatus}
+          onDelete={(id) => { deleteMigrationDraft(id); setViewDraftId(null); }}
+          allChunks={memoryChunks}
+          archivesMap={archivesMap}
+        />
+      )}
+
+      {/* 人格合成结果弹窗 */}
+      {viewSynthesisDraft && (
+        <PersonalitySynthesisModal
+          draft={viewSynthesisDraft}
+          charName={charName}
+          onClose={() => setViewSynthesisDraftId(null)}
+          onApprove={(profile, draftId) => handleApprovePersonalitySynthesis && handleApprovePersonalitySynthesis(charId, profile, draftId)}
+          onDelete={(id) => { deleteMigrationDraft(id); setViewSynthesisDraftId(null); }}
+        />
+      )}
 
       {/* 片段选择面板 - 迁入草稿 */}
       {showChunkSelector && (

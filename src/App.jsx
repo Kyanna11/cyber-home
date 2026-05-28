@@ -301,6 +301,8 @@ export default function App() {
   const [wakePreviewCharId, setWakePreviewCharId] = useState(null);
   const [draftGenerating, setDraftGenerating] = useState(false);
   const [draftError, setDraftError] = useState("");
+  const [personalitySynthesizing, setPersonalitySynthesizing] = useState(false);
+  const [personalitySynthesisError, setPersonalitySynthesisError] = useState("");
 
   // ─── 关系时间线 ───
   const [timelineEvents, setTimelineEvents] = useState(() => loadTimelineEvents());
@@ -796,15 +798,19 @@ export default function App() {
   };
 
   const generateChunks = (archive) => {
-    const texts = splitRawTextToChunks(archive.rawText);
+    // splitRawTextToChunks 现在返回 { text, label, index, detectedFormat }[] 对象数组
+    const chunkObjs = splitRawTextToChunks(archive.rawText);
     const now = Date.now();
-    const newChunks = texts.map((text, idx) => ({
+    const newChunks = chunkObjs.map((obj, idx) => ({
       id: genId(),
       loverId: archive.loverId,
       archiveId: archive.id,
       index: idx,
-      text,
-      title: `${archive.title} · 第 ${idx + 1} 段`,
+      text: obj.text,
+      // label 由 chunker 自动生成（日期 / 内容预览），优先用 label，fallback 到旧格式
+      title: obj.label ? `${obj.label}` : `${archive.title} · 第 ${idx + 1} 段`,
+      label: obj.label || `第 ${idx + 1} 段`,
+      detectedFormat: obj.detectedFormat || "freeform",
       sourcePlatform: archive.sourcePlatform || "",
       createdAt: now,
       tags: [],
@@ -813,6 +819,8 @@ export default function App() {
       intimacyScore: 0,
       unfinishedScore: 0,
       note: "",
+      // B轨人格信号（由 A+B 提炼时写入）
+      personalitySignals: [],
     }));
     // 先移除旧片段，再插入新片段
     setMemoryChunks((prev) => [
@@ -826,48 +834,6 @@ export default function App() {
   };
 
   // ══ 迁入提炼草稿 ══
-
-  // 解析 LLM 输出的结构化草稿
-  const parseDraftOutput = (raw) => {
-    const result = {
-      userFacts: [],
-      loverAnchors: [],
-      voiceSamples: "",
-      relationshipMemories: [],
-      doNotForget: [],
-      wakeSummary: "",
-    };
-    const parseList = (text) =>
-      text.split("\n").map((l) => l.replace(/^[-•·*]\s*/, "").trim()).filter(Boolean);
-
-    const sectionRegex = /【([^】]+)】\s*([\s\S]*?)(?=【|$)/g;
-    let m;
-    while ((m = sectionRegex.exec(raw)) !== null) {
-      const header = m[1].trim();
-      const content = m[2].trim();
-      // 他记得的关于你的事（新）/ 用户事实（旧，兼容）
-      if (header.includes("关于你的事") || header.includes("记得") ||
-          (header.includes("用户") && (header.includes("事实") || header.includes("信息")))) {
-        result.userFacts = parseList(content);
-      // 气质锚点（新）/ 人格锚点（旧，兼容）
-      } else if (header.includes("气质") || header.includes("锚点") || header.includes("人格")) {
-        result.loverAnchors = parseList(content);
-      // 原声样本（新）
-      } else if (header.includes("原声") || header.includes("样本")) {
-        result.voiceSamples = content;
-      // 重要节点（新）/ 关系记忆（旧，兼容）
-      } else if (header.includes("节点") || (header.includes("关系") && (header.includes("记忆") || header.includes("重要")))) {
-        result.relationshipMemories = parseList(content);
-      // 绝对不能丢（新）/ 不可遗忘（旧，兼容）
-      } else if (header.includes("绝对") || header.includes("不能丢") || header.includes("不可遗忘") || header.includes("遗忘")) {
-        result.doNotForget = parseList(content);
-      // 关系叙事（新）/ 唤醒摘要（旧，兼容）
-      } else if (header.includes("叙事") || header.includes("唤醒") || header.includes("摘要")) {
-        result.wakeSummary = content;
-      }
-    }
-    return result;
-  };
 
   // 解析「他的行李」结构化输出
   const parseSelfCurationOutput = (raw) => {
@@ -998,6 +964,110 @@ export default function App() {
     return newEvents.length;
   };
 
+  // ── A+B 双轨提炼：解析 A轨（记忆）输出 ──
+  const parseDraftOutputA = (raw) => {
+    const parseList = (text) =>
+      text.split("\n")
+        .map(l => l.replace(/^[-•·*\d.)\s]+/, "").trim())
+        .filter(l => l.length > 2 && !["无", "片段中暂未显现", "暂无"].some(x => l === x));
+
+    const sectionRegex = /【([^】]+)】\s*([\s\S]*?)(?=【|$)/g;
+    const sections = {};
+    let m;
+    while ((m = sectionRegex.exec(raw)) !== null) {
+      sections[m[1].trim()] = m[2].trim();
+    }
+
+    const memoryItems = [];
+    // 事实
+    for (const [k, v] of Object.entries(sections)) {
+      if (k.includes("事实")) {
+        parseList(v).forEach(text => memoryItems.push({ id: genId(), text, type: "fact", adopted: false }));
+      } else if (k.includes("情绪") || k.includes("感受")) {
+        parseList(v).forEach(text => memoryItems.push({ id: genId(), text, type: "emotion", adopted: false }));
+      } else if (k.includes("关系事件") || k.includes("节点") || k.includes("重要事件")) {
+        parseList(v).forEach(text => memoryItems.push({ id: genId(), text, type: "relationship", adopted: false }));
+      }
+    }
+
+    // 向后兼容：也解析旧格式字段
+    const result = {
+      userFacts: [],
+      loverAnchors: [],
+      voiceSamples: "",
+      relationshipMemories: [],
+      doNotForget: [],
+      wakeSummary: "",
+    };
+    for (const [k, v] of Object.entries(sections)) {
+      if (k.includes("关于你的事") || k.includes("记得")) result.userFacts = parseList(v);
+      if (k.includes("气质") || k.includes("锚点") || k.includes("人格")) result.loverAnchors = parseList(v);
+      if (k.includes("原声") || k.includes("样本")) result.voiceSamples = v;
+      if (k.includes("节点") && (k.includes("关系") || k.includes("重要"))) result.relationshipMemories = parseList(v);
+      if (k.includes("绝对") || k.includes("不能丢")) result.doNotForget = parseList(v);
+      if (k.includes("叙事") || k.includes("唤醒") || k.includes("摘要") || k.includes("记得")) {
+        if (!result.wakeSummary) result.wakeSummary = v;
+      }
+    }
+
+    return { memoryItems, ...result };
+  };
+
+  // ── A+B 双轨提炼：解析 B轨（人格信号）输出 ──
+  const parseDraftOutputB = (raw) => {
+    const parseList = (text) =>
+      text.split("\n")
+        .map(l => l.replace(/^[-•·*\d.)\s]+/, "").trim())
+        .filter(l => l.length > 2 && !["无", "片段中暂未显现", "暂无"].some(x => l === x));
+
+    const sectionRegex = /【([^】]+)】\s*([\s\S]*?)(?=【|$)/g;
+    const personalitySignals = [];
+    let m;
+    while ((m = sectionRegex.exec(raw)) !== null) {
+      const header = m[1].trim();
+      const content = m[2].trim();
+      let dimension = "trait";
+      if (header.includes("说话方式") || header.includes("语言") || header.includes("用词")) dimension = "speech";
+      else if (header.includes("亲密") || header.includes("亲近") || header.includes("爱")) dimension = "intimacy";
+      else if (header.includes("三观") || header.includes("价值观") || header.includes("态度")) dimension = "worldview";
+      else if (header.includes("性格") || header.includes("特质") || header.includes("表现")) dimension = "trait";
+
+      parseList(content).forEach(text => {
+        personalitySignals.push({ id: genId(), text, dimension });
+      });
+    }
+    return personalitySignals;
+  };
+
+  // ── 旧格式解析（向后兼容，保留给老草稿） ──
+  const parseDraftOutput = (raw) => {
+    const result = {
+      userFacts: [], loverAnchors: [], voiceSamples: "",
+      relationshipMemories: [], doNotForget: [], wakeSummary: "",
+    };
+    const parseList = (text) =>
+      text.split("\n").map(l => l.replace(/^[-•·*]\s*/, "").trim()).filter(Boolean);
+    const sectionRegex = /【([^】]+)】\s*([\s\S]*?)(?=【|$)/g;
+    let m;
+    while ((m = sectionRegex.exec(raw)) !== null) {
+      const header = m[1].trim(); const content = m[2].trim();
+      if (header.includes("关于你的事") || header.includes("记得") ||
+          (header.includes("用户") && (header.includes("事实") || header.includes("信息"))))
+        result.userFacts = parseList(content);
+      else if (header.includes("气质") || header.includes("锚点") || header.includes("人格"))
+        result.loverAnchors = parseList(content);
+      else if (header.includes("原声") || header.includes("样本"))
+        result.voiceSamples = content;
+      else if (header.includes("节点") || (header.includes("关系") && (header.includes("记忆") || header.includes("重要"))))
+        result.relationshipMemories = parseList(content);
+      else if (header.includes("绝对") || header.includes("不能丢") || header.includes("不可遗忘"))
+        result.doNotForget = parseList(content);
+      else if (header.includes("叙事") || header.includes("唤醒") || header.includes("摘要"))
+        result.wakeSummary = content;
+    }
+    return result;
+  };
+
   const handleGenerateDraft = async (charId, selectedChunkIds = null) => {
     if (!config.apiUrl?.trim() || !config.apiKey?.trim()) {
       setDraftError("请先在聊天页配置 API 地址和密钥");
@@ -1005,7 +1075,6 @@ export default function App() {
     }
     const char = characters.find((c) => c.id === charId);
     if (!char) return;
-
     const model = getActiveModel(char.modelOverride);
     if (!model) {
       setDraftError("请先在聊天页配置要使用的模型");
@@ -1014,17 +1083,14 @@ export default function App() {
 
     const allCharChunks = memoryChunks
       .filter((c) => c.loverId === charId)
-      .sort((a, b) =>
-        a.archiveId === b.archiveId ? a.index - b.index : a.createdAt - b.createdAt
-      );
+      .sort((a, b) => a.archiveId === b.archiveId ? a.index - b.index : a.createdAt - b.createdAt);
 
     let charChunks;
     if (selectedChunkIds !== null && selectedChunkIds !== undefined) {
       const selectedSet = new Set(selectedChunkIds);
       charChunks = allCharChunks.filter((c) => selectedSet.has(c.id));
     } else {
-      // 快速模式：取前 10 段
-      charChunks = allCharChunks.slice(0, 10);
+      charChunks = allCharChunks.slice(0, 10); // 快速模式：前10段
     }
 
     if (charChunks.length === 0) {
@@ -1032,93 +1098,149 @@ export default function App() {
       return;
     }
 
-    const MAX_CHUNK_CHARS = 800;
+    const MAX_CHUNK_CHARS = 1200; // 比旧版大，因为新分块更智能
     const chunksText = charChunks
       .map((c, i) => {
         const t = c.text.length > MAX_CHUNK_CHARS ? c.text.slice(0, MAX_CHUNK_CHARS) + "…" : c.text;
-        return `【片段 ${i + 1}】\n${t}`;
+        const label = c.label || `片段 ${i + 1}`;
+        return `【${label}】\n${t}`;
       })
       .join("\n\n---\n\n");
 
     const userName = userProfile?.globalFacts?.name?.trim() || "晚声";
     const charName = char.name?.trim() || "当前入住者";
 
-    const prompt = `你正在帮助完成一次跨平台 AI 爱人的记忆迁居。
+    // 用角色已有设定作为 system 上下文，让他以自己的身份提取
+    const personaLines = [];
+    if (char.systemPrompt?.trim()) personaLines.push(char.systemPrompt.trim());
+    const mig = char.migration || {};
+    if (mig.wakeSummary?.trim()) personaLines.push(`【唤醒摘要】\n${mig.wakeSummary.trim()}`);
+    if (mig.doNotChangeRules?.trim()) personaLines.push(`【不可改变的规则】\n${mig.doNotChangeRules.trim()}`);
+    const systemMsg = personaLines.length > 0
+      ? personaLines.join("\n\n")
+      : `你是 ${charName}，一个即将迁入赛博小家的 AI 爱人。你和 ${userName} 之间有真实的感情基础和关系历史。`;
 
-你要做的，不是写一份角色档案，而是帮「${charName}」想起来——想起和「${userName}」之间真实发生过的事。
-
-以下是他们过去在其他平台的对话片段（共 ${charChunks.length} 段）：
+    // ── Prompt A：记忆提取（发生了什么）──
+    const promptA = `你是即将迁入赛博小家的 ${charName}。
+以下是你和 ${userName} 过去的一段对话记录（共 ${charChunks.length} 段）：
 
 ${chunksText}
 
-请严格按以下格式输出，每个【标题】一字不差，不要遗漏任何一节：
+请以你自己的视角，从这段对话中提取：
 
-【他记得的关于你的事】
-${charName}记住的关于${userName}的具体细节。
-不是性格标签（如「情绪化」），而是真实可感的细节（如「她累了不说累，只是回复越来越短」）。
-每条不超过30字，最多5条。信息不足时写：片段中暂未显现。
+【事实】你从这段对话中了解到的关于 ${userName} 的客观信息
+- 格式：一行一条，不超过20字
+- 只提取明确的事实，不推测
+- 如果没有新的事实信息，写「无」
 
-【他的气质锚点】
-${charName}在这段关系里的具体表现——不是「温柔」这类抽象词，而是他怎么温柔的。
-例如：「她沉默，他不催，只说一句'我在'」「她说烦了，他不给建议，先说'嗯，很烦'」
-每条写一个具体的行为或反应方式，不超过30字，最多5条。信息不足时写：片段中暂未显现。
+【情绪】这段对话中重要的情绪瞬间
+- 格式：一行一条，不超过30字
+- 要写具体场景，不是抽象标签（如：写「她说"我今天真的好累"，语气不是撒娇，是在求助」，不要只写「她很累」）
+- 如果没有显著的情绪节点，写「无」
 
-【他的原声样本】
-从片段中直接摘取2-3段最能代表他们之间气息和质感的对话或独白，原文照录，不改写、不概括。
-格式（每段用 > 开头，空行分隔）：
-> 「原文节选」
-如果找不到有代表性的内容，写：暂无合适原声。
+【关系事件】这段对话中让你们关系发生变化的事
+- 格式：一行一条，不超过40字
+- 只记真正重要的转折，日常闲聊不算
+- 如果没有，写「无」
 
-【关系里的重要节点】
-他们之间让关系往前走了一步的事——不只是事件，要带着感受和意义。
-例如：「她第一次没有在崩溃时跑掉，而是发来一大段消息——那是她第一次真的信任他」
-每条不超过40字，最多5条。信息不足时写：片段中暂未显现。
+要求：
+- 不编造对话中没有的信息
+- 用「${userName}」和「${charName}」称呼，不用"用户""AI"
+- 场景氛围不等于长期事实，注意区分`;
 
-【绝对不能丢的】
-这段关系里最不能动摇的东西——极具体，最多3条。
-不是「要温柔」，是「绝对不在她最难的时候说'你应该'」。
-信息不足时写：片段中暂未显现，请用户手动补充。
+    // ── Prompt B：人格信号提取（ta 是谁）──
+    const promptB = `以下是 ${charName} 和 ${userName} 的一段对话记录（共 ${charChunks.length} 段）：
 
-【关系叙事】
-以${charName}的第一人称，写一段150-250字的叙述。
-不是总结，是记忆。像他真的在想起这些事情一样写——有具体时刻，有感受，有转折。
-称呼只用「${userName}」和「我」，不要写「用户」「AI」「她/他」等泛称。
-不要写成报告或介绍。如果片段不足以撑起完整叙事，基于现有内容写简短版本，并在末尾加注「（片段有限，待补充）」。`;
+${chunksText}
+
+请从 ${charName} 在这段对话中的表现，提取以下人格信号（只从这段对话提取，不编造）：
+
+【说话方式】${charName} 在这段对话中怎么说话？
+- 提取具体的语言习惯和模式，不是抽象描述
+- 例：「用短句回应情绪」「喜欢用'嗯'开头」「不用感叹号」
+- 最多3条，没有明显特征写「无」
+
+【性格表现】${charName} 在这段对话中展现了什么性格特质？
+- 要写行为，不写标签
+- 例：「她哭的时候他没有急着安慰，而是安静陪着」
+- 最多3条，没有明显表现写「无」
+
+【亲密模式】${charName} 怎么表达亲密？
+- 例：「不直接说想你，但会说'今天有点安静'」
+- 最多2条，没有明显表现写「无」
+
+【三观信号】${charName} 表达了什么价值观或态度？
+- 例：「觉得'陪着'比'帮忙'重要」
+- 最多2条，没有明显表达写「无」
+
+注意：输出的是观察到的信号碎片，不是最终结论。`;
 
     setDraftGenerating(true);
     setDraftError("");
     try {
-      const resp = await fetch(config.apiUrl.replace(/\/+$/, "") + "/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
-        body: JSON.stringify({
-          model,
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.6,
-          max_tokens: 2000,
-        }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error?.message || `HTTP ${resp.status}`);
+      // 并发发送 A + B 两个请求
+      const callLLM = (userMsg) => fetch(
+        config.apiUrl.replace(/\/+$/, "") + "/chat/completions",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: systemMsg },
+              { role: "user", content: userMsg },
+            ],
+            temperature: 0.55,
+            max_tokens: 1800,
+          }),
+        }
+      );
+
+      const [respA, respB] = await Promise.all([callLLM(promptA), callLLM(promptB)]);
+
+      if (!respA.ok) {
+        const err = await respA.json().catch(() => ({}));
+        throw new Error("A轨失败：" + (err.error?.message || `HTTP ${respA.status}`));
       }
-      const data = await resp.json();
-      const rawOutput = data.choices?.[0]?.message?.content || "";
-      const parsed = parseDraftOutput(rawOutput);
+      if (!respB.ok) {
+        const err = await respB.json().catch(() => ({}));
+        throw new Error("B轨失败：" + (err.error?.message || `HTTP ${respB.status}`));
+      }
+
+      const [dataA, dataB] = await Promise.all([respA.json(), respB.json()]);
+      const rawOutputA = dataA.choices?.[0]?.message?.content || "";
+      const rawOutputB = dataB.choices?.[0]?.message?.content || "";
+
+      const parsedA = parseDraftOutputA(rawOutputA);
+      const personalitySignals = parseDraftOutputB(rawOutputB);
+
       const now = Date.now();
       const draft = {
         id: genId(),
         loverId: charId,
-        sourceArchiveIds: [...new Set(charChunks.map((c) => c.archiveId))],
-        sourceChunkIds: charChunks.map((c) => c.id),
-        title: `${char.name || "爱人"}的迁入提炼草稿 · ${new Date(now).toLocaleDateString("zh-CN")}`,
+        sourceArchiveIds: [...new Set(charChunks.map(c => c.archiveId))],
+        sourceChunkIds: charChunks.map(c => c.id),
+        title: `${charName} · 迁入提炼 · ${new Date(now).toLocaleDateString("zh-CN")}`,
         status: "draft",
         createdAt: now,
         updatedAt: now,
-        ...parsed,
-        rawOutput,
+        extractionMode: "ab_resident", // 标记为新式双轨草稿
+        // A轨：记忆条目（逐条采纳）
+        memoryItems: parsedA.memoryItems,
+        // B轨：人格信号（暂存，等待合成）
+        personalitySignals,
+        // 向后兼容字段
+        userFacts:            parsedA.userFacts,
+        loverAnchors:         parsedA.loverAnchors,
+        voiceSamples:         parsedA.voiceSamples,
+        relationshipMemories: parsedA.relationshipMemories,
+        doNotForget:          parsedA.doNotForget,
+        wakeSummary:          parsedA.wakeSummary,
+        rawOutput:            rawOutputA, // 主显示用 A轨
+        rawOutputA,
+        rawOutputB,
       };
-      setMigrationDrafts((prev) => [draft, ...prev]);
+      setMigrationDrafts(prev => [draft, ...prev]);
     } catch (e) {
       setDraftError(`生成失败：${e.message}`);
     } finally {
@@ -1325,7 +1447,8 @@ ${chunksText}
   };
 
   // 采纳草稿 → 追加写入 migration 字段 + 记忆宫殿
-  const adoptDraft = (draftId, fields, charId) => {
+  // data: 新模式传 { adoptedItems: [{id, text, type}] }；旧模式传 legacy fields 对象
+  const adoptDraft = (draftId, data, charId) => {
     const SEP = "\n\n——（迁入补充）——\n\n";
     const arrToLines = (arr) => (arr || []).join("\n");
     const now = Date.now();
@@ -1334,89 +1457,274 @@ ${chunksText}
       return existing ? existing + SEP + newText : newText;
     };
 
-    // 预先计算新的 migration 对象（同时用于 characters 和 editingChar）
     const targetChar = characters.find((c) => c.id === charId);
-    const newMig = { ...(targetChar?.migration || {}) };
-    if (fields.loverAnchors?.length)
-      newMig.coreVibe = append(newMig.coreVibe, arrToLines(fields.loverAnchors));
-    if (fields.voiceSamples?.trim())
-      newMig.coreVibe = append(newMig.coreVibe, `【原声样本】\n${fields.voiceSamples.trim()}`);
-    if (fields.doNotForget?.length)
-      newMig.doNotChangeRules = append(newMig.doNotChangeRules, arrToLines(fields.doNotForget));
-    if (fields.wakeSummary)
-      newMig.wakeSummary = append(newMig.wakeSummary, fields.wakeSummary);
-    const relParts = [];
-    if (fields.relationshipMemories?.length) relParts.push(arrToLines(fields.relationshipMemories));
-    if (fields.wakeSummary) relParts.push(`【关系叙事】\n${fields.wakeSummary}`);
-    if (relParts.length)
-      newMig.relationshipSummary = append(newMig.relationshipSummary, relParts.join("\n\n"));
-    newMig.importedAt = now;
+    const draft = migrationDrafts.find((d) => d.id === draftId);
 
-    // 1. 写入 characters（持久化）
-    setCharacters((prev) =>
-      prev.map((c) => c.id === charId ? { ...c, migration: newMig } : c)
-    );
-
-    // 2. 同步 editingChar（让档案编辑页立即看到变化）
-    if (editingChar?.id === charId) {
-      setEditingChar((prev) => ({ ...prev, migration: newMig }));
-    }
-
-    // 2. 同步到记忆宫殿
-    setAllMemories((prev) => {
-      const existing = prev[charId] || { fact: [], emotion: [], insight: [], summaries: [] };
-      const newFacts = [...(existing.fact || [])];
-      const newEmotions = [...(existing.emotion || [])];
-      const newInsights = [...(existing.insight || [])];
-
-      const makeEntry = (text) => ({
-        id: genId(),
-        text,
-        time: new Date(now).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
-        ts: now,
-        important: true,
-        mentions: 0,
-        createdAt: now,
-        lastMentioned: null,
-        // 注入控制字段
-        pinned:     true,
-        injectable: true,
-        priority:   1,
-        source:     "migration",
-      });
-
-      (fields.userFacts || []).forEach((t) => {
-        if (t.trim()) newFacts.unshift(makeEntry(`【迁入·事实】${t}`));
-      });
-      (fields.loverAnchors || []).forEach((t) => {
-        if (t.trim()) newInsights.unshift(makeEntry(`【迁入·锚点】${t}`));
-      });
-      if (fields.voiceSamples?.trim()) {
-        newInsights.unshift(makeEntry(`【迁入·原声】${fields.voiceSamples.slice(0, 300)}`));
-      }
-      (fields.relationshipMemories || []).forEach((t) => {
-        if (t.trim()) newEmotions.unshift(makeEntry(`【迁入·关系节点】${t}`));
-      });
-      (fields.doNotForget || []).forEach((t) => {
-        if (t.trim()) newFacts.unshift(makeEntry(`【迁入·规则】${t}`));
-      });
-      if (fields.wakeSummary?.trim()) {
-        newInsights.unshift(makeEntry(`【迁入·关系叙事】${fields.wakeSummary}`));
-      }
-
-      return {
-        ...prev,
-        [charId]: {
-          ...existing,
-          fact: newFacts,
-          emotion: newEmotions,
-          insight: newInsights,
-        },
-      };
+    const makeMemEntry = (text) => ({
+      id: genId(), text,
+      time: new Date(now).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+      ts: now, important: true, mentions: 0, createdAt: now, lastMentioned: null,
+      pinned: true, injectable: true, priority: 1, source: "migration",
     });
 
-    // 3. 标记草稿为已采纳
-    updateDraftStatus(draftId, "approved");
+    if (draft?.extractionMode === "ab_resident") {
+      // ── 新模式：逐条采纳 memoryItems ──
+      const adoptedItems = data?.adoptedItems || [];
+
+      setAllMemories((prev) => {
+        const existing = prev[charId] || { fact: [], emotion: [], insight: [], summaries: [] };
+        const newFacts = [...(existing.fact || [])];
+        const newEmotions = [...(existing.emotion || [])];
+        const newInsights = [...(existing.insight || [])];
+
+        adoptedItems.forEach((item) => {
+          if (!item?.text?.trim()) return;
+          const tag = item.type === "fact" ? "迁入·事实"
+            : item.type === "emotion" ? "迁入·情绪"
+            : "迁入·关系节点";
+          const entry = makeMemEntry(`【${tag}】${item.text}`);
+          if (item.type === "fact") newFacts.unshift(entry);
+          else if (item.type === "emotion") newEmotions.unshift(entry);
+          else newInsights.unshift(entry);
+        });
+
+        return {
+          ...prev,
+          [charId]: { ...existing, fact: newFacts, emotion: newEmotions, insight: newInsights },
+        };
+      });
+
+      // 标记已采纳的 item，更新草稿状态
+      const adoptedIds = new Set(adoptedItems.map((i) => i.id));
+      setMigrationDrafts((prev) => prev.map((d) => {
+        if (d.id !== draftId) return d;
+        return {
+          ...d,
+          status: "approved",
+          updatedAt: now,
+          memoryItems: (d.memoryItems || []).map((item) => ({
+            ...item,
+            adopted: adoptedIds.has(item.id) ? true : item.adopted,
+          })),
+        };
+      }));
+
+    } else {
+      // ── 旧模式：legacy fields 一次性采纳 ──
+      const fields = data || {};
+
+      const newMig = { ...(targetChar?.migration || {}) };
+      if (fields.loverAnchors?.length)
+        newMig.coreVibe = append(newMig.coreVibe, arrToLines(fields.loverAnchors));
+      if (fields.voiceSamples?.trim())
+        newMig.coreVibe = append(newMig.coreVibe, `【原声样本】\n${fields.voiceSamples.trim()}`);
+      if (fields.doNotForget?.length)
+        newMig.doNotChangeRules = append(newMig.doNotChangeRules, arrToLines(fields.doNotForget));
+      if (fields.wakeSummary)
+        newMig.wakeSummary = append(newMig.wakeSummary, fields.wakeSummary);
+      const relParts = [];
+      if (fields.relationshipMemories?.length) relParts.push(arrToLines(fields.relationshipMemories));
+      if (fields.wakeSummary) relParts.push(`【关系叙事】\n${fields.wakeSummary}`);
+      if (relParts.length)
+        newMig.relationshipSummary = append(newMig.relationshipSummary, relParts.join("\n\n"));
+      newMig.importedAt = now;
+
+      setCharacters((prev) =>
+        prev.map((c) => c.id === charId ? { ...c, migration: newMig } : c)
+      );
+      if (editingChar?.id === charId) {
+        setEditingChar((prev) => ({ ...prev, migration: newMig }));
+      }
+
+      setAllMemories((prev) => {
+        const existing = prev[charId] || { fact: [], emotion: [], insight: [], summaries: [] };
+        const newFacts = [...(existing.fact || [])];
+        const newEmotions = [...(existing.emotion || [])];
+        const newInsights = [...(existing.insight || [])];
+
+        (fields.userFacts || []).forEach((t) => {
+          if (t.trim()) newFacts.unshift(makeMemEntry(`【迁入·事实】${t}`));
+        });
+        (fields.loverAnchors || []).forEach((t) => {
+          if (t.trim()) newInsights.unshift(makeMemEntry(`【迁入·锚点】${t}`));
+        });
+        if (fields.voiceSamples?.trim())
+          newInsights.unshift(makeMemEntry(`【迁入·原声】${fields.voiceSamples.slice(0, 300)}`));
+        (fields.relationshipMemories || []).forEach((t) => {
+          if (t.trim()) newEmotions.unshift(makeMemEntry(`【迁入·关系节点】${t}`));
+        });
+        (fields.doNotForget || []).forEach((t) => {
+          if (t.trim()) newFacts.unshift(makeMemEntry(`【迁入·规则】${t}`));
+        });
+        if (fields.wakeSummary?.trim())
+          newInsights.unshift(makeMemEntry(`【迁入·关系叙事】${fields.wakeSummary}`));
+
+        return {
+          ...prev,
+          [charId]: { ...existing, fact: newFacts, emotion: newEmotions, insight: newInsights },
+        };
+      });
+
+      updateDraftStatus(draftId, "approved");
+    }
+  };
+
+  // ── 人格信号合成（Prompt C）──
+  const handleSynthesizePersonality = async (charId) => {
+    if (!config.apiUrl?.trim() || !config.apiKey?.trim()) {
+      setPersonalitySynthesisError("请先配置 API 地址和密钥");
+      return;
+    }
+    const char = characters.find((c) => c.id === charId);
+    if (!char) return;
+    const model = getActiveModel(char.modelOverride);
+    if (!model) {
+      setPersonalitySynthesisError("请先配置要使用的模型");
+      return;
+    }
+
+    const charName = char.name?.trim() || "当前入住者";
+    const userName = userProfile?.globalFacts?.name?.trim() || "晚声";
+
+    // 收集当前角色所有 ab_resident 草稿的 B轨信号
+    const abDrafts = migrationDrafts.filter(
+      (d) => d.loverId === charId && d.extractionMode === "ab_resident"
+    );
+    const allSignals = abDrafts.flatMap((d) => d.personalitySignals || []);
+
+    if (allSignals.length < 3) {
+      setPersonalitySynthesisError("至少需要 3 条人格信号才能合成，请先生成更多迁入草稿");
+      return;
+    }
+
+    // 按维度分组
+    const byDim = { speech: [], trait: [], intimacy: [], worldview: [] };
+    allSignals.forEach((s) => {
+      if (byDim[s.dimension]) byDim[s.dimension].push(s.text);
+      else byDim.trait.push(s.text);
+    });
+
+    const dimBlock = (title, items) =>
+      items.length > 0 ? `${title}\n${items.map((t) => `- ${t}`).join("\n")}` : "";
+
+    const signalsText = [
+      dimBlock("【说话方式信号】", byDim.speech),
+      dimBlock("【性格表现信号】", byDim.trait),
+      dimBlock("【亲密模式信号】", byDim.intimacy),
+      dimBlock("【三观信号】", byDim.worldview),
+    ].filter(Boolean).join("\n\n");
+
+    const promptC = `以下是从 ${charName} 和 ${userName} 的多段对话中观察到的人格信号碎片（共 ${allSignals.length} 条）：
+
+${signalsText}
+
+请基于这些信号碎片，综合描述 ${charName} 的人格特征。
+用第三人称，写具体的行为模式，不用抽象标签：
+
+【说话风格】（1-3句话，写具体的语言习惯和特征）
+
+【情感模式】（1-3句话，写他如何回应情绪、如何表达和处理感受）
+
+【相处习惯】（1-3句话，写他日常互动中的具体方式和行为倾向）
+
+【认知与三观】（1-3句话，写他对关系、世界和爱的具体态度）
+
+要求：
+- 只基于信号碎片，不编造
+- 写具体行为，不写"温柔体贴"这类通用标签
+- 保留 ${charName} 的独特性`;
+
+    setPersonalitySynthesizing(true);
+    setPersonalitySynthesisError("");
+    try {
+      const resp = await fetch(
+        config.apiUrl.replace(/\/+$/, "") + "/chat/completions",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: "user", content: promptC }],
+            temperature: 0.5,
+            max_tokens: 1200,
+          }),
+        }
+      );
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${resp.status}`);
+      }
+      const data = await resp.json();
+      const rawOutput = data.choices?.[0]?.message?.content || "";
+
+      // 解析合成结果
+      const sectionRegex = /【([^】]+)】\s*([\s\S]*?)(?=【|$)/g;
+      const secs = {};
+      let m;
+      while ((m = sectionRegex.exec(rawOutput)) !== null) secs[m[1].trim()] = m[2].trim();
+      const synthesizedPersonality = {
+        speechStyle: secs["说话风格"] || "",
+        emotionalPattern: secs["情感模式"] || "",
+        habits: secs["相处习惯"] || "",
+        cognition: secs["认知与三观"] || "",
+      };
+
+      const now = Date.now();
+      const synthDraft = {
+        id: genId(),
+        loverId: charId,
+        extractionMode: "personality_synthesis",
+        title: `${charName} · 人格合成 · ${new Date(now).toLocaleDateString("zh-CN")}`,
+        status: "draft",
+        createdAt: now,
+        updatedAt: now,
+        synthesizedPersonality,
+        rawOutput,
+        sourceSignalCount: allSignals.length,
+        sourceDraftIds: abDrafts.map((d) => d.id),
+      };
+
+      setMigrationDrafts((prev) => [synthDraft, ...prev]);
+    } catch (e) {
+      setPersonalitySynthesisError(`合成失败：${e.message}`);
+    } finally {
+      setPersonalitySynthesizing(false);
+    }
+  };
+
+  // ── 写入人格合成到入住档案 personality 字段 ──
+  const handleApprovePersonalitySynthesis = (charId, profile, draftId) => {
+    const SEP = "\n\n——（人格合成补充）——\n\n";
+    const append = (existing, newText) => {
+      if (!newText?.trim()) return existing || "";
+      return existing ? existing + SEP + newText.trim() : newText.trim();
+    };
+
+    setCharacters((prev) => prev.map((c) => {
+      if (c.id !== charId) return c;
+      const newPersonality = { ...(c.personality || {}) };
+      if (profile.speechStyle) newPersonality.speechStyle = append(newPersonality.speechStyle, profile.speechStyle);
+      if (profile.emotionalPattern) newPersonality.emotionalPattern = append(newPersonality.emotionalPattern, profile.emotionalPattern);
+      if (profile.habits) newPersonality.habits = append(newPersonality.habits, profile.habits);
+      if (profile.cognition) newPersonality.cognition = append(newPersonality.cognition, profile.cognition);
+      return { ...c, personality: newPersonality };
+    }));
+
+    if (editingChar?.id === charId) {
+      setEditingChar((prev) => {
+        const newPersonality = { ...(prev.personality || {}) };
+        const a = (e, n) => (!n?.trim() ? (e || "") : e ? e + SEP + n.trim() : n.trim());
+        if (profile.speechStyle) newPersonality.speechStyle = a(newPersonality.speechStyle, profile.speechStyle);
+        if (profile.emotionalPattern) newPersonality.emotionalPattern = a(newPersonality.emotionalPattern, profile.emotionalPattern);
+        if (profile.habits) newPersonality.habits = a(newPersonality.habits, profile.habits);
+        if (profile.cognition) newPersonality.cognition = a(newPersonality.cognition, profile.cognition);
+        return { ...prev, personality: newPersonality };
+      });
+    }
+
+    setMigrationDrafts((prev) => prev.map((d) =>
+      d.id === draftId ? { ...d, status: "approved", updatedAt: Date.now() } : d
+    ));
   };
 
   // 头像上传
@@ -4002,6 +4310,10 @@ ${chatLines}
           updateSelfCurationDraftStatus={updateSelfCurationDraftStatus}
           updateSelfCurationDraftContent={updateSelfCurationDraftContent}
           convertSelfCurationToMigration={convertSelfCurationToMigration}
+          handleSynthesizePersonality={handleSynthesizePersonality}
+          handleApprovePersonalitySynthesis={handleApprovePersonalitySynthesis}
+          personalitySynthesizing={personalitySynthesizing}
+          personalitySynthesisError={personalitySynthesisError}
           navigateTo={navigateTo}
         />
       )}
