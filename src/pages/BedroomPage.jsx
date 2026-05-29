@@ -177,7 +177,7 @@ export default function BedroomPage({
         <HotspotCard
           label="日常"
           sublabel="手札 · 便签 · 时间线"
-          onClick={() => navigateTo("diary")}
+          onClick={() => navigateTo("daily")}
           zone={{ position: "absolute", top: "44%", left: "30%", width: "36%", height: "18%" }}
           position={{ top: "44%", left: "30%" }}
           cardAnchor="center"

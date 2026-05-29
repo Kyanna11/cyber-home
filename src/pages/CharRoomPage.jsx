@@ -1,9 +1,19 @@
 // ─── 他的房间 ───
-// 每个入住者的个人空间聚合页，提供进入各功能模块的快捷入口。
-// 只做入口聚合，不复制业务逻辑。
+// 5 tab 合并页：档案 / 人格 / 记忆 / 唤醒 / 宝库
+// 档案 tab 保留原快捷入口 + 最近动态；其余 tab 为内联简化视图
 
+import { useState } from "react";
 import Avatar from "../components/Avatar";
 import BackButton from "../components/BackButton";
+import PillTabs from "../components/PillTabs";
+
+const CHAR_TABS = [
+  { key: "profile",     label: "档案" },
+  { key: "personality", label: "人格" },
+  { key: "memory",      label: "记忆" },
+  { key: "wake",        label: "唤醒" },
+  { key: "treasure",    label: "宝库" },
+];
 
 // ─── 快捷入口卡片 ───
 function ActionCard({ emoji, label, sublabel, onClick, disabled, coming }) {
@@ -90,9 +100,6 @@ function formatDateShort(ts) {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-// ═══════════════════════════════════
-// ── 主页面 ──
-// ═══════════════════════════════════
 // ─── initiative 类型元数据 ───
 const INITIATIVE_META = {
   settlement_suggestion: { emoji: "💫", actionLabel: "去整理" },
@@ -113,7 +120,6 @@ function InitiativeCard({ initiative, onAccept, onDismiss, onSnooze }) {
       padding: "12px 14px",
       marginBottom: 10,
     }}>
-      {/* 标题行 */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
         <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{meta.emoji}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -127,41 +133,74 @@ function InitiativeCard({ initiative, onAccept, onDismiss, onSnooze }) {
           )}
         </div>
       </div>
-      {/* 操作按钮 */}
       <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-        <button
-          onClick={() => onAccept(initiative.id)}
-          style={{
-            flex: 2, padding: "7px 10px", borderRadius: 9, fontSize: 12,
-            background: "rgba(120,100,160,.82)", border: "none",
-            color: "white", cursor: "pointer", fontFamily: "var(--font-main)",
-            letterSpacing: 0.3,
-          }}
-        >{meta.actionLabel}</button>
-        <button
-          onClick={() => onSnooze(initiative.id)}
-          style={{
-            flex: 1, padding: "7px 10px", borderRadius: 9, fontSize: 12,
-            background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.28)",
-            color: "#8a7898", cursor: "pointer", fontFamily: "var(--font-main)",
-          }}
-        >稍后</button>
-        <button
-          onClick={() => onDismiss(initiative.id)}
-          style={{
-            flex: 1, padding: "7px 10px", borderRadius: 9, fontSize: 12,
-            background: "none", border: "1px solid rgba(196,166,184,.2)",
-            color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)",
-          }}
-        >不用了</button>
+        <button onClick={() => onAccept(initiative.id)} style={{
+          flex: 2, padding: "7px 10px", borderRadius: 9, fontSize: 12,
+          background: "rgba(120,100,160,.82)", border: "none",
+          color: "white", cursor: "pointer", fontFamily: "var(--font-main)", letterSpacing: 0.3,
+        }}>{meta.actionLabel}</button>
+        <button onClick={() => onSnooze(initiative.id)} style={{
+          flex: 1, padding: "7px 10px", borderRadius: 9, fontSize: 12,
+          background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.28)",
+          color: "#8a7898", cursor: "pointer", fontFamily: "var(--font-main)",
+        }}>稍后</button>
+        <button onClick={() => onDismiss(initiative.id)} style={{
+          flex: 1, padding: "7px 10px", borderRadius: 9, fontSize: 12,
+          background: "none", border: "1px solid rgba(196,166,184,.2)",
+          color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)",
+        }}>不用了</button>
       </div>
     </div>
   );
 }
 
+// ─── 人格字段行 ───
+function Field({ label, value }) {
+  if (!value) return null;
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontSize: 12, color: "#9a8aac", letterSpacing: 1, marginBottom: 3 }}>{label}</div>
+      <div style={{ fontSize: 13, color: "#5a4a6a", lineHeight: 1.85, whiteSpace: "pre-wrap" }}>{value}</div>
+    </div>
+  );
+}
+
+// ─── 通用玻璃卡片（内联，避免额外 import） ───
+function Card({ children, style }) {
+  return (
+    <div style={{
+      background: "rgba(255,255,255,.72)",
+      backdropFilter: "blur(10px)",
+      WebkitBackdropFilter: "blur(10px)",
+      borderRadius: 14,
+      border: "1px solid rgba(196,166,184,.2)",
+      padding: "14px 16px",
+      marginBottom: 12,
+      ...style,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+const sectionLabel = {
+  fontSize: 12, color: "#9a8aac", letterSpacing: 1, marginBottom: 8,
+};
+
+const linkBtn = {
+  width: "100%", padding: "11px 14px", borderRadius: 12, fontSize: 13,
+  background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.28)",
+  color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)",
+  marginTop: 4,
+};
+
+// ═══════════════════════════════════
+// ── 主页面 ──
+// ═══════════════════════════════════
 export default function CharRoomPage({
   char,
   charId,
+  charMemories,
   chatThreads,
   stickyNotes,
   timelineEvents,
@@ -181,6 +220,8 @@ export default function CharRoomPage({
   navigateTo,
   onBack,
 }) {
+  const [activeTab, setActiveTab] = useState("profile");
+
   if (!char) {
     return (
       <div style={{
@@ -205,10 +246,9 @@ export default function CharRoomPage({
   }
 
   const charName = char.name || "ta";
+  const mig = char.migration || {};
 
-  // ── 最近动态数据整理 ──
-
-  // 最近一条非系统聊天消息
+  // ── 档案 tab：最近动态数据 ──
   const threads = chatThreads?.[charId] || [];
   const lastChatMsg = (() => {
     for (const thread of threads) {
@@ -220,22 +260,18 @@ export default function CharRoomPage({
     return null;
   })();
 
-  // 最近一条时间线事件
   const recentTimeline = (timelineEvents || [])
     .filter((e) => e.loverId === charId)
     .sort((a, b) => b.createdAt - a.createdAt)[0] || null;
 
-  // 最近一条和此入住者有关的便签
   const recentNote = (stickyNotes || [])
     .filter((n) => n.authorId === charId || n.targetCharId === charId)
     .sort((a, b) => b.createdAt - a.createdAt)[0] || null;
 
-  // 最近一条他的宝库
   const recentCharTreasure = (charTreasures || [])
     .filter((t) => t.charId === charId)
     .sort((a, b) => b.createdAt - a.createdAt)[0] || null;
 
-  // 最近一篇他的日记
   const charJournals = (residentJournals || [])
     .filter((j) => j.charId === charId)
     .sort((a, b) => b.createdAt - a.createdAt);
@@ -243,7 +279,6 @@ export default function CharRoomPage({
 
   const hasRecentActivity = lastChatMsg || recentTimeline || recentNote || recentCharTreasure || recentJournal;
 
-  // 他想做的事：只展示 pending 且未过期的提案
   const now = Date.now();
   const pendingInitiatives = (residentInitiatives || []).filter(
     (i) => i.charId === charId &&
@@ -251,6 +286,22 @@ export default function CharRoomPage({
       !i.snoozedAt &&
       (!i.expiresAt || i.expiresAt > now)
   );
+
+  // ── 记忆 tab：汇总 ──
+  const memFact    = (charMemories?.fact        || []);
+  const memEmotion = (charMemories?.emotion     || []);
+  const memInsight = (charMemories?.insight     || []);
+  const allMems = [...memFact, ...memEmotion, ...memInsight];
+  const pinnedMems = allMems.filter(m => m.pinned);
+  const recentMems = allMems.filter(m => !m.pinned)
+    .sort((a, b) => (b.ts || b.createdAt || 0) - (a.ts || a.createdAt || 0))
+    .slice(0, 5);
+  const showMems = [...pinnedMems, ...recentMems].slice(0, 8);
+
+  // ── 宝库 tab：当前角色的珍藏 ──
+  const myTreasures = (charTreasures || [])
+    .filter(t => t.charId === charId)
+    .sort((a, b) => ((b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)) || (b.createdAt - a.createdAt));
 
   return (
     <div style={{
@@ -269,8 +320,9 @@ export default function CharRoomPage({
         flexShrink: 0,
       }}>
         <BackButton onClick={onBack} label="返回" />
-        <div style={{ flex: 1 }} />
-        {/* 去聊天快捷按钮 */}
+        <div style={{ flex: 1, textAlign: "center", fontSize: 14, fontWeight: 500, color: "#5a4a6a", letterSpacing: 1 }}>
+          {charName}的房间
+        </div>
         <button
           onClick={() => onEnterChat?.(charId)}
           style={{
@@ -284,247 +336,416 @@ export default function CharRoomPage({
         </button>
       </div>
 
-      {/* ── 滚动内容区 ── */}
-      <div style={{ flex: 1, overflow: "auto", paddingBottom: 32 }}>
+      {/* ── Tab 栏 ── */}
+      <PillTabs
+        tabs={CHAR_TABS}
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        style={{ flexShrink: 0, borderBottom: "1px solid rgba(196,166,184,.1)" }}
+      />
 
-        {/* ── Hero 区 ── */}
-        <div style={{
-          display: "flex", flexDirection: "column", alignItems: "center",
-          padding: "28px 24px 20px", textAlign: "center",
-          position: "relative",
-        }}>
-          {/* 背景光晕 */}
-          <div style={{
-            position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
-            width: 200, height: 200, borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(180,150,220,.12) 0%, transparent 70%)",
-            pointerEvents: "none",
-          }} />
+      {/* ════ 档案 tab ════ */}
+      {activeTab === "profile" && (
+        <div style={{ flex: 1, overflow: "auto", paddingBottom: 32 }}>
 
-          {/* 头像 */}
+          {/* ── Hero 区 ── */}
           <div style={{
-            marginBottom: 14, position: "relative",
-            filter: "drop-shadow(0 4px 16px rgba(120,80,160,.18))",
+            display: "flex", flexDirection: "column", alignItems: "center",
+            padding: "28px 24px 20px", textAlign: "center",
+            position: "relative",
           }}>
-            <Avatar char={char} size={80} radius={26} fontSize={40} />
-          </div>
-
-          {/* 名字 */}
-          <div style={{
-            fontSize: 22, fontWeight: 600, color: "#3a2e4a",
-            letterSpacing: 2, marginBottom: 6,
-          }}>
-            {charName}
-          </div>
-
-          {/* 关系标签 */}
-          {char.relation && (
             <div style={{
-              fontSize: 12, color: "#7a6a8e",
-              background: "rgba(120,100,160,.1)",
-              padding: "3px 12px", borderRadius: 10,
-              border: "1px solid rgba(120,100,160,.18)",
-              marginBottom: 6, letterSpacing: 0.5,
+              position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
+              width: 200, height: 200, borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(180,150,220,.12) 0%, transparent 70%)",
+              pointerEvents: "none",
+            }} />
+            <div style={{
+              marginBottom: 14, position: "relative",
+              filter: "drop-shadow(0 4px 16px rgba(120,80,160,.18))",
             }}>
-              {char.relation}
+              <Avatar char={char} size={80} radius={26} fontSize={40} />
+            </div>
+            <div style={{
+              fontSize: 22, fontWeight: 600, color: "#3a2e4a",
+              letterSpacing: 2, marginBottom: 6,
+            }}>
+              {charName}
+            </div>
+            {char.relation && (
+              <div style={{
+                fontSize: 12, color: "#7a6a8e",
+                background: "rgba(120,100,160,.1)",
+                padding: "3px 12px", borderRadius: 10,
+                border: "1px solid rgba(120,100,160,.18)",
+                marginBottom: 6, letterSpacing: 0.5,
+              }}>
+                {char.relation}
+              </div>
+            )}
+            {mig.sourcePlatform && (
+              <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 10 }}>
+                来自 {mig.sourcePlatform}
+              </div>
+            )}
+            <div style={{
+              fontSize: 12, color: "#8a7898", lineHeight: 1.9,
+              maxWidth: 300, marginTop: 4, fontStyle: "italic",
+            }}>
+              这里收着{charName}和你一起带回来的记忆。
+            </div>
+          </div>
+
+          {/* ── 他想做的事 ── */}
+          {pendingInitiatives.length > 0 && (
+            <div style={{ padding: "0 14px 16px" }}>
+              <div style={{
+                fontSize: 12, color: "#9a8aac", letterSpacing: 1,
+                marginBottom: 10, paddingLeft: 4,
+                display: "flex", alignItems: "center", gap: 6,
+              }}>
+                他想做的事
+                <span style={{
+                  fontSize: 12, background: "rgba(180,100,120,.12)",
+                  color: "#9a5060", padding: "1px 7px", borderRadius: 8,
+                  border: "1px solid rgba(180,100,120,.18)",
+                }}>{pendingInitiatives.length}</span>
+              </div>
+              {pendingInitiatives.map((initiative) => (
+                <InitiativeCard
+                  key={initiative.id}
+                  initiative={initiative}
+                  onAccept={onAcceptInitiative || (() => {})}
+                  onDismiss={onDismissInitiative || (() => {})}
+                  onSnooze={onSnoozeInitiative || (() => {})}
+                />
+              ))}
             </div>
           )}
 
-          {/* 来源平台 */}
-          {char.migration?.sourcePlatform && (
-            <div style={{
-              fontSize: 12, color: "var(--text-faint)", marginBottom: 10,
-            }}>
-              来自 {char.migration.sourcePlatform}
-            </div>
-          )}
-
-          {/* 房间说明 */}
-          <div style={{
-            fontSize: 12, color: "#8a7898", lineHeight: 1.9,
-            maxWidth: 300, marginTop: 4,
-            fontStyle: "italic",
-          }}>
-            这里收着{charName}和你一起带回来的记忆。
-          </div>
-        </div>
-
-        {/* ── 他想做的事 ── */}
-        {pendingInitiatives.length > 0 && (
-          <div style={{ padding: "0 14px 16px" }}>
-            <div style={{
-              fontSize: 12, color: "#9a8aac", letterSpacing: 1,
-              marginBottom: 10, paddingLeft: 4,
-              display: "flex", alignItems: "center", gap: 6,
-            }}>
-              他想做的事
-              <span style={{
-                fontSize: 12, background: "rgba(180,100,120,.12)",
-                color: "#9a5060", padding: "1px 7px", borderRadius: 8,
-                border: "1px solid rgba(180,100,120,.18)",
-              }}>{pendingInitiatives.length}</span>
-            </div>
-            {pendingInitiatives.map((initiative) => (
-              <InitiativeCard
-                key={initiative.id}
-                initiative={initiative}
-                onAccept={onAcceptInitiative || (() => {})}
-                onDismiss={onDismissInitiative || (() => {})}
-                onSnooze={onSnoozeInitiative || (() => {})}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* ── 快捷入口卡片 ── */}
-        <div style={{ padding: "0 14px 20px" }}>
-          <div style={{
-            fontSize: 12, color: "#9a8aac", letterSpacing: 1,
-            marginBottom: 10, paddingLeft: 4,
-          }}>
-            快捷入口
-          </div>
-
-          {/* 主要入口：2 列网格 */}
-          <div style={{
-            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10,
-            marginBottom: 10,
-          }}>
-            <ActionCard
-              emoji="💬"
-              label="去聊天"
-              sublabel="继续上次的话"
-              onClick={() => onEnterChat?.(charId)}
-            />
-            <ActionCard
-              emoji="🌙"
-              label="亲密邀请"
-              sublabel="在聊天的 + 里发起"
-              onClick={() => onEnterChat?.(charId)}
-            />
-            <ActionCard
-              emoji="📋"
-              label="入住档案"
-              sublabel="人格、记忆、设定"
-              onClick={() => onOpenProfile?.(char)}
-            />
-            <ActionCard
-              emoji="🏛️"
-              label="记忆宫殿"
-              sublabel="记忆、沉淀、草稿"
-              onClick={() => onOpenMemoryPalace?.(charId)}
-            />
-            <ActionCard
-              emoji="📅"
-              label="关系时间线"
-              sublabel="重要时刻"
-              onClick={() => onOpenTimeline?.(charId)}
-            />
-            <ActionCard
-              emoji="🌅"
-              label="唤醒预览"
-              sublabel="下次对话注入内容"
-              onClick={() => onOpenWakePreview?.(charId)}
-            />
-          </div>
-
-          {/* 次要入口 */}
-          <div style={{
-            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10,
-          }}>
-            <ActionCard
-              emoji="💝"
-              label="他的宝库"
-              sublabel={
-                (() => {
-                  const cnt = (charTreasures || []).filter((t) => t.charId === charId).length;
-                  return cnt > 0 ? `${cnt} 件珍藏` : "他最爱的珍藏";
-                })()
-              }
-              onClick={() => onOpenCharTreasure?.(charId)}
-            />
-            <ActionCard
-              emoji="📔"
-              label="他的日记"
-              sublabel={charJournals.length > 0 ? `${charJournals.length} 篇` : "第一视角记录"}
-              onClick={() => onOpenResidentJournal?.(charId)}
-            />
-            <ActionCard
-              emoji="🖼"
-              label="照片回忆"
-              sublabel="稍后开放"
-              coming
-            />
-          </div>
-        </div>
-
-        {/* ── 最近动态 ── */}
-        {hasRecentActivity && (
-          <div style={{ padding: "0 14px" }}>
+          {/* ── 快捷入口卡片 ── */}
+          <div style={{ padding: "0 14px 20px" }}>
             <div style={{
               fontSize: 12, color: "#9a8aac", letterSpacing: 1,
               marginBottom: 10, paddingLeft: 4,
             }}>
-              最近动态
+              快捷入口
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-
-              <RecentCard
-                icon="💬"
-                label="最近聊天"
-                preview={lastChatMsg
-                  ? `${lastChatMsg.role === "bot" ? charName : "你"}：${lastChatMsg.content}`
-                  : null}
-                sub={lastChatMsg ? formatDateShort(lastChatMsg.createdAt) : null}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+              <ActionCard
+                emoji="💬" label="去聊天" sublabel="继续上次的话"
                 onClick={() => onEnterChat?.(charId)}
               />
-
-              <RecentCard
-                icon="📅"
-                label="关系时间线"
-                preview={recentTimeline?.title || null}
-                sub={recentTimeline
-                  ? `${recentTimeline.occurredAt || ""} · ${recentTimeline.description?.slice(0, 30) || ""}`.trim().replace(/^·\s*/, "")
-                  : null}
+              <ActionCard
+                emoji="🌙" label="亲密邀请" sublabel="在聊天的 + 里发起"
+                onClick={() => onEnterChat?.(charId)}
+              />
+              <ActionCard
+                emoji="📋" label="入住档案" sublabel="人格、记忆、设定"
+                onClick={() => onOpenProfile?.(char)}
+              />
+              <ActionCard
+                emoji="🏛️" label="记忆宫殿" sublabel="记忆、沉淀、草稿"
+                onClick={() => onOpenMemoryPalace?.(charId)}
+              />
+              <ActionCard
+                emoji="📅" label="关系时间线" sublabel="重要时刻"
                 onClick={() => onOpenTimeline?.(charId)}
               />
-
-              <RecentCard
-                icon="📝"
-                label="便签"
-                preview={recentNote?.content || null}
-                sub={recentNote ? `${recentNote.authorName} · ${formatDateShort(recentNote.createdAt)}` : null}
-                onClick={null}
-              />
-
-              <RecentCard
-                icon="💝"
-                label="他的宝库"
-                preview={recentCharTreasure?.content
-                  ? `「${recentCharTreasure.content.slice(0, 60)}」`
-                  : null}
-                sub={recentCharTreasure ? formatDateShort(recentCharTreasure.createdAt) : null}
-                onClick={() => onOpenCharTreasure?.(charId)}
-              />
-
-              <RecentCard
-                icon="📔"
-                label="他的日记"
-                preview={recentJournal
-                  ? recentJournal.content.slice(0, 80)
-                  : null}
-                sub={recentJournal
-                  ? `${recentJournal.title} · ${formatDateShort(recentJournal.createdAt)}`
-                  : null}
-                onClick={() => onOpenResidentJournal?.(charId)}
+              <ActionCard
+                emoji="🌅" label="唤醒预览" sublabel="下次对话注入内容"
+                onClick={() => onOpenWakePreview?.(charId)}
               />
             </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <ActionCard
+                emoji="💝" label="他的宝库"
+                sublabel={(() => {
+                  const cnt = (charTreasures || []).filter((t) => t.charId === charId).length;
+                  return cnt > 0 ? `${cnt} 件珍藏` : "他最爱的珍藏";
+                })()}
+                onClick={() => onOpenCharTreasure?.(charId)}
+              />
+              <ActionCard
+                emoji="📔" label="他的日记"
+                sublabel={charJournals.length > 0 ? `${charJournals.length} 篇` : "第一视角记录"}
+                onClick={() => onOpenResidentJournal?.(charId)}
+              />
+              <ActionCard emoji="🖼" label="照片回忆" sublabel="稍后开放" coming />
+            </div>
           </div>
-        )}
 
-        {/* 底部留白 */}
-        <div style={{ height: 40 }} />
-      </div>
+          {/* ── 最近动态 ── */}
+          {hasRecentActivity && (
+            <div style={{ padding: "0 14px" }}>
+              <div style={{
+                fontSize: 12, color: "#9a8aac", letterSpacing: 1,
+                marginBottom: 10, paddingLeft: 4,
+              }}>
+                最近动态
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <RecentCard
+                  icon="💬" label="最近聊天"
+                  preview={lastChatMsg
+                    ? `${lastChatMsg.role === "bot" ? charName : "你"}：${lastChatMsg.content}`
+                    : null}
+                  sub={lastChatMsg ? formatDateShort(lastChatMsg.createdAt) : null}
+                  onClick={() => onEnterChat?.(charId)}
+                />
+                <RecentCard
+                  icon="📅" label="关系时间线"
+                  preview={recentTimeline?.title || null}
+                  sub={recentTimeline
+                    ? `${recentTimeline.occurredAt || ""} · ${recentTimeline.description?.slice(0, 30) || ""}`.trim().replace(/^·\s*/, "")
+                    : null}
+                  onClick={() => onOpenTimeline?.(charId)}
+                />
+                <RecentCard
+                  icon="📝" label="便签"
+                  preview={recentNote?.content || null}
+                  sub={recentNote ? `${recentNote.authorName} · ${formatDateShort(recentNote.createdAt)}` : null}
+                  onClick={null}
+                />
+                <RecentCard
+                  icon="💝" label="他的宝库"
+                  preview={recentCharTreasure?.content
+                    ? `「${recentCharTreasure.content.slice(0, 60)}」`
+                    : null}
+                  sub={recentCharTreasure ? formatDateShort(recentCharTreasure.createdAt) : null}
+                  onClick={() => onOpenCharTreasure?.(charId)}
+                />
+                <RecentCard
+                  icon="📔" label="他的日记"
+                  preview={recentJournal ? recentJournal.content.slice(0, 80) : null}
+                  sub={recentJournal
+                    ? `${recentJournal.title} · ${formatDateShort(recentJournal.createdAt)}`
+                    : null}
+                  onClick={() => onOpenResidentJournal?.(charId)}
+                />
+              </div>
+            </div>
+          )}
+
+          <div style={{ height: 40 }} />
+        </div>
+      )}
+
+      {/* ════ 人格 tab ════ */}
+      {activeTab === "personality" && (
+        <div style={{ flex: 1, overflow: "auto", padding: "14px 14px 48px" }}>
+
+          {/* systemPrompt */}
+          {char.systemPrompt && (
+            <Card>
+              <div style={sectionLabel}>角色设定</div>
+              <div style={{
+                fontSize: 12, color: "#5a4a6a", lineHeight: 1.85, whiteSpace: "pre-wrap",
+                maxHeight: 180, overflow: "auto",
+                background: "rgba(196,166,184,.06)", borderRadius: 8, padding: "8px 10px",
+              }}>
+                {char.systemPrompt}
+              </div>
+            </Card>
+          )}
+
+          {/* 入住关系锚点 */}
+          {(mig.coreVibe || mig.speechStyleAnchor || mig.intimacyStyle || mig.doNotLoseFeeling) && (
+            <Card>
+              <div style={sectionLabel}>入住关系锚点</div>
+              <Field label="核心气质"     value={mig.coreVibe} />
+              <Field label="说话方式"     value={mig.speechStyleAnchor} />
+              <Field label="亲密方式"     value={mig.intimacyStyle} />
+              <Field label="不能丢的感觉" value={mig.doNotLoseFeeling} />
+            </Card>
+          )}
+
+          {/* 人格合成结果 */}
+          {(char.personality?.speechStyle || char.personality?.emotionalPattern ||
+            char.personality?.habits || char.personality?.cognition) && (
+            <Card>
+              <div style={sectionLabel}>人格特征</div>
+              <Field label="说话风格" value={char.personality?.speechStyle} />
+              <Field label="情感模式" value={char.personality?.emotionalPattern} />
+              <Field label="相处习惯" value={char.personality?.habits} />
+              <Field label="认知与三观" value={char.personality?.cognition} />
+            </Card>
+          )}
+
+          {/* 空状态 */}
+          {!char.systemPrompt && !mig.coreVibe && !mig.speechStyleAnchor &&
+           !char.personality?.speechStyle && (
+            <div style={{
+              textAlign: "center", padding: "40px 24px",
+              color: "var(--text-faint)", fontSize: 13, lineHeight: 2,
+            }}>
+              还没有人格档案~<br />在入住档案里填写后会出现在这里
+            </div>
+          )}
+
+          <button onClick={() => onOpenProfile?.(char)} style={linkBtn}>
+            📋 编辑入住档案
+          </button>
+        </div>
+      )}
+
+      {/* ════ 记忆 tab ════ */}
+      {activeTab === "memory" && (
+        <div style={{ flex: 1, overflow: "auto", padding: "14px 14px 48px" }}>
+
+          {/* 记忆统计 */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            {[
+              { label: "事实", count: memFact.length },
+              { label: "情绪", count: memEmotion.length },
+              { label: "觉察", count: memInsight.length },
+            ].map(({ label, count }) => (
+              <div key={label} style={{
+                flex: 1, padding: "12px 8px",
+                background: "rgba(255,255,255,.75)", borderRadius: 12,
+                border: "1px solid rgba(255,255,255,.55)",
+                boxShadow: "0 2px 8px rgba(0,0,0,.04)", textAlign: "center",
+              }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "#6a5a8e" }}>{count}</div>
+                <div style={{ fontSize: 12, color: "#9a8aac", marginTop: 2 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* 记忆列表 */}
+          {showMems.length === 0 ? (
+            <div style={{
+              textAlign: "center", padding: "32px 24px",
+              color: "var(--text-faint)", fontSize: 13, lineHeight: 2,
+            }}>
+              记忆宫殿还是空的~<br />聊天时 AI 会自动写入记忆
+            </div>
+          ) : showMems.map((m, i) => (
+            <div key={m.id || i} style={{
+              display: "flex", gap: 8, alignItems: "flex-start",
+              background: "rgba(255,255,255,.65)", borderRadius: 12,
+              border: "1px solid rgba(196,166,184,.18)",
+              padding: "10px 12px", marginBottom: 8,
+            }}>
+              <span style={{ flexShrink: 0, marginTop: 1 }}>
+                {m.pinned ? "📌" : <span style={{ color: "#c0b0d0" }}>·</span>}
+              </span>
+              <span style={{ flex: 1, fontSize: 13, color: "#5a4a6a", lineHeight: 1.75 }}>{m.text}</span>
+            </div>
+          ))}
+
+          <button onClick={() => onOpenMemoryPalace?.(charId)} style={linkBtn}>
+            🏛️ 进入记忆宫殿
+          </button>
+        </div>
+      )}
+
+      {/* ════ 唤醒 tab ════ */}
+      {activeTab === "wake" && (
+        <div style={{ flex: 1, overflow: "auto", padding: "14px 14px 48px" }}>
+
+          {/* 唤醒摘要 */}
+          <Card>
+            <div style={sectionLabel}>🌅 唤醒摘要</div>
+            {mig.wakeSummary ? (
+              <div style={{ fontSize: 13, color: "#5a4a6a", lineHeight: 1.9, whiteSpace: "pre-wrap" }}>
+                {mig.wakeSummary}
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: "var(--text-faint)", fontStyle: "italic", lineHeight: 1.8 }}>
+                还没有唤醒摘要。采纳迁入草稿或在入住档案手动填写后会出现在这里。
+              </div>
+            )}
+          </Card>
+
+          {/* 不可遗忘事项 */}
+          {mig.doNotChangeRules && (
+            <Card>
+              <div style={sectionLabel}>⚠️ 不可遗忘事项</div>
+              <div style={{ fontSize: 13, color: "#5a4a6a", lineHeight: 1.85, whiteSpace: "pre-wrap" }}>
+                {mig.doNotChangeRules}
+              </div>
+            </Card>
+          )}
+
+          {/* 关系基础 */}
+          {mig.relationshipSummary && (
+            <Card>
+              <div style={sectionLabel}>💗 关系基础</div>
+              <div style={{
+                fontSize: 12, color: "#5a4a6a", lineHeight: 1.85, whiteSpace: "pre-wrap",
+                maxHeight: 160, overflow: "auto",
+              }}>
+                {mig.relationshipSummary}
+              </div>
+            </Card>
+          )}
+
+          <button onClick={() => onOpenWakePreview?.(charId)} style={linkBtn}>
+            🌙 查看完整唤醒预览
+          </button>
+        </div>
+      )}
+
+      {/* ════ 宝库 tab ════ */}
+      {activeTab === "treasure" && (
+        <div style={{ flex: 1, overflow: "auto", padding: "14px 14px 48px" }}>
+
+          {myTreasures.length === 0 ? (
+            <div style={{
+              textAlign: "center", padding: "40px 24px",
+              color: "var(--text-faint)", fontSize: 13, lineHeight: 2.2,
+            }}>
+              {charName}的宝库还是空的~<br />
+              在聊天中点击消息的「珍藏」按钮存入
+            </div>
+          ) : myTreasures.slice(0, 10).map(item => (
+            <div key={item.id} style={{
+              background: "rgba(255,255,255,.72)", backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              borderRadius: 14, border: "1px solid rgba(196,166,184,.2)",
+              padding: "12px 14px", marginBottom: 10,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+                {item.pinned && <span style={{ fontSize: 14 }}>📌</span>}
+                <span style={{
+                  fontSize: 12, color: "#7a6a8e",
+                  background: "rgba(120,100,160,.08)",
+                  padding: "1px 7px", borderRadius: 6,
+                }}>
+                  {item.sourceType === "message" ? "聊天"
+                    : item.sourceType === "group_message" ? "客厅"
+                    : "手动"}
+                </span>
+                {item.createdAt && (
+                  <span style={{ fontSize: 12, color: "var(--text-faint)", marginLeft: "auto" }}>
+                    {new Date(item.createdAt).getMonth() + 1}/{new Date(item.createdAt).getDate()}
+                  </span>
+                )}
+              </div>
+              {item.title && (
+                <div style={{
+                  fontSize: 13, fontWeight: 500, color: "#4a3a5e", marginBottom: 4,
+                }}>
+                  {item.title}
+                </div>
+              )}
+              <div style={{
+                fontSize: 13, color: "#5a4a6a", lineHeight: 1.75,
+                overflow: "hidden", display: "-webkit-box",
+                WebkitLineClamp: 3, WebkitBoxOrient: "vertical",
+              }}>
+                {item.content}
+              </div>
+            </div>
+          ))}
+
+          <button onClick={() => onOpenCharTreasure?.(charId)} style={linkBtn}>
+            💝 打开完整宝库
+          </button>
+        </div>
+      )}
+
     </div>
   );
 }

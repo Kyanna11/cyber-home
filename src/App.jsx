@@ -77,6 +77,7 @@ import StickyNotesPage from "./pages/StickyNotesPage";
 import GroupChatPage from "./pages/GroupChatPage";
 import CharTreasurePage from "./pages/CharTreasurePage";
 import CharRoomPage from "./pages/CharRoomPage";
+import DailyPage from "./pages/DailyPage";
 import ResidentJournalPage from "./pages/ResidentJournalPage";
 
 // MSG_DELIMITER is used internally by parseResponse in utils/prompt.js
@@ -4602,6 +4603,7 @@ ${chatLines}
         <CharRoomPage
           char={characters.find((c) => c.id === charRoomCharId) || null}
           charId={charRoomCharId}
+          charMemories={charRoomCharId ? getCharMemories(charRoomCharId) : {}}
           chatThreads={chatThreads}
           stickyNotes={stickyNotes}
           timelineEvents={timelineEvents}
@@ -4697,6 +4699,20 @@ ${chatLines}
           onClearPendingOpenNoteId={() => setPendingOpenNoteId(null)}
           onAddNoteToTimeline={addTimelineEvent}
           onOpenTimeline={openTimeline}
+        />
+      )}
+
+      {/* 日常合并页 */}
+      {page === "daily" && (
+        <DailyPage
+          navigateTo={navigateTo}
+          prevPage={prevPage}
+          noteEntries={noteEntries}
+          characters={characters}
+          stickyNotes={stickyNotes}
+          onMarkRead={markStickyNoteRead}
+          timelineEvents={timelineEvents}
+          openTimeline={openTimeline}
         />
       )}
 
