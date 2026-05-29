@@ -1,6 +1,7 @@
 // ─── 记忆宫殿页 ───
 // 管理角色的三类记忆（事实/情绪/觉察）和总结，含 AI 反思、人格成长功能
 
+import { useState } from "react";
 import BackButton from "../components/BackButton";
 import { MEMORY_TYPES } from "../constants";
 import { calculateHeat, getHeatLevel } from "../utils/memory";
@@ -245,6 +246,22 @@ export default function MemoryPalacePage({
   charTreasures,
 }) {
   const charName = (characters.find((c) => c.id === memCharId) || {}).name || "记忆";
+  const [viewMode, setViewMode] = useState("list");
+
+  // ── 概览预计算 ──
+  const _mem = getCharMemories(memCharId);
+  const _totalMem = MEMORY_TYPES.reduce((s, mt) => s + (_mem[mt.key] || []).length, 0);
+  const _totalPin = MEMORY_TYPES.reduce((s, mt) => s + (_mem[mt.key] || []).filter(m => m.pinned).length, 0);
+  const _allPinned = MEMORY_TYPES.flatMap(mt =>
+    (_mem[mt.key] || []).filter(m => m.pinned).map(m => ({ ...m, _key: mt.key, _emoji: mt.emoji, _label: mt.label }))
+  );
+  const _pendingDrafts = (settlementDrafts || []).filter(d => d.loverId === memCharId && d.status === "pending").length;
+  const _dayLabel = (ts) => {
+    if (!ts) return "暂无";
+    const d = Math.floor((Date.now() - ts) / 86400000);
+    if (d === 0) return "今日活跃"; if (d === 1) return "昨天"; if (d < 7) return `${d}天前`;
+    const dt = new Date(ts); return `${dt.getMonth() + 1}/${dt.getDate()}`;
+  };
 
   return (
     <div className="memory-page page-fade">
@@ -320,6 +337,22 @@ export default function MemoryPalacePage({
           </button>
         </div>
       )}
+
+      {/* ─ 视图切换 ─ */}
+      <div style={{ display: "flex", gap: 8, padding: "6px 16px 4px", flexShrink: 0 }}>
+        {[["list", "📋 列表"], ["overview", "🧩 概览"]].map(([v, lbl]) => (
+          <button key={v} onClick={() => setViewMode(v)} style={{
+            padding: "5px 14px", borderRadius: 20, fontSize: 12, cursor: "pointer",
+            fontFamily: "var(--font-main)", transition: "all .2s",
+            background: viewMode === v ? "rgba(255,255,255,.8)" : "transparent",
+            border: viewMode === v ? "1px solid rgba(196,166,184,.35)" : "1px solid transparent",
+            color: viewMode === v ? "#5a4a6a" : "var(--text-faint)",
+          }}>{lbl}</button>
+        ))}
+      </div>
+
+      {/* ═══ 列表模式 ═══ */}
+      {viewMode === "list" && <>
 
       {/* Tab 栏 */}
       <div className="mem-tabs">
@@ -734,6 +767,90 @@ export default function MemoryPalacePage({
           </>
         )}
       </div>
+      </>}
+
+      {/* ═══ 概览模式 ═══ */}
+      {viewMode === "overview" && (
+        <div className="mem-scroll">
+
+          {/* 总量一览 */}
+          <div style={{ display: "flex", marginBottom: 16, padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,.55)", border: "1px solid rgba(196,166,184,.18)" }}>
+            {[["条记忆", _totalMem, "#4a3a5e"], ["个锚点", _totalPin, "#5a6aae"], ["段总结", (_mem.summaries || []).length, "#7a6a8e"]].map(([lbl, val, clr], i, arr) => (
+              <div key={lbl} style={{ flex: 1, textAlign: "center", borderRight: i < arr.length - 1 ? "1px solid rgba(196,166,184,.2)" : "none" }}>
+                <div style={{ fontSize: 24, fontWeight: 600, color: clr, lineHeight: 1 }}>{val}</div>
+                <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 4, letterSpacing: 0.5 }}>{lbl}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* 分类型卡片 */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+            {MEMORY_TYPES.map(mt => {
+              const entries = _mem[mt.key] || [];
+              const pinCnt = entries.filter(m => m.pinned).length;
+              const impCnt = entries.filter(m => m.important).length;
+              const lastAt = entries.reduce((mx, m) => Math.max(mx, m.updatedAt || m.createdAt || 0), 0);
+              return (
+                <div key={mt.key} onClick={() => { setViewMode("list"); setMemTab(mt.key); }}
+                  style={{ background: "rgba(255,255,255,.72)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", borderRadius: 16, border: "1px solid rgba(196,166,184,.2)", padding: "14px 16px", cursor: "pointer", transition: "transform .15s" }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 18 }}>{mt.emoji}</span>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "#5a4a6a" }}>{mt.label}</span>
+                  </div>
+                  <div style={{ fontSize: 26, fontWeight: 600, color: "#3a2e4a", lineHeight: 1, marginBottom: 2 }}>{entries.length}</div>
+                  <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 8 }}>条记忆</div>
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap", minHeight: 20, marginBottom: 6 }}>
+                    {pinCnt > 0 && <span style={{ fontSize: 11, background: "rgba(100,110,200,.09)", color: "#6070b8", padding: "1px 7px", borderRadius: 6 }}>📌 {pinCnt}</span>}
+                    {impCnt > 0 && <span style={{ fontSize: 11, background: "rgba(245,166,35,.09)", color: "#a08040", padding: "1px 7px", borderRadius: 6 }}>⭐ {impCnt}</span>}
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{_dayLabel(lastAt)}</div>
+                </div>
+              );
+            })}
+
+            {/* 总结卡 */}
+            <div onClick={() => { setViewMode("list"); setMemTab("summary"); }}
+              style={{ background: "rgba(255,255,255,.72)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", borderRadius: 16, border: "1px solid rgba(196,166,184,.2)", padding: "14px 16px", cursor: "pointer", transition: "transform .15s" }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 18 }}>📖</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "#5a4a6a" }}>总结</span>
+              </div>
+              <div style={{ fontSize: 26, fontWeight: 600, color: "#3a2e4a", lineHeight: 1, marginBottom: 2 }}>{(_mem.summaries || []).length}</div>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 8 }}>段记录</div>
+              {_pendingDrafts > 0 && (
+                <span style={{ fontSize: 11, background: "rgba(106,122,174,.1)", color: "#6a7aae", padding: "1px 7px", borderRadius: 6 }}>🌿 {_pendingDrafts} 待确认</span>
+              )}
+            </div>
+          </div>
+
+          {/* 固定锚点汇总 */}
+          {_allPinned.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: "#7a6a8e", letterSpacing: 1, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                📌 固定锚点
+                <span style={{ fontSize: 11, background: "rgba(100,110,200,.1)", color: "#6070b8", padding: "1px 7px", borderRadius: 6 }}>{_allPinned.length}</span>
+              </div>
+              {_allPinned.map(item => (
+                <div key={item.id} onClick={() => { setViewMode("list"); setMemTab(item._key); setMemFilter("pinned"); }}
+                  style={{ background: "rgba(100,110,200,.05)", border: "1px solid rgba(100,110,200,.14)", borderRadius: 12, padding: "10px 13px", marginBottom: 8, cursor: "pointer" }}
+                >
+                  <div style={{ fontSize: 13, color: "#3a2e4a", lineHeight: 1.65, marginBottom: 4 }}>{item.text}</div>
+                  <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{item._emoji} {item._label} · {item.time}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 空状态 */}
+          {_totalMem === 0 && (
+            <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-faint)", fontSize: 13, lineHeight: 2.2 }}>
+              记忆宫殿还是空的~<br />切换到「列表」视图，开始记录第一条记忆
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
