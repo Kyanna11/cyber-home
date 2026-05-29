@@ -107,7 +107,7 @@ export default function EntrancePage({
             margin: "6px auto 4px",
           }} />
           <div style={{
-            fontSize: 10, color: "#9a8aac", letterSpacing: 2,
+            fontSize: 12, color: "#9a8aac", letterSpacing: 2,
             fontFamily: "var(--font-main)",
           }}>
             欢迎回家
@@ -198,7 +198,7 @@ export default function EntrancePage({
               border: "1px solid rgba(255,255,255,.55)",
               borderRadius: 20,
               color: "#6a5a7a",
-              fontSize: 11,
+              fontSize: 12,
               letterSpacing: 1,
               cursor: "pointer",
               fontFamily: "var(--font-main)",

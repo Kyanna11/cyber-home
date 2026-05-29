@@ -96,7 +96,7 @@ function NewNoteSheet({ characters, userProfile, onSave, onClose }) {
 
           {/* 写给 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 8 }}>写给</div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 8 }}>写给</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button
                 onClick={() => setTargetType("all")}
@@ -128,7 +128,7 @@ function NewNoteSheet({ characters, userProfile, onSave, onClose }) {
 
           {/* 内容 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 8 }}>内容</div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 8 }}>内容</div>
             <textarea
               autoFocus
               placeholder="想说什么都可以，哪怕只是一个字……"
@@ -144,7 +144,7 @@ function NewNoteSheet({ characters, userProfile, onSave, onClose }) {
                 resize: "none", lineHeight: 1.8,
               }}
             />
-            <div style={{ fontSize: 10, color: "var(--text-faint)", textAlign: "right", marginTop: 4 }}>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", textAlign: "right", marginTop: 4 }}>
               {content.length} 字
             </div>
           </div>
@@ -159,7 +159,7 @@ function NewNoteSheet({ characters, userProfile, onSave, onClose }) {
               border: `1.5px solid ${pinned ? "rgba(120,100,160,.6)" : "rgba(196,166,184,.4)"}`,
               background: pinned ? "rgba(120,100,160,.14)" : "transparent",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 10, color: "#7a5aaa", flexShrink: 0,
+              fontSize: 12, color: "#7a5aaa", flexShrink: 0,
             }}>
               {pinned ? "📌" : ""}
             </div>
@@ -224,14 +224,14 @@ function NoteCard({ note, onMarkRead, onTogglePin, onDelete }) {
         paddingLeft: !note.read ? 12 : 0,
       }}>
         <span style={{
-          fontSize: 11, color: "#7a6a8e",
+          fontSize: 12, color: "#7a6a8e",
           background: "rgba(196,166,184,.18)",
           padding: "2px 8px", borderRadius: 10,
           maxWidth: 80, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>{note.authorName}</span>
-        <span style={{ fontSize: 10, color: "var(--text-faint)" }}>→</span>
+        <span style={{ fontSize: 12, color: "var(--text-faint)" }}>→</span>
         <span style={{
-          fontSize: 11, color: "#7a6a8e",
+          fontSize: 12, color: "#7a6a8e",
           background: "rgba(196,166,184,.12)",
           padding: "2px 8px", borderRadius: 10,
           maxWidth: 80, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
@@ -250,7 +250,7 @@ function NoteCard({ note, onMarkRead, onTogglePin, onDelete }) {
 
       {/* 底部：时间 + 操作 */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 10, color: "var(--text-faint)", letterSpacing: 0.3 }}>
+        <span style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 0.3 }}>
           {fmtTime(note.createdAt)}
         </span>
         <div style={{ display: "flex", gap: 4 }}>
@@ -282,7 +282,7 @@ function NoteCard({ note, onMarkRead, onTogglePin, onDelete }) {
                 onClick={() => onDelete(note.id)}
                 style={{
                   background: "rgba(180,80,80,.12)", border: "none", cursor: "pointer",
-                  fontSize: 10, padding: "2px 8px", borderRadius: 8,
+                  fontSize: 12, padding: "2px 8px", borderRadius: 8,
                   color: "#a05050", fontFamily: "var(--font-main)",
                 }}
               >删除</button>
@@ -290,7 +290,7 @@ function NoteCard({ note, onMarkRead, onTogglePin, onDelete }) {
                 onClick={() => setConfirmDel(false)}
                 style={{
                   background: "none", border: "none", cursor: "pointer",
-                  fontSize: 10, padding: "2px 8px", borderRadius: 8,
+                  fontSize: 12, padding: "2px 8px", borderRadius: 8,
                   color: "var(--text-faint)", fontFamily: "var(--font-main)",
                 }}
               >取消</button>
@@ -468,7 +468,7 @@ export default function StickyNotesPage({
         {/* 底部说明 */}
         {displayNotes.length > 0 && tab === "all" && (
           <div style={{
-            textAlign: "center", fontSize: 11,
+            textAlign: "center", fontSize: 12,
             color: "var(--text-faint)", marginTop: 24,
             letterSpacing: 0.5, lineHeight: 1.8,
           }}>

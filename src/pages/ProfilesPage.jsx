@@ -53,7 +53,7 @@ export default function ProfilesPage({
                   padding: "4px 10px", borderRadius: 10,
                   background: "rgba(120,100,160,.1)",
                   border: "1px solid rgba(120,100,160,.2)",
-                  color: "#6a5a8a", fontSize: 11,
+                  color: "#6a5a8a", fontSize: 12,
                   cursor: "pointer", fontFamily: "var(--font-main)",
                   whiteSpace: "nowrap",
                 }}

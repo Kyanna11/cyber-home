@@ -63,7 +63,7 @@ export default function ConfigPage({
         }}>
           配置 API、模型和上下文，让小家里的入住者真正醒来。
           {!hasChatContext && (
-            <div style={{ marginTop: 6, color: "#9a8aac", fontSize: 11 }}>
+            <div style={{ marginTop: 6, color: "#9a8aac", fontSize: 12 }}>
               配置后回首页「推门进入」即可开始聊天。
             </div>
           )}
@@ -157,7 +157,7 @@ export default function ConfigPage({
                 <>
                   ✗ 连接失败
                   {testStatus.length > 4 && (
-                    <div style={{ fontSize: 11, marginTop: 4, opacity: 0.8, wordBreak: "break-all" }}>
+                    <div style={{ fontSize: 12, marginTop: 4, opacity: 0.8, wordBreak: "break-all" }}>
                       {testStatus.slice(5)}
                     </div>
                   )}

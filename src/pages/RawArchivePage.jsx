@@ -42,7 +42,7 @@ const cardStyle = {
 };
 
 const labelStyle = {
-  fontSize: 11,
+  fontSize: 12,
   color: "#9a8aac",
   letterSpacing: 1.5,
   marginBottom: 6,
@@ -343,7 +343,7 @@ export default function RawArchivePage({
                     fontSize: 13, padding: "32px 0", lineHeight: 2,
                   }}>
                     还没有生成记忆片段<br />
-                    <span style={{ fontSize: 11 }}>关闭弹窗后点「整理成记忆片段」按钮</span>
+                    <span style={{ fontSize: 12 }}>关闭弹窗后点「整理成记忆片段」按钮</span>
                   </div>
                 ) : (
                   /* 单片段全文查看 */
@@ -379,13 +379,13 @@ export default function RawArchivePage({
                           gap: 8, marginBottom: 8,
                         }}>
                           <span style={{
-                            fontSize: 10, padding: "2px 8px",
+                            fontSize: 12, padding: "2px 8px",
                             background: "rgba(155,149,181,.18)",
                             borderRadius: 8, color: "#7a6a8e", letterSpacing: 0.5,
                           }}>
                             第 {chunk.index + 1} 段
                           </span>
-                          <span style={{ fontSize: 11, color: "#b0a0c0" }}>
+                          <span style={{ fontSize: 12, color: "#b0a0c0" }}>
                             {countChars(chunk.text).toLocaleString()} 字
                           </span>
                         </div>
@@ -405,13 +405,13 @@ export default function RawArchivePage({
                         {/* 操作 */}
                         <div style={{ display: "flex", gap: 8 }}>
                           <button
-                            style={{ ...btnGhost, fontSize: 11, padding: "5px 12px" }}
+                            style={{ ...btnGhost, fontSize: 12, padding: "5px 12px" }}
                             onClick={() => setChunkDetailText(chunk.text)}
                           >
                             查看全文
                           </button>
                           <button
-                            style={{ ...btnGhost, fontSize: 11, padding: "5px 12px", color: "#c07070", borderColor: "rgba(192,112,112,.3)" }}
+                            style={{ ...btnGhost, fontSize: 12, padding: "5px 12px", color: "#c07070", borderColor: "rgba(192,112,112,.3)" }}
                             onClick={() => deleteChunk(chunk.id)}
                           >
                             删除
@@ -567,7 +567,7 @@ export default function RawArchivePage({
             >
               ✨ 从记忆片段生成迁入草稿
               {totalChunkCount > 0 && (
-                <span style={{ fontSize: 11, color: "#9a7abe", marginLeft: 6 }}>
+                <span style={{ fontSize: 12, color: "#9a7abe", marginLeft: 6 }}>
                   ({totalChunkCount} 段可用)
                 </span>
               )}
@@ -612,13 +612,13 @@ export default function RawArchivePage({
                 <span style={{ fontSize: 18 }}>{fileLoading ? "⏳" : "📄"}</span>
                 <span>{fileLoading ? "正在读取文件……" : "选择 txt / md 文件，自动填入内容"}</span>
               </button>
-              <div style={{ fontSize: 11, color: "#c0b0d0", marginTop: 5, letterSpacing: 0.5 }}>
+              <div style={{ fontSize: 12, color: "#c0b0d0", marginTop: 5, letterSpacing: 0.5 }}>
                 支持 .txt · .md · .markdown，最大 2 MB
               </div>
             </div>
 
             {/* 分隔线 */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18, color: "#c0b0d0", fontSize: 11 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18, color: "#c0b0d0", fontSize: 12 }}>
               <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
               或手动粘贴对话内容
               <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
@@ -656,7 +656,7 @@ export default function RawArchivePage({
                 onChange={(e) => setForm((f) => ({ ...f, rawText: e.target.value }))}
               />
               {form.rawText && (
-                <div style={{ fontSize: 11, color: "#b0a0c0", textAlign: "right", marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: "#b0a0c0", textAlign: "right", marginTop: 4 }}>
                   {countChars(form.rawText).toLocaleString()} 字
                 </div>
               )}
@@ -701,7 +701,7 @@ export default function RawArchivePage({
         {archives.length === 0 ? (
           <div style={{ textAlign: "center", color: "#b0a0c0", fontSize: 13, padding: "40px 20px", lineHeight: 2 }}>
             还没有导入任何对话记录<br />
-            <span style={{ fontSize: 11 }}>把你们之间发生过的一切，都带回家吧</span>
+            <span style={{ fontSize: 12 }}>把你们之间发生过的一切，都带回家吧</span>
           </div>
         ) : (
           archives
@@ -720,22 +720,22 @@ export default function RawArchivePage({
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         {archive.sourcePlatform && (
                           <span style={{
-                            fontSize: 10, padding: "2px 8px",
+                            fontSize: 12, padding: "2px 8px",
                             background: "rgba(160,130,180,.15)",
                             borderRadius: 8, color: "#7a6a8e", letterSpacing: 0.5,
                           }}>
                             {archive.sourcePlatform}
                           </span>
                         )}
-                        <span style={{ fontSize: 11, color: "#b0a0c0" }}>
+                        <span style={{ fontSize: 12, color: "#b0a0c0" }}>
                           {formatTime(archive.importedAt)}
                         </span>
-                        <span style={{ fontSize: 11, color: "#b0a0c0" }}>
+                        <span style={{ fontSize: 12, color: "#b0a0c0" }}>
                           {countChars(archive.rawText).toLocaleString()} 字
                         </span>
                         {chunkCount > 0 && (
                           <span style={{
-                            fontSize: 10, padding: "2px 8px",
+                            fontSize: 12, padding: "2px 8px",
                             background: "rgba(155,149,181,.2)",
                             borderRadius: 8, color: "#6a5a8e", letterSpacing: 0.5,
                           }}>

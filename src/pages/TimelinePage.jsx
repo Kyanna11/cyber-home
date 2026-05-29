@@ -98,7 +98,7 @@ const taStyle = {
 };
 
 const labelStyle = {
-  fontSize: 11,
+  fontSize: 12,
   color: "#9a8aac",
   letterSpacing: 1.5,
   marginBottom: 5,
@@ -253,7 +253,7 @@ function EventFormModal({ initial, charName, onSave, onClose }) {
                   ★
                 </button>
               ))}
-              <span style={{ fontSize: 11, color: "#b0a0c0", marginLeft: 6 }}>
+              <span style={{ fontSize: 12, color: "#b0a0c0", marginLeft: 6 }}>
                 {["", "普通", "较重要", "重要", "很重要", "核心记忆"][form.importance]}
               </span>
             </div>
@@ -331,11 +331,11 @@ function EventCard({ event, onEdit, onDelete, onTogglePin }) {
           {/* 标题 */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 3 }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: "#4a3a5a", lineHeight: 1.4 }}>
-              {event.pinned && <span style={{ fontSize: 11, marginRight: 4 }}>📌</span>}
+              {event.pinned && <span style={{ fontSize: 12, marginRight: 4 }}>📌</span>}
               {event.title}
             </span>
             <span style={{
-              fontSize: 10, padding: "1px 8px", borderRadius: 8,
+              fontSize: 12, padding: "1px 8px", borderRadius: 8,
               background: `${et.color}20`, color: et.color, border: `1px solid ${et.color}40`,
             }}>
               {et.label}
@@ -348,11 +348,11 @@ function EventCard({ event, onEdit, onDelete, onTogglePin }) {
             <ImportanceStars value={event.importance || 1} />
             {event.source === "draft" && (
               <span style={{
-                fontSize: 10, padding: "1px 6px", borderRadius: 6,
+                fontSize: 12, padding: "1px 6px", borderRadius: 6,
                 background: "rgba(140,110,180,.12)", color: "#8a6aac",
               }}>迁入生成</span>
             )}
-            <span style={{ fontSize: 10, color: "#c0b0d0" }}>{formatCreatedAt(event.createdAt)}</span>
+            <span style={{ fontSize: 12, color: "#c0b0d0" }}>{formatCreatedAt(event.createdAt)}</span>
           </div>
         </div>
       </div>
@@ -372,7 +372,7 @@ function EventCard({ event, onEdit, onDelete, onTogglePin }) {
           {event.description.length > 60 && (
             <button
               onClick={() => setShowDetail(!showDetail)}
-              style={{ background: "none", border: "none", color: "#9a6aac", fontSize: 11, cursor: "pointer", padding: "0 4px" }}
+              style={{ background: "none", border: "none", color: "#9a6aac", fontSize: 12, cursor: "pointer", padding: "0 4px" }}
             >
               {showDetail ? " 收起" : " 展开"}
             </button>
@@ -390,7 +390,7 @@ function EventCard({ event, onEdit, onDelete, onTogglePin }) {
       {/* 备注（展开后才显示） */}
       {showDetail && event.note && (
         <div style={{
-          fontSize: 11, color: "#b0a0c0", marginBottom: 8,
+          fontSize: 12, color: "#b0a0c0", marginBottom: 8,
           fontStyle: "italic", paddingLeft: 4,
         }}>
           · {event.note}
@@ -400,35 +400,35 @@ function EventCard({ event, onEdit, onDelete, onTogglePin }) {
       {/* 操作 */}
       <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
         <button
-          style={{ ...btnGhost, fontSize: 11, padding: "5px 12px" }}
+          style={{ ...btnGhost, fontSize: 12, padding: "5px 12px" }}
           onClick={() => onEdit(event)}
         >
           编辑
         </button>
         <button
-          style={{ ...btnGhost, fontSize: 11, padding: "5px 12px" }}
+          style={{ ...btnGhost, fontSize: 12, padding: "5px 12px" }}
           onClick={() => onTogglePin(event.id)}
         >
           {event.pinned ? "取消置顶" : "📌 置顶"}
         </button>
         {!confirmDelete ? (
           <button
-            style={{ ...btnGhost, fontSize: 11, padding: "5px 12px", color: "#c07070", borderColor: "rgba(192,112,112,.3)" }}
+            style={{ ...btnGhost, fontSize: 12, padding: "5px 12px", color: "#c07070", borderColor: "rgba(192,112,112,.3)" }}
             onClick={() => setConfirmDelete(true)}
           >
             删除
           </button>
         ) : (
           <>
-            <span style={{ fontSize: 11, color: "#9a8aac", alignSelf: "center" }}>确定删除？</span>
+            <span style={{ fontSize: 12, color: "#9a8aac", alignSelf: "center" }}>确定删除？</span>
             <button
-              style={{ ...btnGhost, fontSize: 11, padding: "5px 12px", color: "#c07070", borderColor: "rgba(192,112,112,.4)" }}
+              style={{ ...btnGhost, fontSize: 12, padding: "5px 12px", color: "#c07070", borderColor: "rgba(192,112,112,.4)" }}
               onClick={() => onDelete(event.id)}
             >
               确认
             </button>
             <button
-              style={{ ...btnGhost, fontSize: 11, padding: "5px 12px" }}
+              style={{ ...btnGhost, fontSize: 12, padding: "5px 12px" }}
               onClick={() => setConfirmDelete(false)}
             >
               取消
@@ -542,7 +542,7 @@ export default function TimelinePage({
           <div style={{ fontSize: 15, fontWeight: 600, color: "#5a4a6a", letterSpacing: 2 }}>
             📅 {charName}的故事年表
           </div>
-          <div style={{ fontSize: 11, color: "#b0a0c0", marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: "#b0a0c0", marginTop: 2 }}>
             {events.length} 个节点
           </div>
         </div>
@@ -573,7 +573,7 @@ export default function TimelinePage({
         <button
           onClick={() => setFilterType("all")}
           style={{
-            ...btnGhost, fontSize: 11, padding: "4px 12px",
+            ...btnGhost, fontSize: 12, padding: "4px 12px",
             background: filterType === "all" ? "rgba(140,110,180,.2)" : undefined,
             color: filterType === "all" ? "#5a3a7e" : undefined,
             borderColor: filterType === "all" ? "rgba(140,110,180,.4)" : undefined,
@@ -586,7 +586,7 @@ export default function TimelinePage({
             key={et.key}
             onClick={() => setFilterType(filterType === et.key ? "all" : et.key)}
             style={{
-              ...btnGhost, fontSize: 11, padding: "4px 10px",
+              ...btnGhost, fontSize: 12, padding: "4px 10px",
               background: filterType === et.key ? `${et.color}20` : undefined,
               color: filterType === et.key ? et.color : undefined,
               borderColor: filterType === et.key ? `${et.color}50` : undefined,
@@ -599,7 +599,7 @@ export default function TimelinePage({
         {/* 排序切换 */}
         <button
           onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
-          style={{ ...btnGhost, fontSize: 11, padding: "4px 10px" }}
+          style={{ ...btnGhost, fontSize: 12, padding: "4px 10px" }}
         >
           {sortOrder === "desc" ? "↓ 最新" : "↑ 最早"}
         </button>
@@ -615,7 +615,7 @@ export default function TimelinePage({
             {events.length === 0 ? (
               <>
                 还没有记录任何故事节点<br />
-                <span style={{ fontSize: 11 }}>
+                <span style={{ fontSize: 12 }}>
                   点击右上角「+ 记录」，或从迁入草稿生成
                 </span>
               </>
@@ -643,7 +643,7 @@ export default function TimelinePage({
                   {year}
                 </span>
                 <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.3)" }} />
-                <span style={{ fontSize: 11, color: "#c0b0d0" }}>
+                <span style={{ fontSize: 12, color: "#c0b0d0" }}>
                   {groupedByYear[year].length} 个
                 </span>
               </div>

@@ -152,7 +152,7 @@ function ChatToTimelinePanel({ messages, activeChar, activeCharId, onSave, onNav
 
             {/* 消息预览 */}
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>
                 最近 {recentMsgs.length} 条消息
               </div>
               <div style={{
@@ -167,11 +167,11 @@ function ChatToTimelinePanel({ messages, activeChar, activeCharId, onSave, onNav
                     borderBottom: i < recentMsgs.length - 1 ? "1px solid rgba(196,166,184,.08)" : "none",
                   }}>
                     <span style={{
-                      fontSize: 9, padding: "2px 6px", borderRadius: 7, flexShrink: 0, marginTop: 2,
+                      fontSize: 12, padding: "2px 6px", borderRadius: 7, flexShrink: 0, marginTop: 2,
                       background: m.role === "user" ? "rgba(120,100,160,.1)" : "rgba(196,166,184,.12)",
                       color: m.role === "user" ? "#5a4a8a" : "#7a6a8e",
                     }}>{m.role === "user" ? "我" : charName}</span>
-                    <span style={{ fontSize: 11, color: "var(--text-mid)", lineHeight: 1.6 }}>
+                    <span style={{ fontSize: 12, color: "var(--text-mid)", lineHeight: 1.6 }}>
                       {(m.content || "").length > 56 ? m.content.slice(0, 56) + "…" : m.content}
                     </span>
                   </div>
@@ -181,7 +181,7 @@ function ChatToTimelinePanel({ messages, activeChar, activeCharId, onSave, onNav
 
             {/* 时间线标题 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>这一刻的名字</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>这一刻的名字</div>
               <input
                 type="text"
                 value={form.title}
@@ -197,7 +197,7 @@ function ChatToTimelinePanel({ messages, activeChar, activeCharId, onSave, onNav
 
             {/* 描述 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>描述（可编辑）</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>描述（可编辑）</div>
               <textarea
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -214,12 +214,12 @@ function ChatToTimelinePanel({ messages, activeChar, activeCharId, onSave, onNav
 
             {/* 事件类型 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>事件类型</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>事件类型</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {EVENT_TYPES.map((et) => (
                   <button key={et.key} onClick={() => setForm((f) => ({ ...f, eventType: et.key }))}
                     style={{
-                      padding: "5px 11px", borderRadius: 20, fontSize: 11,
+                      padding: "5px 11px", borderRadius: 20, fontSize: 12,
                       cursor: "pointer", fontFamily: "var(--font-main)", transition: "all .15s",
                       background: form.eventType === et.key ? "rgba(120,100,160,.15)" : "rgba(255,255,255,.65)",
                       border: `1px solid ${form.eventType === et.key ? "rgba(120,100,160,.45)" : "rgba(196,166,184,.22)"}`,
@@ -232,7 +232,7 @@ function ChatToTimelinePanel({ messages, activeChar, activeCharId, onSave, onNav
 
             {/* 发生时间 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>发生时间</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>发生时间</div>
               <input
                 type="date"
                 value={form.occurredAt}
@@ -247,7 +247,7 @@ function ChatToTimelinePanel({ messages, activeChar, activeCharId, onSave, onNav
 
             {/* 情绪标签 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>情绪标签（可选）</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>情绪标签（可选）</div>
               <input
                 type="text"
                 placeholder="比如：温柔、感动、想念…"
@@ -264,7 +264,7 @@ function ChatToTimelinePanel({ messages, activeChar, activeCharId, onSave, onNav
 
             {/* 重要程度 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>
                 重要程度
                 <span style={{ marginLeft: 8, fontWeight: 500, color: "#5a4a6a" }}>{form.importance}</span>
               </div>
@@ -292,7 +292,7 @@ function ChatToTimelinePanel({ messages, activeChar, activeCharId, onSave, onNav
                 border: `1.5px solid ${form.pinned ? "rgba(120,100,160,.6)" : "rgba(196,166,184,.4)"}`,
                 background: form.pinned ? "rgba(120,100,160,.14)" : "transparent",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 10, color: "#7a5aaa", flexShrink: 0, transition: "all .15s",
+                fontSize: 12, color: "#7a5aaa", flexShrink: 0, transition: "all .15s",
               }}>
                 {form.pinned ? "📌" : ""}
               </div>
@@ -301,7 +301,7 @@ function ChatToTimelinePanel({ messages, activeChar, activeCharId, onSave, onNav
 
             {/* 备注 */}
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>备注（可选）</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>备注（可选）</div>
               <textarea
                 placeholder="关于这一刻想多说的…"
                 value={form.note}
@@ -403,7 +403,7 @@ function MoveInCeremonyCard({ msg }) {
           }}>
             {relation && (
               <span style={{
-                fontSize: 11, color: "#8a6a9a",
+                fontSize: 12, color: "#8a6a9a",
                 background: "rgba(196,166,184,.18)",
                 padding: "2px 10px", borderRadius: 20,
                 border: "1px solid rgba(196,166,184,.22)",
@@ -412,7 +412,7 @@ function MoveInCeremonyCard({ msg }) {
             )}
             {sourcePlatform && (
               <span style={{
-                fontSize: 11, color: "#8a6a9a",
+                fontSize: 12, color: "#8a6a9a",
                 background: "rgba(196,166,184,.12)",
                 padding: "2px 10px", borderRadius: 20,
                 border: "1px solid rgba(196,166,184,.16)",
@@ -444,7 +444,7 @@ function MoveInCeremonyCard({ msg }) {
         {/* 日期 */}
         {dateStr && (
           <div style={{
-            fontSize: 10, color: "var(--text-faint)",
+            fontSize: 12, color: "var(--text-faint)",
             marginTop: 14, letterSpacing: 1,
             position: "relative", zIndex: 1,
           }}>
@@ -482,14 +482,14 @@ function IntimateInvitationPanel({ activeChar, onSend, onClose }) {
   };
 
   const chipStyle = (active) => ({
-    padding: "5px 12px", borderRadius: 20, fontSize: 11, cursor: "pointer",
+    padding: "5px 12px", borderRadius: 20, fontSize: 12, cursor: "pointer",
     fontFamily: "var(--font-main)", transition: "all .15s",
     background: active ? "rgba(120,100,160,.16)" : "rgba(255,255,255,.7)",
     border: `1px solid ${active ? "rgba(120,100,160,.4)" : "rgba(196,166,184,.25)"}`,
     color: active ? "#5a4a8a" : "#7a6a8e",
   });
 
-  const fieldLabel = { fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 };
+  const fieldLabel = { fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 };
   const textInput  = {
     width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 10,
     fontSize: 13, color: "#5a4a6a", background: "rgba(255,255,255,.7)",
@@ -638,7 +638,7 @@ function SceneInfoCard({ msg }) {
         }}>
           <span style={{ fontSize: 12, opacity: 0.65, lineHeight: 1 }}>🌙</span>
           <span style={{
-            fontSize: 11, color: "rgba(205,172,245,.72)",
+            fontSize: 12, color: "rgba(205,172,245,.72)",
             letterSpacing: 2.5, fontWeight: 400,
           }}>
             {sceneLabel || "亲密场景"}
@@ -709,7 +709,7 @@ function SceneEndCard() {
       <div style={{ fontSize: 12, color: "rgba(190,165,230,.5)", letterSpacing: 1, lineHeight: 1.9 }}>
         今天就到这儿了。
         <br />
-        <span style={{ fontSize: 11, opacity: 0.65 }}>这段时光已经安静地留下来了。</span>
+        <span style={{ fontSize: 12, opacity: 0.65 }}>这段时光已经安静地留下来了。</span>
       </div>
     </div>
   );
@@ -822,7 +822,7 @@ function ImagePickerPanel({ onSend, onClose }) {
               <>
                 <div style={{ fontSize: 28, marginBottom: 8 }}>🖼</div>
                 <div style={{ fontSize: 13, color: "#9a8aac" }}>点击选择图片</div>
-                <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 4 }}>JPG / PNG / GIF · 宽度超过 800px 将自动压缩</div>
+                <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 4 }}>JPG / PNG / GIF · 宽度超过 800px 将自动压缩</div>
               </>
             )}
             <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
@@ -830,7 +830,7 @@ function ImagePickerPanel({ onSend, onClose }) {
 
           {/* 备注 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>备注（可选）</div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>备注（可选）</div>
             <input
               type="text"
               placeholder="给这张图片加一句话……"
@@ -846,7 +846,7 @@ function ImagePickerPanel({ onSend, onClose }) {
             />
           </div>
 
-          <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.7 }}>
+          <div style={{ fontSize: 12, color: "var(--text-faint)", lineHeight: 1.7 }}>
             💡 当前版本图片只在聊天界面显示，不会发送给模型识别。后续会接入「我们的照片回忆」。
           </div>
         </div>
@@ -938,7 +938,7 @@ function MusicSharePanel({ activeChar, onSend, onClose }) {
         <div style={{ flex: 1, overflow: "auto", padding: "16px 18px 32px" }}>
           {/* 歌名 */}
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>歌名 *</div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>歌名 *</div>
             <input
               autoFocus
               type="text"
@@ -947,24 +947,24 @@ function MusicSharePanel({ activeChar, onSend, onClose }) {
               onChange={(e) => { setTitle(e.target.value); setError(""); }}
               style={{ ...fieldStyle, border: `1px solid ${error ? "rgba(180,80,80,.5)" : "rgba(196,166,184,.28)"}` }}
             />
-            {error && <div style={{ fontSize: 11, color: "#9a5050", marginTop: 5 }}>{error}</div>}
+            {error && <div style={{ fontSize: 12, color: "#9a5050", marginTop: 5 }}>{error}</div>}
           </div>
 
           {/* 歌手 */}
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>歌手（可选）</div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>歌手（可选）</div>
             <input type="text" placeholder="谁唱的……" value={artist} onChange={(e) => setArtist(e.target.value)} style={fieldStyle} />
           </div>
 
           {/* 链接 */}
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>链接（可选）</div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>链接（可选）</div>
             <input type="url" placeholder="网易云 / Spotify / YouTube…" value={url} onChange={(e) => setUrl(e.target.value)} style={fieldStyle} />
           </div>
 
           {/* 想说的话 */}
           <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>想说的话（可选）</div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>想说的话（可选）</div>
             <textarea
               placeholder="为什么想分享这首歌……"
               value={note}
@@ -1065,7 +1065,7 @@ function LinkSharePanel({ activeChar, onSend, onClose }) {
 
           {/* URL */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>链接 URL</div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>链接 URL</div>
             <input
               autoFocus
               type="url"
@@ -1081,7 +1081,7 @@ function LinkSharePanel({ activeChar, onSend, onClose }) {
               }}
             />
             {urlError && (
-              <div style={{ fontSize: 11, color: "#9a5050", marginTop: 5, letterSpacing: 0.3 }}>
+              <div style={{ fontSize: 12, color: "#9a5050", marginTop: 5, letterSpacing: 0.3 }}>
                 {urlError}
               </div>
             )}
@@ -1089,7 +1089,7 @@ function LinkSharePanel({ activeChar, onSend, onClose }) {
 
           {/* 标题 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>
               标题 <span style={{ opacity: 0.5 }}>（可选，没填就用域名）</span>
             </div>
             <input
@@ -1109,7 +1109,7 @@ function LinkSharePanel({ activeChar, onSend, onClose }) {
 
           {/* 备注 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>
               我想说的 <span style={{ opacity: 0.5 }}>（可选）</span>
             </div>
             <textarea
@@ -1130,14 +1130,14 @@ function LinkSharePanel({ activeChar, onSend, onClose }) {
 
           {/* 分享意图 */}
           <div style={{ marginBottom: 22 }}>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 9 }}>我想让你怎么看</div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 9 }}>我想让你怎么看</div>
             <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
               {LINK_INTENTS.map((i) => (
                 <button
                   key={i}
                   onClick={() => setIntent(i)}
                   style={{
-                    padding: "6px 12px", borderRadius: 20, fontSize: 11,
+                    padding: "6px 12px", borderRadius: 20, fontSize: 12,
                     cursor: "pointer", fontFamily: "var(--font-main)", transition: "all .15s",
                     background: intent === i ? "rgba(120,100,160,.15)" : "rgba(255,255,255,.8)",
                     border: `1px solid ${intent === i ? "rgba(120,100,160,.45)" : "rgba(196,166,184,.25)"}`,
@@ -1193,7 +1193,7 @@ function LinkShareCard({ msg }) {
             lineHeight: 1.4, wordBreak: "break-all",
           }}>{displayTitle}</div>
           <div style={{
-            fontSize: 10, color: "var(--text-faint)", marginTop: 3,
+            fontSize: 12, color: "var(--text-faint)", marginTop: 3,
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>
             {(msg.linkUrl || "").length > 48
@@ -1221,7 +1221,7 @@ function LinkShareCard({ msg }) {
         display: "flex", alignItems: "center", justifyContent: "flex-end",
       }}>
         <span style={{
-          fontSize: 10, color: "#8a6a9a",
+          fontSize: 12, color: "#8a6a9a",
           background: "rgba(196,166,184,.14)",
           padding: "2px 9px", borderRadius: 10,
           border: "1px solid rgba(196,166,184,.2)",
@@ -1368,7 +1368,7 @@ function ChatBgPanel({ activeChar, onSave, onClose }) {
 
           {/* ── 背景类型 ── */}
           <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 10 }}>背景类型</div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 10 }}>背景类型</div>
             <div style={{ display: "flex", gap: 8 }}>
               {[
                 { value: "default", label: "默认" },
@@ -1394,7 +1394,7 @@ function ChatBgPanel({ activeChar, onSave, onClose }) {
           {/* ── 预设背景网格 ── */}
           {type === "preset" && (
             <div style={{ marginBottom: 18 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 10 }}>选择预设</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 10 }}>选择预设</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8 }}>
                 {CHAT_BG_PRESETS.map((p) => (
                   <button
@@ -1418,7 +1418,7 @@ function ChatBgPanel({ activeChar, onSave, onClose }) {
                       transition: "all .15s",
                     }} />
                     <span style={{
-                      fontSize: 10, color: preset === p.key ? "#6a3a9a" : "var(--text-faint)",
+                      fontSize: 12, color: preset === p.key ? "#6a3a9a" : "var(--text-faint)",
                       lineHeight: 1.3, textAlign: "center",
                     }}>{p.label}</span>
                   </button>
@@ -1430,7 +1430,7 @@ function ChatBgPanel({ activeChar, onSave, onClose }) {
           {/* ── 自定义 URL ── */}
           {type === "url" && (
             <div style={{ marginBottom: 18 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 8 }}>图片 URL</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 8 }}>图片 URL</div>
               <input
                 type="url"
                 placeholder="https://…（图片直链）"
@@ -1438,7 +1438,7 @@ function ChatBgPanel({ activeChar, onSave, onClose }) {
                 onChange={(e) => setUrl(e.target.value)}
                 style={fieldStyle}
               />
-              <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 6, lineHeight: 1.6 }}>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 6, lineHeight: 1.6 }}>
                 暂不支持本地上传。建议使用图床或直链图片地址。
                 加载失败时会自动回退到默认背景。
               </div>
@@ -1448,7 +1448,7 @@ function ChatBgPanel({ activeChar, onSave, onClose }) {
           {/* ── 遮罩透明度 ── */}
           {type !== "default" && (
             <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 10 }}>背景遮罩</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 10 }}>背景遮罩</div>
               <div style={{ display: "flex", gap: 8 }}>
                 {DIM_LEVELS.map((d) => (
                   <button
@@ -1465,7 +1465,7 @@ function ChatBgPanel({ activeChar, onSave, onClose }) {
                   >{d.label}</button>
                 ))}
               </div>
-              <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 6, lineHeight: 1.6 }}>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 6, lineHeight: 1.6 }}>
                 遮罩可以降低背景亮度，保证聊天文字可读。
               </div>
             </div>
@@ -1525,7 +1525,7 @@ function MusicShareCard({ msg }) {
             {msg.musicTitle || "分享了一首歌"}
           </div>
           {msg.musicArtist && (
-            <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>
               {msg.musicArtist}
             </div>
           )}
@@ -1549,7 +1549,7 @@ function MusicShareCard({ msg }) {
             href={msg.musicUrl}
             target="_blank"
             rel="noreferrer"
-            style={{ fontSize: 11, color: "#8a6a9a", wordBreak: "break-all", textDecoration: "none" }}
+            style={{ fontSize: 12, color: "#8a6a9a", wordBreak: "break-all", textDecoration: "none" }}
           >
             🔗 {msg.musicUrl.length > 40 ? msg.musicUrl.slice(0, 40) + "…" : msg.musicUrl}
           </a>
@@ -1594,7 +1594,7 @@ function ImageCard({ msg }) {
       {/* 提示 */}
       <div style={{ padding: "5px 12px 8px" }}>
         <span style={{
-          fontSize: 10, color: "var(--text-faint)",
+          fontSize: 12, color: "var(--text-faint)",
           background: "rgba(196,166,184,.1)",
           padding: "1px 7px", borderRadius: 8,
         }}>仅在聊天中可见</span>
@@ -1867,7 +1867,7 @@ export default function ChatPage({
             <button
               onClick={() => setSceneEndStep("choose")}
               style={{
-                padding: "5px 12px", borderRadius: 14, fontSize: 11,
+                padding: "5px 12px", borderRadius: 14, fontSize: 12,
                 background: "rgba(90,55,170,.18)", border: "1px solid rgba(130,90,220,.22)",
                 color: "rgba(180,150,240,.85)", cursor: "pointer",
                 fontFamily: "var(--font-main)", letterSpacing: 0.5, flexShrink: 0,
@@ -1877,12 +1877,12 @@ export default function ChatPage({
           {/* 行 2：场景胶囊 + 场景/氛围 + 注入按钮 */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             <span style={{
-              fontSize: 10, color: "rgba(155,120,210,.75)",
+              fontSize: 12, color: "rgba(155,120,210,.75)",
               background: "rgba(70,45,150,.14)", padding: "2px 10px",
               borderRadius: 10, border: "1px solid rgba(110,75,200,.18)", letterSpacing: 1,
             }}>🌙 亲密场景</span>
             {(activeThread?.sceneConfig?.scene || activeThread?.sceneConfig?.mood) && (
-              <span style={{ fontSize: 10, color: "rgba(135,105,190,.5)", letterSpacing: 0.5 }}>
+              <span style={{ fontSize: 12, color: "rgba(135,105,190,.5)", letterSpacing: 0.5 }}>
                 {[activeThread.sceneConfig.scene, activeThread.sceneConfig.mood].filter(Boolean).join(" · ")}
               </span>
             )}
@@ -1891,7 +1891,7 @@ export default function ChatPage({
               style={{
                 background: sceneNote?.trim() ? "rgba(120,80,220,.22)" : "rgba(255,255,255,.07)",
                 border: `1px solid ${sceneNote?.trim() ? "rgba(160,110,255,.4)" : "rgba(130,90,220,.2)"}`,
-                borderRadius: 10, padding: "2px 9px", fontSize: 10,
+                borderRadius: 10, padding: "2px 9px", fontSize: 12,
                 color: sceneNote?.trim() ? "rgba(200,170,255,.9)" : "rgba(140,105,200,.65)",
                 cursor: "pointer", fontFamily: "var(--font-main)", letterSpacing: 0.5,
               }}
@@ -1909,7 +1909,7 @@ export default function ChatPage({
           style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}
         >
           <span style={{ fontSize: 14, lineHeight: 1 }}>💬</span>
-          <span style={{ fontSize: 8, letterSpacing: 0.5, color: "var(--text-faint)" }}>对话</span>
+          <span style={{ fontSize: 12, letterSpacing: 0.5, color: "var(--text-faint)" }}>对话</span>
         </button>
 
         {/* 回房间 */}
@@ -1929,7 +1929,7 @@ export default function ChatPage({
           <div className="chat-companion-name">{activeChar?.name || "赛博伴侣"}</div>
           {isSceneMode ? (
             <div style={{
-              fontSize: 10, color: "rgba(180,140,220,.9)",
+              fontSize: 12, color: "rgba(180,140,220,.9)",
               background: "rgba(100,60,160,.12)", padding: "1px 8px", borderRadius: 10,
               border: "1px solid rgba(150,100,200,.2)", letterSpacing: 0.5,
               display: "inline-block", margin: "2px auto 0",
@@ -1940,7 +1940,7 @@ export default function ChatPage({
             </div>
           )}
           <div style={{
-            fontSize: 10, fontWeight: 300, color: "var(--text-faint)",
+            fontSize: 12, fontWeight: 300, color: "var(--text-faint)",
             letterSpacing: 0.5, opacity: 0.7,
             maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
             margin: "1px auto 0",
@@ -1954,7 +1954,7 @@ export default function ChatPage({
           <button
             onClick={() => setSceneEndStep("choose")}
             style={{
-              padding: "5px 10px", borderRadius: 10, fontSize: 11,
+              padding: "5px 10px", borderRadius: 10, fontSize: 12,
               background: "rgba(100,60,160,.1)", border: "1px solid rgba(150,100,200,.25)",
               color: "rgba(150,110,200,.9)", cursor: "pointer",
               fontFamily: "var(--font-main)", letterSpacing: 0.5,
@@ -2220,7 +2220,7 @@ export default function ChatPage({
                   </div>
                   <div
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       color: "var(--text-faint)",
                       marginTop: 2,
                     }}
@@ -2348,7 +2348,7 @@ export default function ChatPage({
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
-                    fontSize: 10,
+                    fontSize: 12,
                     color: "var(--text-faint)",
                     marginTop: 4,
                   }}
@@ -2425,7 +2425,7 @@ export default function ChatPage({
                   </div>
                   <div
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       color: "var(--text-faint)",
                       lineHeight: 1.6,
                     }}
@@ -2479,7 +2479,7 @@ export default function ChatPage({
             />
             <div
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 color: "var(--text-faint)",
                 marginTop: 8,
                 lineHeight: 1.6,
@@ -2550,7 +2550,7 @@ export default function ChatPage({
                   border: openThreads.length > 0
                     ? "1px solid rgba(196,166,184,.35)" : "1px solid rgba(160,160,160,.2)",
                   color: openThreads.length > 0 ? "var(--text-soft)" : "var(--text-faint)",
-                  fontSize: 11, cursor: "pointer",
+                  fontSize: 12, cursor: "pointer",
                   fontFamily: "var(--font-main)", letterSpacing: 0.5,
                   transition: "all .2s",
                   ...(S ? { background: "rgba(160,120,220,.12)", border: "1px solid rgba(160,120,220,.2)", color: "rgba(200,170,240,.8)" } : {}),
@@ -2562,7 +2562,7 @@ export default function ChatPage({
                     ? `${openThreads.length} 条还没聊完`
                     : "伏笔都了结了"}
                 </span>
-                <span style={{ opacity: 0.6, fontSize: 9 }}>{showThreadsPanel ? "▲" : "▼"}</span>
+                <span style={{ opacity: 0.6, fontSize: 12 }}>{showThreadsPanel ? "▲" : "▼"}</span>
               </button>
             </div>
 
@@ -2608,7 +2608,7 @@ export default function ChatPage({
                           title="标记已了结"
                           style={{
                             background: "none", border: "none", cursor: "pointer",
-                            fontSize: 11, color: "var(--text-faint)", padding: "1px 4px",
+                            fontSize: 12, color: "var(--text-faint)", padding: "1px 4px",
                           }}
                         >了结</button>
                       )}
@@ -2667,7 +2667,7 @@ export default function ChatPage({
                 background: "rgba(196,166,184,.25)",
                 border: "1px solid rgba(196,166,184,.4)",
                 color: "var(--text-soft)",
-                fontSize: 11,
+                fontSize: 12,
                 cursor: "pointer",
                 fontFamily: "var(--font-main)",
                 letterSpacing: .5,
@@ -2717,7 +2717,7 @@ export default function ChatPage({
                 opacity: 0.55,
               }}>
                 <div style={{ flex: 1, height: 1, background: "rgba(160,130,180,.25)" }} />
-                <span style={{ fontSize: 10, color: "#9a8aac", letterSpacing: 1, whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: 12, color: "#9a8aac", letterSpacing: 1, whiteSpace: "nowrap" }}>
                   💭 你不在的时候，他发来了
                 </span>
                 <div style={{ flex: 1, height: 1, background: "rgba(160,130,180,.25)" }} />
@@ -2746,7 +2746,7 @@ export default function ChatPage({
                     💭 心声
                     {isSceneMode && (
                       <span style={{
-                        fontSize: 9, color: "rgba(160,130,200,.6)",
+                        fontSize: 12, color: "rgba(160,130,200,.6)",
                         transition: "transform .2s",
                         display: "inline-block",
                         transform: thoughtExpanded ? "rotate(0deg)" : "rotate(-90deg)",
@@ -2777,7 +2777,7 @@ export default function ChatPage({
                     </span>
                     {msg.noteType && (
                       <span style={{
-                        fontSize: 10, color: "var(--text-faint)",
+                        fontSize: 12, color: "var(--text-faint)",
                         marginLeft: 6, verticalAlign: "middle",
                         background: "rgba(196,166,184,.15)",
                         padding: "1px 6px", borderRadius: 8,
@@ -2791,7 +2791,7 @@ export default function ChatPage({
                   <span>{msg.diaryDate || ""}</span>
                   {msg.shareIntent && msg.shareIntent !== "read" && (
                     <span style={{
-                      fontSize: 10, color: "var(--accent-dusk)",
+                      fontSize: 12, color: "var(--accent-dusk)",
                       background: "rgba(196,166,184,.12)",
                       padding: "1px 7px", borderRadius: 8,
                     }}>
@@ -2828,7 +2828,7 @@ export default function ChatPage({
                 {msg.replyMode === "long" && msg.role === "bot" && !isSceneMode && (
                   <span style={{
                     display: "inline-block",
-                    fontSize: 9,
+                    fontSize: 12,
                     color: "var(--text-faint)",
                     background: "rgba(196,166,184,.18)",
                     padding: "1px 6px",
@@ -2863,7 +2863,7 @@ export default function ChatPage({
                     onClick={() => { setEditingMsgIdx(i); setEditingMsgText(msg.content); }}
                     style={{
                       background: "none", border: "1px solid rgba(155,149,181,.22)", cursor: "pointer",
-                      fontSize: 10, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
+                      fontSize: 12, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
                       transition: "all .2s", fontFamily: "var(--font-main)", letterSpacing: 0.5,
                     }}
                     title="编辑并重发"
@@ -2875,7 +2875,7 @@ export default function ChatPage({
                     onClick={() => setCharTreasureTarget(msg)}
                     style={{
                       background: "none", border: "1px solid rgba(155,149,181,.22)", cursor: "pointer",
-                      fontSize: 10, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
+                      fontSize: 12, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
                       transition: "all .2s", fontFamily: "var(--font-main)", letterSpacing: 0.5,
                     }}
                     title="让他珍藏"
@@ -2887,7 +2887,7 @@ export default function ChatPage({
                     onClick={() => openTreasure(msg)}
                     style={{
                       background: "none", border: "1px solid rgba(155,149,181,.22)", cursor: "pointer",
-                      fontSize: 10, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
+                      fontSize: 12, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
                       transition: "all .2s", fontFamily: "var(--font-main)", letterSpacing: 0.5,
                     }}
                     title="珍藏这段"
@@ -2905,7 +2905,7 @@ export default function ChatPage({
                     }}
                     style={{
                       background: "none", border: "1px solid rgba(155,149,181,.22)", cursor: "pointer",
-                      fontSize: 10, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
+                      fontSize: 12, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
                       transition: "all .2s", fontFamily: "var(--font-main)", letterSpacing: 0.5,
                     }}
                     title="标记为伏笔"
@@ -2918,7 +2918,7 @@ export default function ChatPage({
                     onClick={handleRegenerate}
                     style={{
                       background: "none", border: "1px solid rgba(155,149,181,.22)", cursor: "pointer",
-                      fontSize: 10, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
+                      fontSize: 12, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
                       transition: "all .2s", fontFamily: "var(--font-main)", letterSpacing: 0.5,
                     }}
                     title="换一版"
@@ -2932,7 +2932,7 @@ export default function ChatPage({
                     style={{
                       background: showVersionFor === i ? "rgba(155,149,181,.12)" : "none",
                       border: "1px solid rgba(155,149,181,.22)", cursor: "pointer",
-                      fontSize: 10, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
+                      fontSize: 12, color: "var(--text-faint)", padding: "1px 7px", borderRadius: 8,
                       transition: "all .2s", fontFamily: "var(--font-main)", letterSpacing: 0.5,
                     }}
                     title="查看旧版本"
@@ -2953,7 +2953,7 @@ export default function ChatPage({
               }}>
                 <div style={{
                   padding: "7px 12px 5px",
-                  fontSize: 10, color: "var(--text-faint)", letterSpacing: 1,
+                  fontSize: 12, color: "var(--text-faint)", letterSpacing: 1,
                   borderBottom: "1px solid rgba(155,149,181,.15)",
                 }}>旧版本（共 {msg.prevVersions.length} 个）</div>
                 {[...msg.prevVersions].reverse().map((v, vi) => (
@@ -2961,7 +2961,7 @@ export default function ChatPage({
                     padding: "10px 14px",
                     borderBottom: vi < msg.prevVersions.length - 1 ? "1px solid rgba(155,149,181,.1)" : "none",
                   }}>
-                    <div style={{ fontSize: 10, color: "var(--text-faint)", marginBottom: 5 }}>
+                    <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 5 }}>
                       版本 {msg.prevVersions.length - vi} · {v.time || ""}
                     </div>
                     <div style={{ fontSize: 13, color: "var(--text-mid)", lineHeight: 1.75, whiteSpace: "pre-wrap" }}>
@@ -2990,7 +2990,7 @@ export default function ChatPage({
         )}
         {offlineGenerating && (
           <div className="typing-wrap">
-            <div style={{ fontSize: 11, color: "var(--text-faint)", padding: "4px 14px", letterSpacing: 1 }}>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", padding: "4px 14px", letterSpacing: 1 }}>
               💭 他好像想说什么……
             </div>
           </div>
@@ -3086,12 +3086,12 @@ export default function ChatPage({
                     {item.emoji}
                   </div>
                   <div style={{
-                    fontSize: 11, color: item.active ? "#5a4a6a" : "#9a8aac",
+                    fontSize: 12, color: item.active ? "#5a4a6a" : "#9a8aac",
                     letterSpacing: 0.5, lineHeight: 1.2, textAlign: "center",
                   }}>
                     {item.label}
-                    {item.sub && <div style={{ fontSize: 9, color: "var(--text-faint)", marginTop: 1, opacity: 0.85 }}>{item.sub}</div>}
-                    {item.comingSoon && <div style={{ fontSize: 9, opacity: 0.65, marginTop: 1 }}>稍后开放</div>}
+                    {item.sub && <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 1, opacity: 0.85 }}>{item.sub}</div>}
+                    {item.comingSoon && <div style={{ fontSize: 12, opacity: 0.65, marginTop: 1 }}>稍后开放</div>}
                   </div>
                 </button>
               ))}
@@ -3102,7 +3102,7 @@ export default function ChatPage({
               <div style={{
                 marginTop: 12, padding: "7px 12px", borderRadius: 10,
                 background: "rgba(196,166,184,.16)", border: "1px solid rgba(196,166,184,.22)",
-                fontSize: 11, color: "#7a6a8e", textAlign: "center", letterSpacing: 0.3,
+                fontSize: 12, color: "#7a6a8e", textAlign: "center", letterSpacing: 0.3,
               }}>
                 {comingSoonMsg}
               </div>
@@ -3146,7 +3146,7 @@ export default function ChatPage({
               {(noteEntries || []).filter((e) => !e.isDraft).length === 0 ? (
                 <div style={{ padding: "40px 16px", textAlign: "center", color: "var(--text-faint)", fontSize: 13, lineHeight: 2.2 }}>
                   还没有手札<br />
-                  <span style={{ fontSize: 11, opacity: .7 }}>可以先去书桌写一篇</span>
+                  <span style={{ fontSize: 12, opacity: .7 }}>可以先去书桌写一篇</span>
                 </div>
               ) : (
                 (noteEntries || [])
@@ -3174,20 +3174,20 @@ export default function ChatPage({
                             {note.title || note.text.slice(0, 20) || "无标题"}
                           </span>
                           {alreadyShared && (
-                            <span style={{ fontSize: 10, color: "var(--text-faint)", background: "rgba(155,149,181,.12)", padding: "1px 6px", borderRadius: 8, flexShrink: 0 }}>
+                            <span style={{ fontSize: 12, color: "var(--text-faint)", background: "rgba(155,149,181,.12)", padding: "1px 6px", borderRadius: 8, flexShrink: 0 }}>
                               已分享
                             </span>
                           )}
                         </div>
                         {/* 类型 + 日期行 */}
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                          <span style={{ fontSize: 10, color: "var(--text-faint)", background: "rgba(196,166,184,.12)", padding: "1px 7px", borderRadius: 8 }}>
+                          <span style={{ fontSize: 12, color: "var(--text-faint)", background: "rgba(196,166,184,.12)", padding: "1px 7px", borderRadius: 8 }}>
                             {nt.label}
                           </span>
-                          <span style={{ fontSize: 10, color: "var(--text-faint)" }}>{fmtNoteDate(note)}</span>
+                          <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{fmtNoteDate(note)}</span>
                         </div>
                         {/* 正文预览 */}
-                        <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.55, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                        <div style={{ fontSize: 12, color: "var(--text-faint)", lineHeight: 1.55, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                           {note.text || "（无内容）"}
                         </div>
                       </div>
@@ -3221,11 +3221,11 @@ export default function ChatPage({
                 <span style={{ fontSize: 12, fontWeight: 500, color: "#5a4a6a" }}>
                   {selectedNote.title || selectedNote.text.slice(0, 20) || "无标题"}
                 </span>
-                <span style={{ fontSize: 10, color: "var(--text-faint)", background: "rgba(196,166,184,.15)", padding: "1px 6px", borderRadius: 8 }}>
+                <span style={{ fontSize: 12, color: "var(--text-faint)", background: "rgba(196,166,184,.15)", padding: "1px 6px", borderRadius: 8 }}>
                   {getNoteType(selectedNote.type).label}
                 </span>
               </div>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.55, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", lineHeight: 1.55, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                 {selectedNote.text || "（无内容）"}
               </div>
             </div>
@@ -3252,7 +3252,7 @@ export default function ChatPage({
               >
                 <span>{intent.label}</span>
                 {intent.hint && (
-                  <span style={{ fontSize: 10, color: "var(--text-faint)", marginLeft: 8 }}>{intent.hint}</span>
+                  <span style={{ fontSize: 12, color: "var(--text-faint)", marginLeft: 8 }}>{intent.hint}</span>
                 )}
               </button>
             ))}
@@ -3291,7 +3291,7 @@ export default function ChatPage({
                   .slice(-10);
                 return (
                   <>
-                    <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 0.5, marginBottom: 8 }}>
+                    <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 0.5, marginBottom: 8 }}>
                       将从以下 {recentMsgs.length} 条消息中提炼
                     </div>
                     <div>
@@ -3302,7 +3302,7 @@ export default function ChatPage({
                           borderBottom: "1px solid rgba(196,166,184,.08)",
                         }}>
                           <span style={{
-                            fontSize: 10, padding: "2px 7px", borderRadius: 8,
+                            fontSize: 12, padding: "2px 7px", borderRadius: 8,
                             flexShrink: 0, marginTop: 2,
                             background: msg.role === "user" ? "rgba(120,100,160,.1)" : "rgba(196,166,184,.12)",
                             color: msg.role === "user" ? "#5a4a8a" : "#7a6a8e",
@@ -3416,7 +3416,7 @@ export default function ChatPage({
                   </div>
                 ) : (
                   <>
-                    <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 0.5, marginBottom: 8 }}>
+                    <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 0.5, marginBottom: 8 }}>
                       最近 {recentMsgs.length} 条与 {charName} 的聊天
                     </div>
                     <div>
@@ -3427,7 +3427,7 @@ export default function ChatPage({
                           borderBottom: "1px solid rgba(196,166,184,.08)",
                         }}>
                           <span style={{
-                            fontSize: 10, padding: "2px 7px", borderRadius: 8,
+                            fontSize: 12, padding: "2px 7px", borderRadius: 8,
                             flexShrink: 0, marginTop: 2,
                             background: msg.role === "user" ? "rgba(120,100,160,.1)" : "rgba(196,166,184,.12)",
                             color: msg.role === "user" ? "#5a4a8a" : "#7a6a8e",
@@ -3562,7 +3562,7 @@ export default function ChatPage({
                       </div>
                     ) : (
                       <>
-                        <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 0.5, marginBottom: 8 }}>
+                        <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 0.5, marginBottom: 8 }}>
                           最近 {recentMsgs.length} 条消息将作为素材
                         </div>
                         <div>
@@ -3572,7 +3572,7 @@ export default function ChatPage({
                               padding: "7px 0", borderBottom: "1px solid rgba(196,166,184,.08)",
                             }}>
                               <span style={{
-                                fontSize: 10, padding: "2px 7px", borderRadius: 8,
+                                fontSize: 12, padding: "2px 7px", borderRadius: 8,
                                 flexShrink: 0, marginTop: 2,
                                 background: msg.role === "user" ? "rgba(120,100,160,.1)" : "rgba(196,166,184,.12)",
                                 color: msg.role === "user" ? "#5a4a8a" : "#7a6a8e",
@@ -3882,7 +3882,7 @@ export default function ChatPage({
                   {/* 日记生成错误提示 */}
                   {sceneJournalError && (
                     <div style={{
-                      fontSize: 11, color: "rgba(220,140,140,.75)",
+                      fontSize: 12, color: "rgba(220,140,140,.75)",
                       textAlign: "center", marginBottom: 10, lineHeight: 1.7,
                     }}>
                       {sceneJournalError}
@@ -3923,7 +3923,7 @@ export default function ChatPage({
                   <div style={{ fontSize: 14, color: "rgba(220,200,255,.85)", letterSpacing: 1, marginBottom: 8 }}>
                     已经把这次邀请收藏进宝库了。
                   </div>
-                  <div style={{ fontSize: 11, color: "rgba(155,130,210,.5)", lineHeight: 1.9, marginBottom: 24 }}>
+                  <div style={{ fontSize: 12, color: "rgba(155,130,210,.5)", lineHeight: 1.9, marginBottom: 24 }}>
                     随时可以在宝库里找到它。
                   </div>
                   <div style={{ display: "flex", gap: 10 }}>
@@ -3956,7 +3956,7 @@ export default function ChatPage({
                   <div style={{ fontSize: 14, color: "rgba(220,200,255,.85)", letterSpacing: 1, marginBottom: 8 }}>
                     已经把这一刻放进回忆里了。
                   </div>
-                  <div style={{ fontSize: 11, color: "rgba(155,130,210,.5)", lineHeight: 1.9, marginBottom: 24 }}>
+                  <div style={{ fontSize: 12, color: "rgba(155,130,210,.5)", lineHeight: 1.9, marginBottom: 24 }}>
                     在关系时间线里可以找到它。
                   </div>
                   <div style={{ display: "flex", gap: 10 }}>
@@ -3989,7 +3989,7 @@ export default function ChatPage({
                   <div style={{ fontSize: 14, color: "rgba(220,200,255,.85)", letterSpacing: 1, marginBottom: 8 }}>
                     他已经把今晚写进日记了。
                   </div>
-                  <div style={{ fontSize: 11, color: "rgba(155,130,210,.5)", lineHeight: 1.9, marginBottom: 24 }}>
+                  <div style={{ fontSize: 12, color: "rgba(155,130,210,.5)", lineHeight: 1.9, marginBottom: 24 }}>
                     在"他的日记"里可以找到它，<br />也可以从那里生成记忆草稿。
                   </div>
                   <div style={{ display: "flex", gap: 10 }}>
@@ -4061,10 +4061,10 @@ export default function ChatPage({
               ].filter(f => f.value?.trim());
               return fields.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, color: "rgba(140,110,200,.5)", letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" }}>已注入的场景设定</div>
+                  <div style={{ fontSize: 12, color: "rgba(140,110,200,.5)", letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" }}>已注入的场景设定</div>
                   {fields.map(f => (
                     <div key={f.label} style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 10, color: "rgba(155,120,210,.6)", marginBottom: 2 }}>{f.label}</div>
+                      <div style={{ fontSize: 12, color: "rgba(155,120,210,.6)", marginBottom: 2 }}>{f.label}</div>
                       <div style={{
                         fontSize: 12, color: "rgba(195,170,240,.7)", lineHeight: 1.65,
                         background: "rgba(255,255,255,.04)", borderRadius: 8, padding: "6px 10px",
@@ -4081,8 +4081,8 @@ export default function ChatPage({
 
             {/* 补充指示 textarea */}
             <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 10, color: "rgba(140,110,200,.5)", letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" }}>补充指示</div>
-              <div style={{ fontSize: 11, color: "rgba(140,110,190,.45)", marginBottom: 8, lineHeight: 1.6 }}>
+              <div style={{ fontSize: 12, color: "rgba(140,110,200,.5)", letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" }}>补充指示</div>
+              <div style={{ fontSize: 12, color: "rgba(140,110,190,.45)", marginBottom: 8, lineHeight: 1.6 }}>
                 告诉他这次你希望怎样，你的状态，想要的感觉……会直接注入到 Prompt 里，对他可见。
               </div>
               <textarea
@@ -4106,7 +4106,7 @@ export default function ChatPage({
                 <button
                   onClick={() => setSceneNote?.("")}
                   style={{
-                    padding: "7px 14px", borderRadius: 10, fontSize: 11,
+                    padding: "7px 14px", borderRadius: 10, fontSize: 12,
                     background: "none", border: "1px solid rgba(150,100,200,.18)",
                     color: "rgba(155,120,210,.5)", cursor: "pointer",
                     fontFamily: "var(--font-main)", letterSpacing: 0.5,
@@ -4162,7 +4162,7 @@ export default function ChatPage({
                 color: replyMode === m.value
                   ? (S ? S.replyActiveTxt : "#5a4a6a")
                   : (S ? S.replyTxt : "#9a8aac"),
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: replyMode === m.value ? 500 : 400,
                 cursor: "pointer",
                 fontFamily: "var(--font-main)",
@@ -4300,7 +4300,7 @@ export default function ChatPage({
                     key={t.value}
                     onClick={() => setTreasureForm((f) => ({ ...f, type: t.value }))}
                     style={{
-                      padding: "3px 10px", borderRadius: 16, fontSize: 11,
+                      padding: "3px 10px", borderRadius: 16, fontSize: 12,
                       cursor: "pointer", fontFamily: "var(--font-main)", transition: "all .12s",
                       background: treasureForm.type === t.value ? "rgba(120,100,160,.85)" : "rgba(255,255,255,.7)",
                       color: treasureForm.type === t.value ? "white" : "#7a6a8e",
@@ -4345,7 +4345,7 @@ export default function ChatPage({
                 border: `1.5px solid ${treasureForm.important ? "#c08030" : "rgba(196,166,184,.4)"}`,
                 background: treasureForm.important ? "rgba(200,140,60,.15)" : "transparent",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 10, color: "#c08030", transition: "all .15s",
+                fontSize: 12, color: "#c08030", transition: "all .15s",
               }}>
                 {treasureForm.important ? "★" : ""}
               </div>
@@ -4450,7 +4450,7 @@ export default function ChatPage({
               </div>
 
               {/* 备注输入 */}
-              <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
+              <label style={{ fontSize: 12, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
                 我希望 ta 记得为什么这句话重要（可不填）
               </label>
               <CharTreasureNoteInput

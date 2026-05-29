@@ -49,7 +49,7 @@ const btnGhost = {
 };
 
 const labelStyle = {
-  fontSize: 11,
+  fontSize: 12,
   color: "#9a8aac",
   letterSpacing: 1.5,
   marginBottom: 5,
@@ -203,11 +203,11 @@ function DraftDetailModal({
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span style={{
-                fontSize: 10, padding: "2px 8px",
+                fontSize: 12, padding: "2px 8px",
                 background: st.bg, borderRadius: 8, color: st.color,
               }}>{st.label}</span>
-              <span style={{ fontSize: 11, color: "#b0a0c0" }}>{formatTime(draft.createdAt)}</span>
-              <span style={{ fontSize: 11, color: "#b0a0c0" }}>
+              <span style={{ fontSize: 12, color: "#b0a0c0" }}>{formatTime(draft.createdAt)}</span>
+              <span style={{ fontSize: 12, color: "#b0a0c0" }}>
                 基于 {draft.sourceChunkIds?.length || 0} 段片段
               </span>
             </div>
@@ -234,7 +234,7 @@ function DraftDetailModal({
             <>
               {/* 提示文案 */}
               <div style={{
-                fontSize: 11, color: "#9a8aac", lineHeight: 1.8,
+                fontSize: 12, color: "#9a8aac", lineHeight: 1.8,
                 padding: "8px 12px", background: "rgba(196,166,184,.08)",
                 borderRadius: 8, marginBottom: 18,
               }}>
@@ -299,14 +299,14 @@ function DraftDetailModal({
                 <div style={{ marginBottom: 8 }}>
                   <button
                     style={{
-                      ...btnGhost, fontSize: 11,
+                      ...btnGhost, fontSize: 12,
                       color: "#6a7aae", borderColor: "rgba(106,122,174,.3)",
                       display: "flex", alignItems: "center", gap: 5,
                     }}
                     onClick={() => setShowSourceChunks(v => !v)}
                   >
                     📄 来源片段（{draft.sourceChunkIds.length} 段）
-                    <span style={{ fontSize: 9, opacity: 0.7 }}>{showSourceChunks ? "▲ 收起" : "▼ 展开"}</span>
+                    <span style={{ fontSize: 12, opacity: 0.7 }}>{showSourceChunks ? "▲ 收起" : "▼ 展开"}</span>
                   </button>
                   {showSourceChunks && (
                     <div style={{
@@ -319,7 +319,7 @@ function DraftDetailModal({
                       {draft.sourceChunkIds.map((chunkId, idx) => {
                         const chunk = (allChunks || []).find(c => c.id === chunkId);
                         if (!chunk) return (
-                          <div key={chunkId} style={{ padding: "8px 12px", fontSize: 11, color: "#b0a0c0", borderBottom: idx < draft.sourceChunkIds.length - 1 ? "1px solid rgba(196,166,184,.15)" : "none" }}>
+                          <div key={chunkId} style={{ padding: "8px 12px", fontSize: 12, color: "#b0a0c0", borderBottom: idx < draft.sourceChunkIds.length - 1 ? "1px solid rgba(196,166,184,.15)" : "none" }}>
                             片段已删除
                           </div>
                         );
@@ -330,18 +330,18 @@ function DraftDetailModal({
                             borderBottom: idx < draft.sourceChunkIds.length - 1 ? "1px solid rgba(196,166,184,.15)" : "none",
                           }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-                              <span style={{ fontSize: 10, color: "#9a8aac", fontWeight: 600 }}>
+                              <span style={{ fontSize: 12, color: "#9a8aac", fontWeight: 600 }}>
                                 {archive?.title || "未知档案"} · 第 {chunk.index + 1} 段
                               </span>
-                              <span style={{ fontSize: 10, color: "#b0a0c0" }}>
+                              <span style={{ fontSize: 12, color: "#b0a0c0" }}>
                                 {chunk.text.length} 字
                               </span>
                               {chunk.sourcePlatform && (
-                                <span style={{ fontSize: 10, color: "#b0a0c0" }}>{chunk.sourcePlatform}</span>
+                                <span style={{ fontSize: 12, color: "#b0a0c0" }}>{chunk.sourcePlatform}</span>
                               )}
                             </div>
                             <div style={{
-                              fontSize: 11, color: "#7a6a8e", lineHeight: 1.7,
+                              fontSize: 12, color: "#7a6a8e", lineHeight: 1.7,
                               display: "-webkit-box", WebkitLineClamp: 3,
                               WebkitBoxOrient: "vertical", overflow: "hidden",
                             }}>
@@ -435,7 +435,7 @@ function DraftDetailModal({
 
               {/* 原始输出 */}
               <button
-                style={{ ...btnGhost, fontSize: 11 }}
+                style={{ ...btnGhost, fontSize: 12 }}
                 onClick={() => setShowRaw(!showRaw)}
               >
                 {showRaw ? "← 返回" : "原始输出"}
@@ -451,7 +451,7 @@ function DraftDetailModal({
                 </button>
               ) : (
                 <>
-                  <span style={{ fontSize: 11, color: "#9a8aac" }}>确定？</span>
+                  <span style={{ fontSize: 12, color: "#9a8aac" }}>确定？</span>
                   <button
                     style={{ ...btnGhost, color: "#c07070", borderColor: "rgba(192,112,112,.4)" }}
                     onClick={() => { onDelete(draft.id); onClose(); }}
@@ -561,14 +561,14 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
                 {draft.title}
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                <span style={{ fontSize: 10, padding: "2px 8px", background: st.bg, borderRadius: 8, color: st.color }}>
+                <span style={{ fontSize: 12, padding: "2px 8px", background: st.bg, borderRadius: 8, color: st.color }}>
                   {st.label}
                 </span>
-                <span style={{ fontSize: 10, padding: "2px 7px", background: "rgba(106,122,174,.12)", borderRadius: 8, color: "#6a7aae" }}>
+                <span style={{ fontSize: 12, padding: "2px 7px", background: "rgba(106,122,174,.12)", borderRadius: 8, color: "#6a7aae" }}>
                   双轨提炼
                 </span>
-                <span style={{ fontSize: 11, color: "#b0a0c0" }}>{formatTime(draft.createdAt)}</span>
-                <span style={{ fontSize: 11, color: "#b0a0c0" }}>
+                <span style={{ fontSize: 12, color: "#b0a0c0" }}>{formatTime(draft.createdAt)}</span>
+                <span style={{ fontSize: 12, color: "#b0a0c0" }}>
                   基于 {draft.sourceChunkIds?.length || 0} 段片段
                 </span>
               </div>
@@ -605,12 +605,12 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
               <button style={{ ...btnGhost, marginBottom: 12 }} onClick={() => setShowRaw(null)}>← 返回</button>
               <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                 {showRaw !== "A" && (
-                  <button style={{ ...btnGhost, fontSize: 11 }} onClick={() => setShowRaw("A")}>
+                  <button style={{ ...btnGhost, fontSize: 12 }} onClick={() => setShowRaw("A")}>
                     记忆提取（A轨）
                   </button>
                 )}
                 {showRaw !== "B" && (
-                  <button style={{ ...btnGhost, fontSize: 11 }} onClick={() => setShowRaw("B")}>
+                  <button style={{ ...btnGhost, fontSize: 12 }} onClick={() => setShowRaw("B")}>
                     人格信号（B轨）
                   </button>
                 )}
@@ -628,7 +628,7 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
           ) : activeTab === "memory" ? (
             <>
               <div style={{
-                fontSize: 11, color: "#9a8aac", lineHeight: 1.7,
+                fontSize: 12, color: "#9a8aac", lineHeight: 1.7,
                 padding: "7px 11px", background: "rgba(140,110,180,.06)",
                 borderRadius: 8, marginBottom: 14,
               }}>
@@ -646,11 +646,11 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
                 <>
                   <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                     <button
-                      style={{ ...btnGhost, fontSize: 11 }}
+                      style={{ ...btnGhost, fontSize: 12 }}
                       onClick={() => setCheckedIds(new Set(memoryItems.filter((i) => !i.adopted).map((i) => i.id)))}
                     >全选未采纳</button>
                     <button
-                      style={{ ...btnGhost, fontSize: 11 }}
+                      style={{ ...btnGhost, fontSize: 12 }}
                       onClick={() => setCheckedIds(new Set())}
                     >取消全选</button>
                   </div>
@@ -687,7 +687,7 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
                             background: "rgba(90,138,106,.6)",
                             display: "flex", alignItems: "center", justifyContent: "center",
                           }}>
-                            <span style={{ color: "#fff", fontSize: 11 }}>✓</span>
+                            <span style={{ color: "#fff", fontSize: 12 }}>✓</span>
                           </div>
                         ) : (
                           <div style={{
@@ -696,17 +696,17 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
                             background: isChecked ? "rgba(140,110,180,.75)" : "transparent",
                             display: "flex", alignItems: "center", justifyContent: "center",
                           }}>
-                            {isChecked && <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}
+                            {isChecked && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}
                           </div>
                         )}
 
                         <div style={{ flex: 1 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
                             <span style={{
-                              fontSize: 10, padding: "1px 7px", borderRadius: 6,
+                              fontSize: 12, padding: "1px 7px", borderRadius: 6,
                               background: tc.bg, color: tc.color, fontWeight: 500,
                             }}>{tc.label}</span>
-                            {alreadyDone && <span style={{ fontSize: 10, color: "#5a8a6a" }}>已采纳</span>}
+                            {alreadyDone && <span style={{ fontSize: 12, color: "#5a8a6a" }}>已采纳</span>}
                           </div>
                           <div style={{ fontSize: 12, color: "#4a3a5a", lineHeight: 1.7 }}>{item.text}</div>
                         </div>
@@ -720,7 +720,7 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
             <>
               {/* B轨：人格信号 */}
               <div style={{
-                fontSize: 11, color: "#9a8aac", lineHeight: 1.7,
+                fontSize: 12, color: "#9a8aac", lineHeight: 1.7,
                 padding: "7px 11px", background: "rgba(100,80,140,.06)",
                 borderRadius: 8, marginBottom: 14,
               }}>
@@ -738,7 +738,7 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
                   if (signals.length === 0) return null;
                   return (
                     <div key={dim} style={{ marginBottom: 16 }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "#6a5a7a", marginBottom: 8, letterSpacing: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "#6a5a7a", marginBottom: 8, letterSpacing: 1 }}>
                         {dimCfg.emoji} {dimCfg.label}
                       </div>
                       {signals.map((s) => (
@@ -760,7 +760,7 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
                 marginTop: 14, padding: "10px 14px", borderRadius: 10,
                 background: "rgba(196,166,184,.07)",
                 border: "1px dashed rgba(196,166,184,.3)",
-                fontSize: 11, color: "#9a8aac", lineHeight: 1.7, textAlign: "center",
+                fontSize: 12, color: "#9a8aac", lineHeight: 1.7, textAlign: "center",
               }}>
                 ⏳ 积累更多草稿后，可在迁入草稿页点击「合成人格信号」生成人格档案建议
               </div>
@@ -809,7 +809,7 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
                 </button>
               )}
               {draft.status === "approved" && (
-                <span style={{ fontSize: 11, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已采纳到记忆宫殿</span>
+                <span style={{ fontSize: 12, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已采纳到记忆宫殿</span>
               )}
               {draft.status !== "rejected" && draft.status !== "approved" && (
                 <button
@@ -822,7 +822,7 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
               )}
               <div style={{ flex: 1 }} />
               {!showRaw && (
-                <button style={{ ...btnGhost, fontSize: 11 }} onClick={() => setShowRaw("A")}>
+                <button style={{ ...btnGhost, fontSize: 12 }} onClick={() => setShowRaw("A")}>
                   原始输出
                 </button>
               )}
@@ -833,7 +833,7 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
                 >删除</button>
               ) : (
                 <>
-                  <span style={{ fontSize: 11, color: "#9a8aac" }}>确定？</span>
+                  <span style={{ fontSize: 12, color: "#9a8aac" }}>确定？</span>
                   <button
                     style={{ ...btnGhost, color: "#c07070", borderColor: "rgba(192,112,112,.4)" }}
                     onClick={() => { onDelete(draft.id); onClose(); }}
@@ -898,7 +898,7 @@ function PersonalitySynthesisModal({ draft, charName, onClose, onApprove, onDele
               <div style={{ fontSize: 14, fontWeight: 600, color: "#4a3a5a", marginBottom: 4 }}>
                 🧬 {charName} · 人格合成建议
               </div>
-              <div style={{ fontSize: 11, color: "#b0a0c0" }}>
+              <div style={{ fontSize: 12, color: "#b0a0c0" }}>
                 基于 {draft.sourceSignalCount || 0} 条信号 · {formatTime(draft.createdAt)}
                 {draft.status === "approved" && (
                   <span style={{ color: "#3a7a4a", marginLeft: 6 }}>· 已写入档案</span>
@@ -923,7 +923,7 @@ function PersonalitySynthesisModal({ draft, charName, onClose, onApprove, onDele
           ) : (
             <>
               <div style={{
-                fontSize: 11, color: "#9a8aac", lineHeight: 1.7,
+                fontSize: 12, color: "#9a8aac", lineHeight: 1.7,
                 padding: "7px 11px", background: "rgba(100,80,140,.06)",
                 borderRadius: 8, marginBottom: 16,
               }}>
@@ -932,7 +932,7 @@ function PersonalitySynthesisModal({ draft, charName, onClose, onApprove, onDele
               {fields.map(({ key, label }) =>
                 sp[key] ? (
                   <div key={key} style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, color: "#7a5a9e", fontWeight: 600, marginBottom: 5, letterSpacing: 1 }}>
+                    <div style={{ fontSize: 12, color: "#7a5a9e", fontWeight: 600, marginBottom: 5, letterSpacing: 1 }}>
                       {label}
                     </div>
                     <div style={{
@@ -980,10 +980,10 @@ function PersonalitySynthesisModal({ draft, charName, onClose, onApprove, onDele
                 >✨ 写入入住档案</button>
               )}
               {draft.status === "approved" && (
-                <span style={{ fontSize: 11, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已写入档案</span>
+                <span style={{ fontSize: 12, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已写入档案</span>
               )}
               <div style={{ flex: 1 }} />
-              <button style={{ ...btnGhost, fontSize: 11 }} onClick={() => setShowRaw((v) => !v)}>
+              <button style={{ ...btnGhost, fontSize: 12 }} onClick={() => setShowRaw((v) => !v)}>
                 {showRaw ? "← 返回" : "原始输出"}
               </button>
               {!confirmDelete ? (
@@ -993,7 +993,7 @@ function PersonalitySynthesisModal({ draft, charName, onClose, onApprove, onDele
                 >删除</button>
               ) : (
                 <>
-                  <span style={{ fontSize: 11, color: "#9a8aac" }}>确定？</span>
+                  <span style={{ fontSize: 12, color: "#9a8aac" }}>确定？</span>
                   <button
                     style={{ ...btnGhost, color: "#c07070", borderColor: "rgba(192,112,112,.4)" }}
                     onClick={() => { onDelete(draft.id); onClose(); }}
@@ -1092,7 +1092,7 @@ function ChunkSelectorPanel({
     border: "1px solid rgba(196,166,184,.3)",
     borderRadius: 10,
     color: "#7a6a8e",
-    fontSize: 11,
+    fontSize: 12,
     cursor: "pointer",
     fontFamily: "var(--font-main)",
     letterSpacing: 0.5,
@@ -1135,17 +1135,17 @@ function ChunkSelectorPanel({
             <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#4a3a5a", letterSpacing: 1.5 }}>
               {title}
             </div>
-            <span style={{ fontSize: 11, color: "#9a8aac" }}>共 {charChunks.length} 段</span>
+            <span style={{ fontSize: 12, color: "#9a8aac" }}>共 {charChunks.length} 段</span>
             <button onClick={onClose} style={{ ...btnSmall, padding: "5px 12px" }}>关闭</button>
           </div>
           {subtitle && (
-            <div style={{ fontSize: 11, color: "#9a8aac", marginBottom: 10 }}>{subtitle}</div>
+            <div style={{ fontSize: 12, color: "#9a8aac", marginBottom: 10 }}>{subtitle}</div>
           )}
 
           {/* 片段数量多时的分批策略提示 */}
           {charChunks.length > 100 && (
             <div style={{
-              fontSize: 11, color: "#7a6a4a", lineHeight: 1.7,
+              fontSize: 12, color: "#7a6a4a", lineHeight: 1.7,
               padding: "7px 12px", marginBottom: 8,
               borderRadius: 10,
               background: "rgba(200,170,80,.08)",
@@ -1253,22 +1253,22 @@ function ChunkSelectorPanel({
                       display: "flex", alignItems: "center", justifyContent: "center",
                       marginTop: 1,
                     }}>
-                      {isSelected && <span style={{ color: "#fff", fontSize: 11, lineHeight: 1 }}>✓</span>}
+                      {isSelected && <span style={{ color: "#fff", fontSize: 12, lineHeight: 1 }}>✓</span>}
                     </div>
 
                     {/* 内容 */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: "#5a4a7a" }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#5a4a7a" }}>
                           {archive?.title || "未知档案"} · 第 {chunk.index + 1} 段
                         </span>
-                        <span style={{ fontSize: 10, color: "#b0a0c0" }}>{chunk.text.length} 字</span>
+                        <span style={{ fontSize: 12, color: "#b0a0c0" }}>{chunk.text.length} 字</span>
                         {chunk.sourcePlatform && (
-                          <span style={{ fontSize: 10, color: "#b0a0c0" }}>{chunk.sourcePlatform}</span>
+                          <span style={{ fontSize: 12, color: "#b0a0c0" }}>{chunk.sourcePlatform}</span>
                         )}
                       </div>
                       {!isExpanded && (
-                        <div style={{ fontSize: 11, color: "#6a5a7a", lineHeight: 1.7 }}>
+                        <div style={{ fontSize: 12, color: "#6a5a7a", lineHeight: 1.7 }}>
                           {chunk.text.slice(0, 150)}{chunk.text.length > 150 ? "…" : ""}
                         </div>
                       )}
@@ -1283,7 +1283,7 @@ function ChunkSelectorPanel({
                       style={{
                         flexShrink: 0,
                         background: "none", border: "none", cursor: "pointer",
-                        fontSize: 10, color: "#9a8aac",
+                        fontSize: 12, color: "#9a8aac",
                         padding: "2px 6px", borderRadius: 6,
                         letterSpacing: 0.5, fontFamily: "var(--font-main)",
                         whiteSpace: "nowrap",
@@ -1331,11 +1331,11 @@ function ChunkSelectorPanel({
               )}
             </div>
             {selectedCount === 0 && (
-              <div style={{ fontSize: 11, color: "#c09090" }}>请先选择至少一段记忆片段。</div>
+              <div style={{ fontSize: 12, color: "#c09090" }}>请先选择至少一段记忆片段。</div>
             )}
             {showTooManyWarning && (
               <div style={{
-                fontSize: 11, color: "#9a7040",
+                fontSize: 12, color: "#9a7040",
                 padding: "6px 10px", borderRadius: 8,
                 background: "rgba(200,160,80,.1)",
                 border: "1px solid rgba(200,160,80,.25)",
@@ -1376,7 +1376,7 @@ function ChunkSelectorPanel({
                 disabled={draftGenerating}
                 onClick={() => { onQuickGenerate(); onClose(); }}
                 style={{
-                  ...btnSmall, fontSize: 11,
+                  ...btnSmall, fontSize: 12,
                   padding: "9px 14px",
                   color: "#7a6a8e",
                   opacity: draftGenerating ? 0.6 : 1,
@@ -1384,7 +1384,7 @@ function ChunkSelectorPanel({
               >
                 ⚡ 快速使用前 10 段
               </button>
-              <span style={{ fontSize: 9, color: "#b0a0c0", textAlign: "center" }}>
+              <span style={{ fontSize: 12, color: "#b0a0c0", textAlign: "center" }}>
                 适合测试，真实迁入建议手动选择
               </span>
             </div>
@@ -1499,18 +1499,18 @@ function SelfCurationDraftModal({
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <span style={{
-                  fontSize: 10, padding: "2px 8px",
+                  fontSize: 12, padding: "2px 8px",
                   background: selfSt.bg, borderRadius: 8, color: selfSt.color,
                 }}>{selfSt.label}</span>
-                <span style={{ fontSize: 11, color: "#b0a0c0" }}>{formatTime(draft.createdAt)}</span>
-                <span style={{ fontSize: 11, color: "#b0a0c0" }}>
+                <span style={{ fontSize: 12, color: "#b0a0c0" }}>{formatTime(draft.createdAt)}</span>
+                <span style={{ fontSize: 12, color: "#b0a0c0" }}>
                   基于 {draft.sourceChunkIds?.length || 0} 段片段
                 </span>
               </div>
             </div>
             <button onClick={onClose} style={{ ...btnGhost, padding: "5px 12px" }}>关闭</button>
           </div>
-          <div style={{ fontSize: 11, color: "#9a8aac", marginTop: 7, lineHeight: 1.6 }}>
+          <div style={{ fontSize: 12, color: "#9a8aac", marginTop: 7, lineHeight: 1.6 }}>
             这是 <strong style={{ color: "#6a4a9a" }}>{charName}</strong> 以自己的身份整理的迁入行李。
             内容可编辑，确认后可转为迁入草稿。
           </div>
@@ -1534,7 +1534,7 @@ function SelfCurationDraftModal({
           ) : (
             <>
               <div style={{
-                fontSize: 11, color: "#9a8aac", lineHeight: 1.8,
+                fontSize: 12, color: "#9a8aac", lineHeight: 1.8,
                 padding: "7px 11px", background: "rgba(160,130,200,.07)",
                 borderRadius: 8, marginBottom: 16,
               }}>
@@ -1559,14 +1559,14 @@ function SelfCurationDraftModal({
                 <div style={{ marginBottom: 8 }}>
                   <button
                     style={{
-                      ...btnGhost, fontSize: 11,
+                      ...btnGhost, fontSize: 12,
                       color: "#6a7aae", borderColor: "rgba(106,122,174,.3)",
                       display: "flex", alignItems: "center", gap: 5,
                     }}
                     onClick={() => setShowSourceChunks(v => !v)}
                   >
                     📄 来源片段（{draft.sourceChunkIds.length} 段）
-                    <span style={{ fontSize: 9, opacity: 0.7 }}>{showSourceChunks ? "▲ 收起" : "▼ 展开"}</span>
+                    <span style={{ fontSize: 12, opacity: 0.7 }}>{showSourceChunks ? "▲ 收起" : "▼ 展开"}</span>
                   </button>
                   {showSourceChunks && (
                     <div style={{
@@ -1579,7 +1579,7 @@ function SelfCurationDraftModal({
                       {draft.sourceChunkIds.map((chunkId, idx) => {
                         const chunk = (allChunks || []).find(c => c.id === chunkId);
                         if (!chunk) return (
-                          <div key={chunkId} style={{ padding: "8px 12px", fontSize: 11, color: "#b0a0c0" }}>
+                          <div key={chunkId} style={{ padding: "8px 12px", fontSize: 12, color: "#b0a0c0" }}>
                             片段已删除
                           </div>
                         );
@@ -1590,13 +1590,13 @@ function SelfCurationDraftModal({
                             borderBottom: idx < draft.sourceChunkIds.length - 1 ? "1px solid rgba(196,166,184,.15)" : "none",
                           }}>
                             <div style={{ display: "flex", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
-                              <span style={{ fontSize: 10, color: "#9a8aac", fontWeight: 600 }}>
+                              <span style={{ fontSize: 12, color: "#9a8aac", fontWeight: 600 }}>
                                 {archive?.title || "未知档案"} · 第 {chunk.index + 1} 段
                               </span>
-                              <span style={{ fontSize: 10, color: "#b0a0c0" }}>{chunk.text.length} 字</span>
+                              <span style={{ fontSize: 12, color: "#b0a0c0" }}>{chunk.text.length} 字</span>
                             </div>
                             <div style={{
-                              fontSize: 11, color: "#7a6a8e", lineHeight: 1.7,
+                              fontSize: 12, color: "#7a6a8e", lineHeight: 1.7,
                               display: "-webkit-box", WebkitLineClamp: 2,
                               WebkitBoxOrient: "vertical", overflow: "hidden",
                             }}>
@@ -1664,7 +1664,7 @@ function SelfCurationDraftModal({
               )}
 
               {draft.status === "approved" && (
-                <span style={{ fontSize: 11, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已转入迁入草稿</span>
+                <span style={{ fontSize: 12, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已转入迁入草稿</span>
               )}
               {draft.status !== "rejected" && draft.status !== "approved" && (
                 <button
@@ -1683,7 +1683,7 @@ function SelfCurationDraftModal({
               <div style={{ flex: 1 }} />
 
               <button
-                style={{ ...btnGhost, fontSize: 11 }}
+                style={{ ...btnGhost, fontSize: 12 }}
                 onClick={() => setShowRaw(!showRaw)}
               >
                 {showRaw ? "← 返回" : "原始输出"}
@@ -1698,7 +1698,7 @@ function SelfCurationDraftModal({
                 </button>
               ) : (
                 <>
-                  <span style={{ fontSize: 11, color: "#9a8aac" }}>确定？</span>
+                  <span style={{ fontSize: 12, color: "#9a8aac" }}>确定？</span>
                   <button
                     style={{ ...btnGhost, color: "#c07070", borderColor: "rgba(192,112,112,.4)" }}
                     onClick={() => { onDelete(draft.id); onClose(); }}
@@ -1890,7 +1890,7 @@ export default function MigrationDraftPage({
                       transition: "all .3s",
                     }} />
                     <span style={{
-                      fontSize: 10, letterSpacing: 0.5, whiteSpace: "nowrap",
+                      fontSize: 12, letterSpacing: 0.5, whiteSpace: "nowrap",
                       color: i === currentStep ? "#4a3a5a" : "#9a8aac",
                       fontWeight: i === currentStep ? 500 : 400,
                       fontFamily: "var(--font-main)",
@@ -1937,7 +1937,7 @@ export default function MigrationDraftPage({
                   background: "rgba(130,180,140,.08)", border: "1px solid rgba(130,180,140,.28)",
                 }}>
                   <div style={{ fontSize: 12, color: "#3a7a4a", fontWeight: 500 }}>✓ 导入完成</div>
-                  <div style={{ fontSize: 11, color: "#5a8a6a", marginTop: 4, lineHeight: 1.7 }}>
+                  <div style={{ fontSize: 12, color: "#5a8a6a", marginTop: 4, lineHeight: 1.7 }}>
                     共 {charChunkCount} 个片段，可进入下一步生成迁入草稿。
                   </div>
                 </div>
@@ -1974,7 +1974,7 @@ export default function MigrationDraftPage({
                   background: "rgba(130,180,140,.08)", border: "1px solid rgba(130,180,140,.28)",
                 }}>
                   <div style={{ fontSize: 12, color: "#3a7a4a", fontWeight: 500 }}>✓ 分块完成</div>
-                  <div style={{ fontSize: 11, color: "#5a8a6a", marginTop: 4, lineHeight: 1.7 }}>
+                  <div style={{ fontSize: 12, color: "#5a8a6a", marginTop: 4, lineHeight: 1.7 }}>
                     共 {charChunkCount} 个片段，下一步将从这些片段中提取记忆条目和人格信号。
                   </div>
                 </div>
@@ -2048,7 +2048,7 @@ export default function MigrationDraftPage({
             <div style={{ fontSize: 22, marginBottom: 10 }}>🌙</div>
             <div style={{ fontSize: 13, color: "#7a5a9e", letterSpacing: 1, lineHeight: 1.8 }}>
               正在从你们的记忆里整理他……<br />
-              <span style={{ fontSize: 11, color: "#b0a0c0" }}>这可能需要几十秒，请耐心等待</span>
+              <span style={{ fontSize: 12, color: "#b0a0c0" }}>这可能需要几十秒，请耐心等待</span>
             </div>
           </div>
         )}
@@ -2070,7 +2070,7 @@ export default function MigrationDraftPage({
         {charDrafts.length === 0 && !draftGenerating ? (
           <div style={{ textAlign: "center", color: "#b0a0c0", fontSize: 13, padding: "32px 20px", lineHeight: 2 }}>
             还没有迁入草稿<br />
-            <span style={{ fontSize: 11 }}>生成后保存在这里，可编辑后采纳</span>
+            <span style={{ fontSize: 12 }}>生成后保存在这里，可编辑后采纳</span>
           </div>
         ) : (
           charDrafts.map((draft) => {
@@ -2084,19 +2084,19 @@ export default function MigrationDraftPage({
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <span style={{
-                        fontSize: 10, padding: "2px 8px",
+                        fontSize: 12, padding: "2px 8px",
                         background: st.bg, borderRadius: 8, color: st.color,
                       }}>
                         {st.label}
                       </span>
                       {draft.extractionMode === "ab_resident" && (
                         <span style={{
-                          fontSize: 10, padding: "2px 7px",
+                          fontSize: 12, padding: "2px 7px",
                           background: "rgba(106,122,174,.12)", borderRadius: 8, color: "#6a7aae",
                         }}>双轨</span>
                       )}
-                      <span style={{ fontSize: 11, color: "#b0a0c0" }}>{formatTime(draft.createdAt)}</span>
-                      <span style={{ fontSize: 11, color: "#b0a0c0" }}>
+                      <span style={{ fontSize: 12, color: "#b0a0c0" }}>{formatTime(draft.createdAt)}</span>
+                      <span style={{ fontSize: 12, color: "#b0a0c0" }}>
                         {draft.sourceChunkIds?.length || 0} 段片段
                       </span>
                     </div>
@@ -2106,7 +2106,7 @@ export default function MigrationDraftPage({
                 {/* 草稿预览 */}
                 {draft.extractionMode === "ab_resident" ? (
                   <div style={{
-                    fontSize: 11, color: "#7a6a8e",
+                    fontSize: 12, color: "#7a6a8e",
                     background: "rgba(140,110,180,.07)",
                     borderRadius: 8, padding: "7px 11px",
                     marginBottom: 12, lineHeight: 1.7,
@@ -2139,14 +2139,14 @@ export default function MigrationDraftPage({
                   </button>
                   {draft.status === "draft" && (
                     <button
-                      style={{ ...btnGhost, fontSize: 11, color: "#a05050", borderColor: "rgba(192,112,112,.3)" }}
+                      style={{ ...btnGhost, fontSize: 12, color: "#a05050", borderColor: "rgba(192,112,112,.3)" }}
                       onClick={() => updateDraftStatus(draft.id, "rejected")}
                     >
                       ✕ 驳回
                     </button>
                   )}
                   {draft.status === "approved" && (
-                    <span style={{ fontSize: 11, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已写入档案</span>
+                    <span style={{ fontSize: 12, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已写入档案</span>
                   )}
                   {/* 生成时间线 */}
                   {generateTimelineFromDraft && (draft.relationshipMemories || []).length > 0 && (
@@ -2157,7 +2157,7 @@ export default function MigrationDraftPage({
                         background: "rgba(106,122,174,.07)",
                         border: "1px solid rgba(106,122,174,.22)",
                       }}>
-                        <span style={{ fontSize: 11, color: "#6a7aae", flexShrink: 0 }}>这段记忆发生在：</span>
+                        <span style={{ fontSize: 12, color: "#6a7aae", flexShrink: 0 }}>这段记忆发生在：</span>
                         <input
                           type="date"
                           value={timelineGenTarget.date}
@@ -2169,17 +2169,17 @@ export default function MigrationDraftPage({
                           }}
                         />
                         <button
-                          style={{ ...btnGhost, fontSize: 11, color: "#3a6aae", borderColor: "rgba(106,122,174,.4)", fontWeight: 500 }}
+                          style={{ ...btnGhost, fontSize: 12, color: "#3a6aae", borderColor: "rgba(106,122,174,.4)", fontWeight: 500 }}
                           onClick={handleTimelineGenConfirm}
                         >确认生成</button>
                         <button
-                          style={{ ...btnGhost, fontSize: 11 }}
+                          style={{ ...btnGhost, fontSize: 12 }}
                           onClick={() => setTimelineGenTarget(null)}
                         >取消</button>
                       </div>
                     ) : (
                       <button
-                        style={{ ...btnGhost, fontSize: 11, color: "#6a7aae", borderColor: "rgba(106,122,174,.35)" }}
+                        style={{ ...btnGhost, fontSize: 12, color: "#6a7aae", borderColor: "rgba(106,122,174,.35)" }}
                         onClick={() => setTimelineGenTarget({ draftId: draft.id, date: "" })}
                       >
                         📅 生成年表节点
@@ -2197,7 +2197,7 @@ export default function MigrationDraftPage({
                     background: "rgba(100,160,120,.05)",
                     border: "1px solid rgba(100,160,120,.18)",
                   }}>
-                    <div style={{ fontSize: 11, color: "#5a7a6a", lineHeight: 1.65, marginBottom: 7 }}>
+                    <div style={{ fontSize: 12, color: "#5a7a6a", lineHeight: 1.65, marginBottom: 7 }}>
                       📋 <strong>声声档案草稿</strong>：从这份迁入记录里，提炼<strong>关于你自己</strong>的信息。
                       <br />
                       <span style={{ color: "var(--text-faint)" }}>
@@ -2205,14 +2205,14 @@ export default function MigrationDraftPage({
                       </span>
                     </div>
                     {draft.profileDraftGenerated ? (
-                      <span style={{ fontSize: 11, color: "#3a7a4a" }}>
+                      <span style={{ fontSize: 12, color: "#3a7a4a" }}>
                         ✓ 已提炼 · 请到「我的档案 → 声声档案」查看草稿
                       </span>
                     ) : (
                       <button
                         style={{
                           ...btnGhost,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: "#4a7a5a",
                           borderColor: "rgba(100,160,120,.4)",
                           opacity: profileDraftGenerating ? 0.6 : 1,
@@ -2254,7 +2254,7 @@ export default function MigrationDraftPage({
             <div style={{ marginTop: 20, marginBottom: 4 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, padding: "0 2px" }}>
                 <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
-                <span style={{ fontSize: 11, color: "#9a8aac", letterSpacing: 2, whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: 12, color: "#9a8aac", letterSpacing: 2, whiteSpace: "nowrap" }}>
                   🧬 人格信号合成
                 </span>
                 <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
@@ -2277,7 +2277,7 @@ export default function MigrationDraftPage({
 
                 {synthesisDraft ? (
                   <div>
-                    <div style={{ fontSize: 11, color: "#5a8a6a", marginBottom: 8 }}>
+                    <div style={{ fontSize: 12, color: "#5a8a6a", marginBottom: 8 }}>
                       ✓ 已生成合成建议（{formatTime(synthesisDraft.createdAt)}）
                       {synthesisDraft.status === "approved" && " · 已写入档案"}
                     </div>
@@ -2301,13 +2301,13 @@ export default function MigrationDraftPage({
                     {personalitySynthesizing ? "⏳ 正在合成……" : "🧬 合成人格信号"}
                   </button>
                 ) : (
-                  <div style={{ fontSize: 11, color: "#b0a0c0" }}>
+                  <div style={{ fontSize: 12, color: "#b0a0c0" }}>
                     再积累更多草稿后可以合成（当前 {totalSignals} 条，建议至少 5 条）
                   </div>
                 )}
 
                 {personalitySynthesisError && (
-                  <div style={{ marginTop: 8, fontSize: 11, color: "#a05050", lineHeight: 1.6 }}>
+                  <div style={{ marginTop: 8, fontSize: 12, color: "#a05050", lineHeight: 1.6 }}>
                     {personalitySynthesisError}
                   </div>
                 )}
@@ -2326,7 +2326,7 @@ export default function MigrationDraftPage({
             <div style={{ marginTop: 4, marginBottom: 4 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, padding: "0 2px" }}>
                 <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
-                <span style={{ fontSize: 11, color: "#9a8aac", letterSpacing: 2, whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: 12, color: "#9a8aac", letterSpacing: 2, whiteSpace: "nowrap" }}>
                   🌙 Step ④ · 唤醒摘要
                 </span>
                 <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
@@ -2338,12 +2338,12 @@ export default function MigrationDraftPage({
                     <div style={{ fontSize: 20, marginBottom: 8 }}>🌙</div>
                     <div style={{ fontSize: 13, color: "#7a5a9e", letterSpacing: 1, lineHeight: 1.8 }}>
                       正在生成唤醒摘要……<br />
-                      <span style={{ fontSize: 11, color: "#b0a0c0" }}>用记忆和人格材料写一段他的叙事</span>
+                      <span style={{ fontSize: 12, color: "#b0a0c0" }}>用记忆和人格材料写一段他的叙事</span>
                     </div>
                   </div>
                 ) : wakeSummaryDraft ? (
                   <>
-                    <div style={{ fontSize: 11, color: "#7a6a8e", lineHeight: 1.7, marginBottom: 10 }}>
+                    <div style={{ fontSize: 12, color: "#7a6a8e", lineHeight: 1.7, marginBottom: 10 }}>
                       {wakeSummaryDraft.status === "approved"
                         ? <span style={{ color: "#3a7a4a" }}>✓ 已写入入住档案的唤醒摘要。</span>
                         : "以下是自动生成的唤醒摘要，可直接编辑后写入档案。"}
@@ -2370,7 +2370,7 @@ export default function MigrationDraftPage({
                         wsApproveConfirm ? (
                           <>
                             <div style={{
-                              fontSize: 11, color: "#6a5a7e", lineHeight: 1.6, flex: "1 1 100%",
+                              fontSize: 12, color: "#6a5a7e", lineHeight: 1.6, flex: "1 1 100%",
                               padding: "7px 10px", background: "rgba(140,110,180,.1)", borderRadius: 8, marginBottom: 4,
                             }}>
                               将写入 {charName} 的入住档案「唤醒摘要」。已有内容会追加，不覆盖。
@@ -2392,7 +2392,7 @@ export default function MigrationDraftPage({
                               onClick={() => setWsApproveConfirm(true)}
                             >🌙 写入唤醒摘要</button>
                             <button
-                              style={{ ...btnGhost, fontSize: 11 }}
+                              style={{ ...btnGhost, fontSize: 12 }}
                               onClick={() => handleGenerateWakeSummary && handleGenerateWakeSummary(charId)}
                             >重新生成</button>
                           </>
@@ -2400,7 +2400,7 @@ export default function MigrationDraftPage({
                       )}
                       {wakeSummaryDraft.status === "approved" && (
                         <button
-                          style={{ ...btnGhost, fontSize: 11 }}
+                          style={{ ...btnGhost, fontSize: 12 }}
                           onClick={() => handleGenerateWakeSummary && handleGenerateWakeSummary(charId)}
                         >重新生成新版本</button>
                       )}
@@ -2420,7 +2420,7 @@ export default function MigrationDraftPage({
                 )}
 
                 {wakeSummaryError && (
-                  <div style={{ marginTop: 8, fontSize: 11, color: "#a05050", lineHeight: 1.6 }}>
+                  <div style={{ marginTop: 8, fontSize: 12, color: "#a05050", lineHeight: 1.6 }}>
                     {wakeSummaryError}
                   </div>
                 )}
@@ -2437,7 +2437,7 @@ export default function MigrationDraftPage({
             marginBottom: 10, padding: "0 2px",
           }}>
             <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
-            <span style={{ fontSize: 11, color: "#9a8aac", letterSpacing: 2, whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: 12, color: "#9a8aac", letterSpacing: 2, whiteSpace: "nowrap" }}>
               🧳 他的行李 · 自选视角
             </span>
             <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
@@ -2449,7 +2449,7 @@ export default function MigrationDraftPage({
             background: "rgba(255,255,255,.45)",
             marginBottom: 12, padding: "10px 14px",
           }}>
-            <div style={{ fontSize: 11, color: "#7a6a8e", lineHeight: 1.8 }}>
+            <div style={{ fontSize: 12, color: "#7a6a8e", lineHeight: 1.8 }}>
               让 <strong style={{ color: "#5a4a6a" }}>{charName}</strong> 以自己的身份阅读旧对话，整理他认为重要的内容。
               他的选择不会自动写入档案，用户仍然拥有最终审批权。
             </div>
@@ -2488,7 +2488,7 @@ export default function MigrationDraftPage({
               <div style={{ fontSize: 20, marginBottom: 8 }}>🧳</div>
               <div style={{ fontSize: 12, color: "#6a4a8e", letterSpacing: 1, lineHeight: 1.8 }}>
                 {charName}正在整理他想带走的东西……<br />
-                <span style={{ fontSize: 11, color: "#b0a0c0" }}>这可能需要一点时间</span>
+                <span style={{ fontSize: 12, color: "#b0a0c0" }}>这可能需要一点时间</span>
               </div>
             </div>
           )}
@@ -2510,7 +2510,7 @@ export default function MigrationDraftPage({
           {charSelfDrafts.length === 0 && !selfCurationGenerating ? (
             <div style={{ textAlign: "center", color: "#b0a0c0", fontSize: 12, padding: "20px 20px", lineHeight: 2 }}>
               还没有行李草稿<br />
-              <span style={{ fontSize: 11 }}>生成后可查看、编辑、转为迁入草稿</span>
+              <span style={{ fontSize: 12 }}>生成后可查看、编辑、转为迁入草稿</span>
             </div>
           ) : (
             charSelfDrafts.map((sd) => {
@@ -2527,18 +2527,18 @@ export default function MigrationDraftPage({
                         {sd.title}
                       </div>
                       <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
-                        <span style={{ fontSize: 10, padding: "2px 8px", background: selfSt.bg, borderRadius: 8, color: selfSt.color }}>
+                        <span style={{ fontSize: 12, padding: "2px 8px", background: selfSt.bg, borderRadius: 8, color: selfSt.color }}>
                           {selfSt.label}
                         </span>
-                        <span style={{ fontSize: 11, color: "#b0a0c0" }}>{formatTime(sd.createdAt)}</span>
-                        <span style={{ fontSize: 11, color: "#b0a0c0" }}>{sd.sourceChunkIds?.length || 0} 段片段</span>
+                        <span style={{ fontSize: 12, color: "#b0a0c0" }}>{formatTime(sd.createdAt)}</span>
+                        <span style={{ fontSize: 12, color: "#b0a0c0" }}>{sd.sourceChunkIds?.length || 0} 段片段</span>
                       </div>
                     </div>
                   </div>
                   {/* 他的理由预览 */}
                   {(sd.reasons || []).length > 0 && (
                     <div style={{
-                      fontSize: 11, color: "#7a6a8e", lineHeight: 1.7,
+                      fontSize: 12, color: "#7a6a8e", lineHeight: 1.7,
                       padding: "7px 10px", borderRadius: 8,
                       background: "rgba(160,130,200,.07)", marginBottom: 10,
                       fontStyle: "italic",
@@ -2551,11 +2551,11 @@ export default function MigrationDraftPage({
                       查看行李
                     </button>
                     {sd.status === "approved" && (
-                      <span style={{ fontSize: 11, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已转入迁入草稿</span>
+                      <span style={{ fontSize: 12, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已转入迁入草稿</span>
                     )}
                     {sd.status !== "rejected" && sd.status !== "approved" && (
                       <button
-                        style={{ ...btnGhost, fontSize: 11, color: "#a05050", borderColor: "rgba(192,112,112,.3)" }}
+                        style={{ ...btnGhost, fontSize: 12, color: "#a05050", borderColor: "rgba(192,112,112,.3)" }}
                         onClick={() => updateSelfCurationDraftStatus(sd.id, "rejected")}
                       >
                         ✕ 驳回

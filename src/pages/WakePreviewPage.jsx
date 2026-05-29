@@ -21,14 +21,14 @@ const preStyle = {
 };
 
 const sectionLabelStyle = {
-  fontSize: 10,
+  fontSize: 12,
   color: "#9a8aac",
   letterSpacing: 1.5,
   marginBottom: 4,
 };
 
 const memItemStyle = {
-  fontSize: 11,
+  fontSize: 12,
   color: "#5a4a6a",
   lineHeight: 1.75,
   marginBottom: 2,
@@ -108,8 +108,8 @@ function Block({ emoji, title, isEmpty, isOpen: initOpen = false, children, copy
           {title}
         </span>
         {isEmpty
-          ? <span style={{ fontSize: 10, color: "#b0a0c0", padding: "2px 8px", background: "rgba(196,166,184,.1)", borderRadius: 6 }}>暂无</span>
-          : <span style={{ fontSize: 11, color: "#9a8aac" }}>{open ? "▲" : "▼"}</span>
+          ? <span style={{ fontSize: 12, color: "#b0a0c0", padding: "2px 8px", background: "rgba(196,166,184,.1)", borderRadius: 6 }}>暂无</span>
+          : <span style={{ fontSize: 12, color: "#9a8aac" }}>{open ? "▲" : "▼"}</span>
         }
       </button>
 
@@ -124,7 +124,7 @@ function Block({ emoji, title, isEmpty, isOpen: initOpen = false, children, copy
                 background: copied === copyLabel ? "rgba(130,180,140,.2)" : "rgba(255,255,255,.6)",
                 border: "1px solid rgba(196,166,184,.3)", borderRadius: 10,
                 color: copied === copyLabel ? "#3a7a4a" : "#7a6a8e",
-                fontSize: 11, cursor: "pointer", fontFamily: "var(--font-main)",
+                fontSize: 12, cursor: "pointer", fontFamily: "var(--font-main)",
                 transition: "all .2s",
               }}
             >
@@ -289,7 +289,7 @@ export default function WakePreviewPage({
               boxShadow: "0 2px 8px rgba(0,0,0,.04)", textAlign: "center",
             }}>
               <div style={{ fontSize: 16, fontWeight: 700, color: "#6a5a8e" }}>{value}</div>
-              <div style={{ fontSize: 10, color: "#9a8aac", letterSpacing: 0.6, marginTop: 2 }}>{label}</div>
+              <div style={{ fontSize: 12, color: "#9a8aac", letterSpacing: 0.6, marginTop: 2 }}>{label}</div>
             </div>
           ))}
         </div>
@@ -397,7 +397,7 @@ export default function WakePreviewPage({
           <div style={{ paddingTop: 6 }}>
             {/* 注入策略说明 */}
             <div style={{
-              fontSize: 11, color: "#9a8aac", lineHeight: 1.65,
+              fontSize: 12, color: "#9a8aac", lineHeight: 1.65,
               padding: "6px 10px", marginBottom: 10,
               background: "rgba(100,100,160,.05)", borderRadius: 7,
             }}>
@@ -419,7 +419,7 @@ export default function WakePreviewPage({
                         {m.pinned ? "📌" : "⭐"}
                       </span>
                       <span style={{ flex: 1 }}>
-                        {src && <span style={{ fontSize: 10, color: "#9a8aac", marginRight: 4 }}>[{src}]</span>}
+                        {src && <span style={{ fontSize: 12, color: "#9a8aac", marginRight: 4 }}>[{src}]</span>}
                         {m.text}
                       </span>
                     </div>
@@ -439,7 +439,7 @@ export default function WakePreviewPage({
                     <div key={i} style={{ ...memItemStyle, display: "flex", alignItems: "flex-start", gap: 4 }}>
                       <span style={{ color: "#9aaecc", flexShrink: 0 }}>·</span>
                       <span style={{ flex: 1 }}>
-                        {src && <span style={{ fontSize: 10, color: "#9a8aac", marginRight: 4 }}>[{src}]</span>}
+                        {src && <span style={{ fontSize: 12, color: "#9a8aac", marginRight: 4 }}>[{src}]</span>}
                         {m.text}
                       </span>
                     </div>
@@ -447,7 +447,7 @@ export default function WakePreviewPage({
                 })}
               </div>
             ) : (
-              <div style={{ fontSize: 11, color: "#9a8aac", fontStyle: "italic", padding: "4px 0" }}>
+              <div style={{ fontSize: 12, color: "#9a8aac", fontStyle: "italic", padding: "4px 0" }}>
                 🔍 话题召回层将在对话开始后，根据聊天内容动态激活相关记忆
               </div>
             )}
@@ -473,7 +473,7 @@ export default function WakePreviewPage({
                           {items.length} 条
                         </span>
                         {isCurrent && (
-                          <span style={{ fontSize: 9, color: "#b08a50", background: "rgba(192,160,80,.1)", borderRadius: 5, padding: "1px 6px" }}>
+                          <span style={{ fontSize: 12, color: "#b08a50", background: "rgba(192,160,80,.1)", borderRadius: 5, padding: "1px 6px" }}>
                             短期·仅供参考
                           </span>
                         )}
@@ -544,7 +544,7 @@ export default function WakePreviewPage({
             }}>
               完整 System Prompt
             </span>
-            <span style={{ fontSize: 11, color: "#9a8aac" }}>
+            <span style={{ fontSize: 12, color: "#9a8aac" }}>
               ≈{tokenCount.toLocaleString()} tokens · {showFullPrompt ? "▲" : "▼"}
             </span>
           </button>
@@ -554,7 +554,7 @@ export default function WakePreviewPage({
               <pre style={{
                 margin: "8px 0",
                 whiteSpace: "pre-wrap", wordBreak: "break-word",
-                fontSize: 11, lineHeight: 1.8, color: "#5a4a6a",
+                fontSize: 12, lineHeight: 1.8, color: "#5a4a6a",
                 fontFamily: "var(--font-main)",
                 maxHeight: 440, overflow: "auto",
                 background: "rgba(196,166,184,.06)",

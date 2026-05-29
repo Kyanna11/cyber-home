@@ -258,7 +258,7 @@ function ShareModal({ entry, characters, onShare, onClose }) {
           background: "rgba(155,149,181,.04)", border: "1px solid rgba(155,149,181,.08)",
           fontSize: 13, color: "var(--text-mid)", lineHeight: 1.7,
         }}>
-          <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 4 }}>
+          <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 4 }}>
             {ti.emoji} {ti.label} · {formatNoteDate(entry)}
           </div>
           {entry.title && (
@@ -377,10 +377,10 @@ function NoteProfileDraftConfirmPanel({ entry, onConfirm, onClose }) {
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
               <span style={{
-                fontSize: 10, padding: "2px 8px", borderRadius: 10,
+                fontSize: 12, padding: "2px 8px", borderRadius: 10,
                 background: "rgba(120,100,160,.1)", color: "#7a6a8e",
               }}>{ti.emoji} {ti.label}</span>
-              <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{formatNoteDate(entry)}</span>
+              <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{formatNoteDate(entry)}</span>
             </div>
             {entry.title && (
               <div style={{ fontSize: 13, fontWeight: 500, color: "#5a4a6a", marginBottom: 5, letterSpacing: 0.3 }}>
@@ -552,10 +552,10 @@ function NoteToTimelinePanel({ entry, characters, activeCharId, onSave, onNaviga
               background: "rgba(255,255,255,.55)", border: "1px solid rgba(196,166,184,.2)",
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 8, background: "rgba(120,100,160,.1)", color: "#7a6a8e" }}>
+                <span style={{ fontSize: 12, padding: "1px 7px", borderRadius: 8, background: "rgba(120,100,160,.1)", color: "#7a6a8e" }}>
                   {ti.emoji} {ti.label}
                 </span>
-                <span style={{ fontSize: 10, color: "var(--text-faint)" }}>{formatNoteDate(entry)}</span>
+                <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{formatNoteDate(entry)}</span>
               </div>
               {entry.title && (
                 <div style={{ fontSize: 12, fontWeight: 500, color: "#5a4a6a", marginBottom: 3 }}>{entry.title}</div>
@@ -571,7 +571,7 @@ function NoteToTimelinePanel({ entry, characters, activeCharId, onSave, onNaviga
             {/* 目标入住者 */}
             {characters.length > 1 && (
               <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>记入谁的时间线</div>
+                <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>记入谁的时间线</div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {characters.map((char) => (
                     <button key={char.id} onClick={() => setForm((f) => ({ ...f, loverId: char.id }))}
@@ -595,7 +595,7 @@ function NoteToTimelinePanel({ entry, characters, activeCharId, onSave, onNaviga
 
             {/* 时间线标题 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>这一刻的名字</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>这一刻的名字</div>
               <input
                 type="text"
                 value={form.title}
@@ -611,7 +611,7 @@ function NoteToTimelinePanel({ entry, characters, activeCharId, onSave, onNaviga
 
             {/* 描述 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>描述（可编辑）</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>描述（可编辑）</div>
               <textarea
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -628,12 +628,12 @@ function NoteToTimelinePanel({ entry, characters, activeCharId, onSave, onNaviga
 
             {/* 事件类型 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>事件类型</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>事件类型</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {EVENT_TYPES.map((et) => (
                   <button key={et.key} onClick={() => setForm((f) => ({ ...f, eventType: et.key }))}
                     style={{
-                      padding: "5px 11px", borderRadius: 20, fontSize: 11,
+                      padding: "5px 11px", borderRadius: 20, fontSize: 12,
                       cursor: "pointer", fontFamily: "var(--font-main)", transition: "all .15s",
                       background: form.eventType === et.key ? "rgba(120,100,160,.15)" : "rgba(255,255,255,.65)",
                       border: `1px solid ${form.eventType === et.key ? "rgba(120,100,160,.45)" : "rgba(196,166,184,.22)"}`,
@@ -646,7 +646,7 @@ function NoteToTimelinePanel({ entry, characters, activeCharId, onSave, onNaviga
 
             {/* 发生时间 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>发生时间</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>发生时间</div>
               <input
                 type="date"
                 value={form.occurredAt}
@@ -661,7 +661,7 @@ function NoteToTimelinePanel({ entry, characters, activeCharId, onSave, onNaviga
 
             {/* 情绪标签 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>情绪标签（可选）</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>情绪标签（可选）</div>
               <input
                 type="text"
                 placeholder="比如：温柔、感动、想念…"
@@ -678,7 +678,7 @@ function NoteToTimelinePanel({ entry, characters, activeCharId, onSave, onNaviga
 
             {/* 重要程度 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>
                 重要程度
                 <span style={{ marginLeft: 8, fontWeight: 500, color: "#5a4a6a" }}>{form.importance}</span>
               </div>
@@ -706,7 +706,7 @@ function NoteToTimelinePanel({ entry, characters, activeCharId, onSave, onNaviga
                 border: `1.5px solid ${form.pinned ? "rgba(120,100,160,.6)" : "rgba(196,166,184,.4)"}`,
                 background: form.pinned ? "rgba(120,100,160,.14)" : "transparent",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 10, color: "#7a5aaa", flexShrink: 0, transition: "all .15s",
+                fontSize: 12, color: "#7a5aaa", flexShrink: 0, transition: "all .15s",
               }}>
                 {form.pinned ? "📌" : ""}
               </div>
@@ -715,7 +715,7 @@ function NoteToTimelinePanel({ entry, characters, activeCharId, onSave, onNaviga
 
             {/* 备注 */}
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>备注（可选）</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>备注（可选）</div>
               <textarea
                 placeholder="关于这一刻想多说的…"
                 value={form.note}
@@ -885,16 +885,16 @@ export default function DiaryPage({
                     {/* 头部行：类型 + 草稿标 + 日期 */}
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
                       <span style={{
-                        fontSize: 10, padding: "2px 8px", borderRadius: 10,
+                        fontSize: 12, padding: "2px 8px", borderRadius: 10,
                         background: "rgba(120,100,160,.1)", color: "#7a6a8e",
                       }}>{ti.emoji} {ti.label}</span>
                       {entry.isDraft && (
                         <span style={{
-                          fontSize: 10, padding: "2px 8px", borderRadius: 10,
+                          fontSize: 12, padding: "2px 8px", borderRadius: 10,
                           background: "rgba(192,160,80,.12)", color: "#907020",
                         }}>草稿</span>
                       )}
-                      <span style={{ fontSize: 11, color: "var(--text-faint)", marginLeft: "auto" }}>
+                      <span style={{ fontSize: 12, color: "var(--text-faint)", marginLeft: "auto" }}>
                         {formatNoteDate(entry)}
                       </span>
                     </div>
@@ -917,11 +917,11 @@ export default function DiaryPage({
                     {/* 底部行：心情 + 标签 + 分享 */}
                     <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                       {entry.mood && (
-                        <span style={{ fontSize: 11, color: "#9a8aac" }}>{entry.mood}</span>
+                        <span style={{ fontSize: 12, color: "#9a8aac" }}>{entry.mood}</span>
                       )}
                       {(entry.tags || []).slice(0, 3).map((tag, i) => (
                         <span key={i} style={{
-                          fontSize: 10, padding: "1px 7px", borderRadius: 8,
+                          fontSize: 12, padding: "1px 7px", borderRadius: 8,
                           background: "rgba(196,166,184,.12)", color: "#9a8aac",
                         }}>#{tag}</span>
                       ))}
@@ -935,7 +935,7 @@ export default function DiaryPage({
                             style={{
                               background: "rgba(100,160,100,.08)",
                               border: "1px solid rgba(100,160,100,.2)",
-                              borderRadius: 8, padding: "3px 10px", fontSize: 11,
+                              borderRadius: 8, padding: "3px 10px", fontSize: 12,
                               color: "#4a8a4a", cursor: "pointer",
                               fontFamily: "var(--font-main)",
                             }}
@@ -954,7 +954,7 @@ export default function DiaryPage({
                             style={{
                               background: "rgba(106,122,174,.08)",
                               border: "1px solid rgba(106,122,174,.2)",
-                              borderRadius: 8, padding: "3px 10px", fontSize: 11,
+                              borderRadius: 8, padding: "3px 10px", fontSize: 12,
                               color: generatingNoteId === entry.id ? "#9a8aac" : "#6a7aae",
                               cursor: generatingNoteId !== null || profileDraftGenerating ? "default" : "pointer",
                               fontFamily: "var(--font-main)",
@@ -974,7 +974,7 @@ export default function DiaryPage({
                           style={{
                             background: "rgba(122,173,204,.08)",
                             border: "1px solid rgba(122,173,204,.22)",
-                            borderRadius: 8, padding: "3px 10px", fontSize: 11,
+                            borderRadius: 8, padding: "3px 10px", fontSize: 12,
                             color: "#4a7a9a", cursor: "pointer",
                             fontFamily: "var(--font-main)",
                           }}
@@ -982,7 +982,7 @@ export default function DiaryPage({
                       )}
 
                       {sharedWithNames.length > 0 ? (
-                        <span style={{ fontSize: 11, color: "#9a8aac" }}>
+                        <span style={{ fontSize: 12, color: "#9a8aac" }}>
                           📤 已分享给 {sharedWithNames.join("、")}
                         </span>
                       ) : (
@@ -990,7 +990,7 @@ export default function DiaryPage({
                           onClick={(e) => { e.stopPropagation(); setShareTarget(entry); }}
                           style={{
                             background: "none", border: "1px solid rgba(155,149,181,.18)",
-                            borderRadius: 8, padding: "3px 10px", fontSize: 11,
+                            borderRadius: 8, padding: "3px 10px", fontSize: 12,
                             color: "var(--text-mid)", cursor: "pointer",
                             fontFamily: "var(--font-main)",
                           }}

@@ -17,7 +17,7 @@ function SourceBadge({ sourceType }) {
   const s = SOURCE_LABEL[sourceType] || SOURCE_LABEL.manual;
   return (
     <span style={{
-      fontSize: 9, padding: "2px 7px", borderRadius: 6,
+      fontSize: 12, padding: "2px 7px", borderRadius: 6,
       background: s.bg, color: s.color, letterSpacing: 0.3,
     }}>
       {s.text}
@@ -112,7 +112,7 @@ function ItemDetail({ item, onClose, onDelete, onTogglePin, onUpdateNote }) {
 
           {/* 备注 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, marginBottom: 6 }}>
+            <div style={{ fontSize: 12, color: "#7a6a8e", letterSpacing: 0.8, marginBottom: 6 }}>
               备注
             </div>
             {editingNote ? (
@@ -169,7 +169,7 @@ function ItemDetail({ item, onClose, onDelete, onTogglePin, onUpdateNote }) {
           </div>
 
           {/* 时间 */}
-          <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 18 }}>
+          <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 18 }}>
             珍藏于 {new Date(item.createdAt).toLocaleString("zh-CN", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}
           </div>
 
@@ -293,7 +293,7 @@ export default function CharTreasurePage({
           <div style={{ fontSize: 14, fontWeight: 600, color: "#5a4a6a", letterSpacing: 1 }}>
             {emoji} {charName} 的宝库
           </div>
-          <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 1 }}>
+          <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 1 }}>
             {items.length > 0 ? `${items.length} 件珍藏` : "还没有珍藏"}
           </div>
         </div>
@@ -355,7 +355,7 @@ export default function CharTreasurePage({
                 {/* 备注 */}
                 {item.note && (
                   <div style={{
-                    fontSize: 11, color: "#8a7898", lineHeight: 1.6,
+                    fontSize: 12, color: "#8a7898", lineHeight: 1.6,
                     marginBottom: 8, fontStyle: "italic",
                     overflow: "hidden", display: "-webkit-box",
                     WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
@@ -367,7 +367,7 @@ export default function CharTreasurePage({
                 {/* 底部元信息行 */}
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
                   <SourceBadge sourceType={item.sourceType} />
-                  <span style={{ fontSize: 9, color: "var(--text-faint)" }}>{formatDate(item.createdAt)}</span>
+                  <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{formatDate(item.createdAt)}</span>
                   <div style={{ flex: 1 }} />
                   {/* 快捷复制 */}
                   <button

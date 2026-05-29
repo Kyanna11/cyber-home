@@ -99,7 +99,7 @@ function TreasureEditor({ initial, onSave, onClose }) {
                 key={t.value}
                 onClick={() => setForm((f) => ({ ...f, type: t.value }))}
                 style={{
-                  padding: "4px 11px", borderRadius: 20, fontSize: 11,
+                  padding: "4px 11px", borderRadius: 20, fontSize: 12,
                   cursor: "pointer", fontFamily: "var(--font-main)", transition: "all .15s",
                   background: form.type === t.value ? "rgba(120,100,160,.85)" : "rgba(255,255,255,.7)",
                   color: form.type === t.value ? "white" : "#7a6a8e",
@@ -178,7 +178,7 @@ function TreasureEditor({ initial, onSave, onClose }) {
               border: `1.5px solid ${form.important ? "#c08030" : "rgba(196,166,184,.4)"}`,
               background: form.important ? "rgba(200,140,60,.15)" : "transparent",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 11, color: "#c08030", flexShrink: 0, transition: "all .15s",
+              fontSize: 12, color: "#c08030", flexShrink: 0, transition: "all .15s",
             }}>
               {form.important ? "★" : ""}
             </div>
@@ -216,8 +216,8 @@ function ActionBtn({ emoji, label, sub, onClick, disabled, color }) {
   return (
     <button onClick={disabled ? undefined : onClick} style={base}>
       <div style={{ fontSize: 18, marginBottom: 3 }}>{emoji}</div>
-      <div style={{ fontSize: 11, color: disabled ? "var(--text-faint)" : (color || "#5a4a6a"), fontWeight: 500, lineHeight: 1.3 }}>{label}</div>
-      {sub && <div style={{ fontSize: 9, color: "var(--text-faint)", marginTop: 2 }}>{sub}</div>}
+      <div style={{ fontSize: 12, color: disabled ? "var(--text-faint)" : (color || "#5a4a6a"), fontWeight: 500, lineHeight: 1.3 }}>{label}</div>
+      {sub && <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>{sub}</div>}
     </button>
   );
 }
@@ -269,7 +269,7 @@ function TreasureContinuePanel({ treasure, characters, activeCharId, onConfirm, 
             padding: "10px 12px", borderRadius: 10, marginBottom: 16,
             background: "rgba(255,255,255,.6)", border: "1px solid rgba(196,166,184,.2)",
           }}>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 4 }}>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 4 }}>
               {ti.emoji} {treasure.title || treasure.content.slice(0, 24)}
               {treasure.sourceCharName ? ` · 来自 ${treasure.sourceCharName}` : ""}
             </div>
@@ -283,7 +283,7 @@ function TreasureContinuePanel({ treasure, characters, activeCharId, onConfirm, 
 
           {/* 续写方式 */}
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 8 }}>续写方式</div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 8 }}>续写方式</div>
             {CONTINUE_MODES.map((m) => (
               <button
                 key={m.value}
@@ -322,7 +322,7 @@ function TreasureContinuePanel({ treasure, characters, activeCharId, onConfirm, 
           {/* 选择入住者（多于 1 人时显示） */}
           {characters.length > 1 && (
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 8 }}>发给谁写</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 8 }}>发给谁写</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {characters.map((char) => (
                   <button
@@ -468,7 +468,7 @@ function TreasureToTimelinePanel({ treasure, characters, activeCharId, onSave, o
               padding: "9px 12px", borderRadius: 10, marginBottom: 16,
               background: "rgba(255,255,255,.55)", border: "1px solid rgba(196,166,184,.2)",
             }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 3 }}>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 3 }}>
                 {typeInfo(treasure.type).emoji} {treasure.title || treasure.content.slice(0, 28)}
               </div>
               <div style={{
@@ -482,7 +482,7 @@ function TreasureToTimelinePanel({ treasure, characters, activeCharId, onSave, o
             {/* 入住者选择（多于1人显示） */}
             {characters.length > 1 && (
               <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>记入谁的时间线</div>
+                <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>记入谁的时间线</div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {characters.map((char) => (
                     <button key={char.id} onClick={() => setForm((f) => ({ ...f, loverId: char.id }))}
@@ -506,7 +506,7 @@ function TreasureToTimelinePanel({ treasure, characters, activeCharId, onSave, o
 
             {/* 标题 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>这一刻的名字</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>这一刻的名字</div>
               <input
                 type="text"
                 value={form.title}
@@ -522,12 +522,12 @@ function TreasureToTimelinePanel({ treasure, characters, activeCharId, onSave, o
 
             {/* 事件类型 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>事件类型</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 7 }}>事件类型</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {EVENT_TYPES.map((et) => (
                   <button key={et.key} onClick={() => setForm((f) => ({ ...f, eventType: et.key }))}
                     style={{
-                      padding: "5px 11px", borderRadius: 20, fontSize: 11,
+                      padding: "5px 11px", borderRadius: 20, fontSize: 12,
                       cursor: "pointer", fontFamily: "var(--font-main)", transition: "all .15s",
                       background: form.eventType === et.key ? "rgba(120,100,160,.15)" : "rgba(255,255,255,.65)",
                       border: `1px solid ${form.eventType === et.key ? "rgba(120,100,160,.45)" : "rgba(196,166,184,.22)"}`,
@@ -540,7 +540,7 @@ function TreasureToTimelinePanel({ treasure, characters, activeCharId, onSave, o
 
             {/* 发生日期 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>发生时间</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>发生时间</div>
               <input
                 type="date"
                 value={form.occurredAt}
@@ -555,7 +555,7 @@ function TreasureToTimelinePanel({ treasure, characters, activeCharId, onSave, o
 
             {/* 情绪标签 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>情绪标签（可选）</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>情绪标签（可选）</div>
               <input
                 type="text"
                 placeholder="比如：温柔、感动、想念…"
@@ -572,7 +572,7 @@ function TreasureToTimelinePanel({ treasure, characters, activeCharId, onSave, o
 
             {/* 重要程度 */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>
                 重要程度
                 <span style={{ marginLeft: 8, fontWeight: 500, color: "#5a4a6a" }}>{form.importance}</span>
               </div>
@@ -600,7 +600,7 @@ function TreasureToTimelinePanel({ treasure, characters, activeCharId, onSave, o
                 border: `1.5px solid ${form.pinned ? "rgba(120,100,160,.6)" : "rgba(196,166,184,.4)"}`,
                 background: form.pinned ? "rgba(120,100,160,.14)" : "transparent",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 10, color: "#7a5aaa", flexShrink: 0, transition: "all .15s",
+                fontSize: 12, color: "#7a5aaa", flexShrink: 0, transition: "all .15s",
               }}>
                 {form.pinned ? "📌" : ""}
               </div>
@@ -609,7 +609,7 @@ function TreasureToTimelinePanel({ treasure, characters, activeCharId, onSave, o
 
             {/* 备注 */}
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>备注（可选）</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6 }}>备注（可选）</div>
               <textarea
                 placeholder="关于这一刻想多说的…"
                 value={form.note}
@@ -714,19 +714,19 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromT
             </div>
             {/* 元信息行 */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 9, color: "var(--text-faint)", background: "rgba(196,166,184,.15)", padding: "1px 6px", borderRadius: 7 }}>{ti.label}</span>
+              <span style={{ fontSize: 12, color: "var(--text-faint)", background: "rgba(196,166,184,.15)", padding: "1px 6px", borderRadius: 7 }}>{ti.label}</span>
               {treasure.sourceCharName && (
-                <span style={{ fontSize: 10, color: "var(--text-faint)" }}>来自 {treasure.sourceCharName}</span>
+                <span style={{ fontSize: 12, color: "var(--text-faint)" }}>来自 {treasure.sourceCharName}</span>
               )}
               {treasure.createdAt > 0 && (
-                <span style={{ fontSize: 10, color: "var(--text-faint)" }}>{fmtDate(treasure.createdAt)}</span>
+                <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{fmtDate(treasure.createdAt)}</span>
               )}
               {treasure.important && (
-                <span style={{ fontSize: 10, color: "#c08030" }}>★ 重要</span>
+                <span style={{ fontSize: 12, color: "#c08030" }}>★ 重要</span>
               )}
               {treasure._dupHint && (
                 <span title="同一来源已有其他宝库条目，可能重复" style={{
-                  fontSize: 9, padding: "1px 6px", borderRadius: 6,
+                  fontSize: 12, padding: "1px 6px", borderRadius: 6,
                   background: "rgba(180,140,60,.12)", color: "#a07828",
                   border: "1px solid rgba(180,140,60,.22)",
                 }}>同源</span>
@@ -747,7 +747,7 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromT
           >★</button>
           <button
             onClick={() => setEditing(true)}
-            style={{ background: "rgba(196,166,184,.15)", border: "1px solid rgba(196,166,184,.3)", borderRadius: 8, padding: "4px 10px", fontSize: 11, color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)", flexShrink: 0 }}
+            style={{ background: "rgba(196,166,184,.15)", border: "1px solid rgba(196,166,184,.3)", borderRadius: 8, padding: "4px 10px", fontSize: 12, color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)", flexShrink: 0 }}
           >编辑</button>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9a8aac", padding: "4px 2px", flexShrink: 0 }}>✕</button>
         </div>
@@ -770,7 +770,7 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromT
               background: "rgba(196,166,184,.1)", border: "1px solid rgba(196,166,184,.18)",
               fontSize: 12, color: "var(--text-mid)", lineHeight: 1.7,
             }}>
-              <span style={{ fontSize: 10, color: "var(--text-faint)", display: "block", marginBottom: 3 }}>备注</span>
+              <span style={{ fontSize: 12, color: "var(--text-faint)", display: "block", marginBottom: 3 }}>备注</span>
               {treasure.note}
             </div>
           )}
@@ -779,7 +779,7 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromT
           {(treasure.tags || []).length > 0 && (
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12 }}>
               {treasure.tags.map((tag, i) => (
-                <span key={i} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 8, background: "rgba(196,166,184,.12)", color: "#9a8aac" }}>#{tag}</span>
+                <span key={i} style={{ fontSize: 12, padding: "2px 8px", borderRadius: 8, background: "rgba(196,166,184,.12)", color: "#9a8aac" }}>#{tag}</span>
               ))}
             </div>
           )}
@@ -790,7 +790,7 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromT
             paddingTop: 16,
             borderTop: "1px solid rgba(196,166,184,.15)",
           }}>
-            <div style={{ fontSize: 10, color: "var(--text-faint)", letterSpacing: 1.5, marginBottom: 12 }}>操作</div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1.5, marginBottom: 12 }}>操作</div>
 
             {/* 第一行：已实现操作 */}
             <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
@@ -851,7 +851,7 @@ function TreasureDetail({ treasure, onSave, onDelete, onClose, onCreateNoteFromT
                 </div>
               </div>
             ) : (
-              <button onClick={() => setShowDeleteConfirm(true)} style={{ width: "100%", padding: "8px", borderRadius: 10, background: "transparent", border: "1px solid rgba(196,166,184,.15)", fontSize: 11, color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)" }}>🗑 删除这条宝物</button>
+              <button onClick={() => setShowDeleteConfirm(true)} style={{ width: "100%", padding: "8px", borderRadius: 10, background: "transparent", border: "1px solid rgba(196,166,184,.15)", fontSize: 12, color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)" }}>🗑 删除这条宝物</button>
             )}
           </div>
         </div>
@@ -989,7 +989,7 @@ export default function TreasurePage({
             key={t.value}
             onClick={() => setFilterType(t.value)}
             style={{
-              padding: "4px 12px", borderRadius: 20, fontSize: 11,
+              padding: "4px 12px", borderRadius: 20, fontSize: 12,
               cursor: "pointer", whiteSpace: "nowrap",
               fontFamily: "var(--font-main)", transition: "all .15s", flexShrink: 0,
               background: filterType === t.value ? "rgba(120,100,160,.15)" : "transparent",
@@ -1045,18 +1045,18 @@ export default function TreasurePage({
                 {/* 头部 */}
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
                   <span style={{ fontSize: 14 }}>{ti.emoji}</span>
-                  <span style={{ fontSize: 10, color: "var(--text-faint)", background: "rgba(196,166,184,.12)", padding: "1px 7px", borderRadius: 8 }}>{ti.label}</span>
-                  {charName && <span style={{ fontSize: 10, color: "var(--text-faint)" }}>{charName}</span>}
+                  <span style={{ fontSize: 12, color: "var(--text-faint)", background: "rgba(196,166,184,.12)", padding: "1px 7px", borderRadius: 8 }}>{ti.label}</span>
+                  {charName && <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{charName}</span>}
                   {item._dupHint && (
                     <span title="同一来源已有其他宝库条目" style={{
-                      fontSize: 9, padding: "1px 6px", borderRadius: 6,
+                      fontSize: 12, padding: "1px 6px", borderRadius: 6,
                       background: "rgba(180,140,60,.12)", color: "#a07828",
                       border: "1px solid rgba(180,140,60,.22)", letterSpacing: 0.3,
                     }}>同源重复</span>
                   )}
-                  {item.important && <span style={{ fontSize: 11, color: "#c08030", marginLeft: "auto" }}>★</span>}
-                  {!item.important && <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--text-faint)" }}>{fmtDate(item.createdAt)}</span>}
-                  {item.important && <span style={{ fontSize: 10, color: "var(--text-faint)" }}>{fmtDate(item.createdAt)}</span>}
+                  {item.important && <span style={{ fontSize: 12, color: "#c08030", marginLeft: "auto" }}>★</span>}
+                  {!item.important && <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--text-faint)" }}>{fmtDate(item.createdAt)}</span>}
+                  {item.important && <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{fmtDate(item.createdAt)}</span>}
                 </div>
 
                 {/* 标题（如果和正文不同）*/}
@@ -1080,7 +1080,7 @@ export default function TreasurePage({
                 {(item.tags || []).length > 0 && (
                   <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 7 }}>
                     {item.tags.map((tag, i) => (
-                      <span key={i} style={{ fontSize: 10, padding: "1px 6px", borderRadius: 7, background: "rgba(196,166,184,.12)", color: "#9a8aac" }}>#{tag}</span>
+                      <span key={i} style={{ fontSize: 12, padding: "1px 6px", borderRadius: 7, background: "rgba(196,166,184,.12)", color: "#9a8aac" }}>#{tag}</span>
                     ))}
                   </div>
                 )}

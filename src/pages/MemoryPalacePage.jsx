@@ -76,11 +76,11 @@ function SettlementDraftCard({ draft, onApplySection, onDismiss, onDelete, onNav
           <span style={{ fontSize: 16 }}>🌿</span>
           <div>
             <div style={{ fontSize: 13, color: "var(--text-mid)", fontWeight: 500 }}>阶段沉淀草稿</div>
-            <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 1 }}>{date} · 等待确认</div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 1 }}>{date} · 等待确认</div>
           </div>
         </div>
         {applied.length > 0 && (
-          <span style={{ fontSize: 10, color: "#6a9a6a", background: "rgba(100,160,100,.1)", padding: "2px 8px", borderRadius: 8 }}>
+          <span style={{ fontSize: 12, color: "#6a9a6a", background: "rgba(100,160,100,.1)", padding: "2px 8px", borderRadius: 8 }}>
             已采纳 {applied.length} / {totalSections} 节
           </span>
         )}
@@ -93,7 +93,7 @@ function SettlementDraftCard({ draft, onApplySection, onDismiss, onDelete, onNav
         borderRadius: 8,
         background: "rgba(106,122,174,.06)",
         border: "1px solid rgba(106,122,174,.12)",
-        fontSize: 11, color: "#7a7aaa", lineHeight: 1.7,
+        fontSize: 12, color: "#7a7aaa", lineHeight: 1.7,
       }}>
         采纳后的内容会<strong>追加写入</strong>对应位置，不会覆盖你手写的内容。若需要修改，可前往写入位置编辑。
       </div>
@@ -121,17 +121,17 @@ function SettlementDraftCard({ draft, onApplySection, onDismiss, onDelete, onNav
                     <span>{emoji}</span>
                     <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-mid)" }}>{label}</span>
                   </div>
-                  <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2, paddingLeft: 20 }}>
+                  <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2, paddingLeft: 20 }}>
                     写入位置：{target}
                   </div>
                 </div>
                 {isApplied ? (
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
-                    <span style={{ fontSize: 11, color: "#6a9a6a" }}>✓ 已采纳</span>
+                    <span style={{ fontSize: 12, color: "#6a9a6a" }}>✓ 已采纳</span>
                     <button
                       onClick={() => onNavigate?.(navTarget)}
                       style={{
-                        fontSize: 10, padding: "2px 9px", borderRadius: 7, cursor: "pointer",
+                        fontSize: 12, padding: "2px 9px", borderRadius: 7, cursor: "pointer",
                         background: "rgba(100,160,100,.1)", border: "1px solid rgba(100,160,100,.25)",
                         color: "#4a8a4a", fontFamily: "var(--font-main)",
                       }}
@@ -141,7 +141,7 @@ function SettlementDraftCard({ draft, onApplySection, onDismiss, onDelete, onNav
                   <button
                     onClick={() => onApplySection(key)}
                     style={{
-                      fontSize: 11, padding: "3px 12px", borderRadius: 8, cursor: "pointer",
+                      fontSize: 12, padding: "3px 12px", borderRadius: 8, cursor: "pointer",
                       background: "rgba(106,122,174,.15)", border: "1px solid rgba(106,122,174,.3)",
                       color: "#6a7aae", fontFamily: "var(--font-main)", flexShrink: 0,
                     }}
@@ -162,7 +162,7 @@ function SettlementDraftCard({ draft, onApplySection, onDismiss, onDelete, onNav
               {/* 采纳成功提示 */}
               {isApplied && (
                 <div style={{
-                  marginTop: 6, fontSize: 10, color: "#6a9a6a",
+                  marginTop: 6, fontSize: 12, color: "#6a9a6a",
                   padding: "4px 8px", borderRadius: 6,
                   background: "rgba(100,160,100,.07)",
                 }}>
@@ -277,7 +277,7 @@ export default function MemoryPalacePage({
               border: "1px solid rgba(106,122,174,.3)",
               borderRadius: 12,
               color: "#6a7aae",
-              fontSize: 11,
+              fontSize: 12,
               cursor: "pointer",
               fontFamily: "var(--font-main)",
               letterSpacing: 0.5,
@@ -298,7 +298,7 @@ export default function MemoryPalacePage({
             onClick={() => openCharTreasure(memCharId)}
             style={{
               display: "flex", alignItems: "center", gap: 6,
-              padding: "5px 14px", borderRadius: 10, fontSize: 11,
+              padding: "5px 14px", borderRadius: 10, fontSize: 12,
               background: "rgba(196,166,184,.12)",
               border: "1px solid rgba(196,166,184,.3)",
               color: "#7a6a8e", cursor: "pointer",
@@ -310,7 +310,7 @@ export default function MemoryPalacePage({
               const cnt = (charTreasures || []).filter((t) => t.charId === memCharId).length;
               return cnt > 0 ? (
                 <span style={{
-                  fontSize: 10, background: "rgba(120,100,160,.15)",
+                  fontSize: 12, background: "rgba(120,100,160,.15)",
                   padding: "1px 6px", borderRadius: 6, color: "#6a5a8a",
                 }}>
                   {cnt}
@@ -360,7 +360,7 @@ export default function MemoryPalacePage({
           active:    entries.filter((m) => (m.mentions || 0) > 0).length,
         };
         const badge = (n) => n > 0
-          ? <span style={{ marginLeft: 3, fontSize: 10, opacity: 0.7 }}>{n}</span>
+          ? <span style={{ marginLeft: 3, fontSize: 12, opacity: 0.7 }}>{n}</span>
           : null;
         return (
           <div className="mem-toolbar">
@@ -408,7 +408,7 @@ export default function MemoryPalacePage({
 
             {/* 注入策略说明 */}
             <div style={{
-              fontSize: 11, color: "var(--text-faint)", lineHeight: 1.7,
+              fontSize: 12, color: "var(--text-faint)", lineHeight: 1.7,
               padding: "7px 12px", marginBottom: 8,
               background: "rgba(100,100,160,.05)", borderRadius: 8,
               letterSpacing: ".2px",
@@ -482,14 +482,14 @@ export default function MemoryPalacePage({
                         {isPinned && <span style={{ marginRight: 3 }}>📌</span>}
                         {mem.important && !isPinned && "⭐ "}
                         {srcLabel && (
-                          <span style={{ fontSize: 10, color: "var(--accent-iris)", marginRight: 4, fontWeight: 400 }}>
+                          <span style={{ fontSize: 12, color: "var(--accent-iris)", marginRight: 4, fontWeight: 400 }}>
                             {srcLabel === "AI" ? "🤖AI" : `【${srcLabel}】`}
                           </span>
                         )}
                         {mem.text}
                       </div>
                       <div style={{
-                        fontSize: 10, padding: "2px 8px", borderRadius: 8, flexShrink: 0,
+                        fontSize: 12, padding: "2px 8px", borderRadius: 8, flexShrink: 0,
                         background: isBlocked ? "rgba(150,150,150,.1)" :
                           heatInfo.level === "hot"    ? "rgba(232,120,120,.1)" :
                           heatInfo.level === "warm"   ? "rgba(220,180,80,.1)"  :
@@ -521,7 +521,7 @@ export default function MemoryPalacePage({
                         {/* 注入开关 */}
                         <button
                           className="mem-entry-del"
-                          style={{ color: isBlocked ? "#bbb" : "#8a9ac8", fontSize: 11 }}
+                          style={{ color: isBlocked ? "#bbb" : "#8a9ac8", fontSize: 12 }}
                           onClick={() => toggleInjectable && toggleInjectable(memCharId, memTab, mem.id)}
                           title={isBlocked ? "允许唤醒（加入 prompt）" : "暂停唤醒（不注入 prompt）"}
                         >
@@ -593,7 +593,7 @@ export default function MemoryPalacePage({
                 <option value={30}>1月一次</option>
               </select>
               {getReflectSetting(memCharId).lastReflectTime && (
-                <span style={{ fontSize: 11, color: "var(--text-faint)" }}>
+                <span style={{ fontSize: 12, color: "var(--text-faint)" }}>
                   上次：{new Date(getReflectSetting(memCharId).lastReflectTime).toLocaleDateString("zh-CN")}
                 </span>
               )}
@@ -642,7 +642,7 @@ export default function MemoryPalacePage({
             {(settlementDrafts || [])
               .filter((d) => d.loverId === memCharId && d.status !== "pending")
               .length > 0 && (
-              <div style={{ margin: "16px 0 8px", fontSize: 11, color: "var(--text-faint)", letterSpacing: 1 }}>
+              <div style={{ margin: "16px 0 8px", fontSize: 12, color: "var(--text-faint)", letterSpacing: 1 }}>
                 已处理的沉淀记录
               </div>
             )}
@@ -658,14 +658,14 @@ export default function MemoryPalacePage({
                   <span style={{ fontSize: 18 }}>{draft.status === "applied" ? "✅" : "🚫"}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 12, color: "var(--text-mid)", lineHeight: 1.5 }}>{draft.title}</div>
-                    <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>
+                    <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>
                       {draft.status === "applied" ? "已全部采纳" : "已忽略"}
                       {draft.appliedSections?.length > 0 && draft.status !== "applied" &&
                         ` · 已采纳 ${draft.appliedSections.length} 节`}
                     </div>
                   </div>
                   <button
-                    style={{ fontSize: 11, color: "#c07070", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}
+                    style={{ fontSize: 12, color: "#c07070", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}
                     onClick={() => deleteSettlementDraft && deleteSettlementDraft(draft.id)}
                   >
                     删除
@@ -675,7 +675,7 @@ export default function MemoryPalacePage({
             }
 
             {/* ── 手动写总结 ── */}
-            <div style={{ margin: "20px 0 10px", fontSize: 11, color: "var(--text-faint)", letterSpacing: 1 }}>
+            <div style={{ margin: "20px 0 10px", fontSize: 12, color: "var(--text-faint)", letterSpacing: 1 }}>
               手动记录
             </div>
             {!showAddSummary ? (
@@ -702,7 +702,7 @@ export default function MemoryPalacePage({
 
             {/* 旧版总结列表（作为历史记录保留） */}
             {(getCharMemories(memCharId).summaries || []).length > 0 && (
-              <div style={{ marginBottom: 8, fontSize: 11, color: "var(--text-faint)", letterSpacing: 1 }}>历史记录</div>
+              <div style={{ marginBottom: 8, fontSize: 12, color: "var(--text-faint)", letterSpacing: 1 }}>历史记录</div>
             )}
             {(getCharMemories(memCharId).summaries || []).length === 0 && !showAddSummary &&
               (settlementDrafts || []).filter((d) => d.loverId === memCharId).length === 0 && (
@@ -714,20 +714,20 @@ export default function MemoryPalacePage({
             {(getCharMemories(memCharId).summaries || []).map((s) => (
               <div key={s.id} className="summary-entry">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, color: "#aaa" }}>
+                  <span style={{ fontSize: 12, color: "#aaa" }}>
                     {s.isAutoReflect ? "🧠 旧版AI反思" : "✍️ 手动记录"} · {s.time}
                   </span>
                 </div>
                 <div className="summary-entry-text">{s.text}</div>
                 {!s.feedbackApplied && (
                   <div style={{ marginTop: 8, textAlign: "right" }}>
-                    <button className="btn-ghost" onClick={() => applyFeedbackToProfile(memCharId, s)} disabled={reflecting} style={{ fontSize: 11, padding: "3px 10px", color: "var(--text-faint)" }}>
+                    <button className="btn-ghost" onClick={() => applyFeedbackToProfile(memCharId, s)} disabled={reflecting} style={{ fontSize: 12, padding: "3px 10px", color: "var(--text-faint)" }}>
                       {reflecting ? "处理中..." : "📜 写入世界观"}
                     </button>
                   </div>
                 )}
                 {s.feedbackApplied && (
-                  <div style={{ marginTop: 8, textAlign: "right", fontSize: 11, color: "var(--text-faint)" }}>✓ 已写入世界观</div>
+                  <div style={{ marginTop: 8, textAlign: "right", fontSize: 12, color: "var(--text-faint)" }}>✓ 已写入世界观</div>
                 )}
               </div>
             ))}

@@ -1,6 +1,6 @@
 // ─── 卧室页 ───
 // 背景：房间插画（public/bedroom-bg.jpg）
-// 热点：便签墙 / 书桌(手札) / 柜子(档案) / 床(宝库) / 门(出门)
+// 热点（3个）：书桌(日常) / 书柜(ta的房间) / 门(聊天区)
 // 小透明卡片 + 悬停发光，点击跳转
 
 import { useState } from "react";
@@ -86,7 +86,7 @@ function HotspotCard({ label, sublabel, position, cardAnchor = "center", onClick
         }}
       >
         <div style={{
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 500,
           color: hovered ? "#4a3a5e" : "#6a5a7a",
           letterSpacing: 2,
@@ -97,7 +97,7 @@ function HotspotCard({ label, sublabel, position, cardAnchor = "center", onClick
         </div>
         {sublabel && (
           <div style={{
-            fontSize: 9,
+            fontSize: 12,
             color: "var(--text-faint)",
             letterSpacing: 0.5,
             marginTop: 1,
@@ -173,46 +173,29 @@ export default function BedroomPage({
       */}
       <div style={{ flex: 1, position: "relative", zIndex: 1 }}>
 
-        {/* 便签墙 → 便签墙页 */}
+        {/* 书桌 → 日常 */}
         <HotspotCard
-          label="便签墙"
-          sublabel={unreadNotes.length > 0 ? `${unreadNotes.length} 条未读` : undefined}
-          onClick={() => navigateTo("stickyNotes")}
-          zone={{ position: "absolute", top: "10%", left: "42%", width: "28%", height: "16%" }}
-          position={{ top: "10%", left: "42%" }}
-          cardAnchor="center"
-        />
-
-        {/* 书桌 → 我的手札 */}
-        <HotspotCard
-          label="我的手札"
+          label="日常"
+          sublabel="手札 · 便签 · 时间线"
           onClick={() => navigateTo("diary")}
           zone={{ position: "absolute", top: "44%", left: "30%", width: "36%", height: "18%" }}
           position={{ top: "44%", left: "30%" }}
           cardAnchor="center"
         />
 
-        {/* 绿色书柜 → 我的档案 */}
+        {/* 绿色书柜 → ta 的房间 */}
         <HotspotCard
-          label="我的档案"
+          label="ta 的房间"
+          sublabel="入住档案 · 记忆"
           onClick={() => navigateTo("profileHome")}
           zone={{ position: "absolute", top: "12%", left: "68%", width: "20%", height: "30%" }}
           position={{ top: "12%", left: "68%" }}
           cardAnchor="center"
         />
 
-        {/* 床 → 我的宝库 */}
+        {/* 右侧门 → 聊天区 */}
         <HotspotCard
-          label="我的宝库"
-          onClick={() => navigateTo("treasure")}
-          zone={{ position: "absolute", top: "38%", left: "0%", width: "30%", height: "26%" }}
-          position={{ top: "38%", left: "0%" }}
-          cardAnchor="left"
-        />
-
-        {/* 右侧门 → 出门（打开角色选择） */}
-        <HotspotCard
-          label="出门"
+          label="聊天区"
           sublabel={characters.length > 0 ? `${characters.length} 位在家` : ""}
           onClick={() => setShowCharSelect(true)}
           zone={{ position: "absolute", top: "0%", left: "86%", width: "14%", height: "52%" }}
@@ -249,11 +232,11 @@ export default function BedroomPage({
                 <span style={{ fontSize: 22, flexShrink: 0 }}>☕</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 500, color: "#5a4a6a", letterSpacing: 0.5 }}>小家客厅</div>
-                  <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 1 }}>
+                  <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 1 }}>
                     {groupChats?.length > 0 ? `${groupChats.length} 个客厅 · 点击进入` : "把他们叫到一起聊聊"}
                   </div>
                 </div>
-                <span style={{ fontSize: 11, color: "var(--text-faint)" }}>→</span>
+                <span style={{ fontSize: 12, color: "var(--text-faint)" }}>→</span>
               </div>
             )}
 

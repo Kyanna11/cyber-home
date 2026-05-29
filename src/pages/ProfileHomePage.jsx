@@ -62,13 +62,13 @@ function ProfileDraftCard({ draft, onApplySection, onUnapplySection, onUpdateSec
           <div style={{ fontSize: 13, color: "var(--text-mid)", fontWeight: 500 }}>
             📋 声声档案草稿
           </div>
-          <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>
             {date} · {srcLabel}
           </div>
         </div>
         {totalApplied > 0 && (
           <span style={{
-            fontSize: 10, color: "#4a8a4a",
+            fontSize: 12, color: "#4a8a4a",
             background: "rgba(100,160,100,.1)",
             padding: "2px 9px", borderRadius: 8,
           }}>
@@ -108,11 +108,11 @@ function ProfileDraftCard({ draft, onApplySection, onUnapplySection, onUpdateSec
                     {label}
                   </span>
                   {isCurrentState && (
-                    <span style={{ fontSize: 9, color: "#4a8a4a", background: "rgba(100,180,100,.12)", padding: "1px 6px", borderRadius: 6 }}>
+                    <span style={{ fontSize: 12, color: "#4a8a4a", background: "rgba(100,180,100,.12)", padding: "1px 6px", borderRadius: 6 }}>
                       近期
                     </span>
                   )}
-                  <span style={{ fontSize: 10, color: "var(--text-faint)" }}>({items.length}条)</span>
+                  <span style={{ fontSize: 12, color: "var(--text-faint)" }}>({items.length}条)</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   {isApplied ? (
@@ -120,7 +120,7 @@ function ProfileDraftCard({ draft, onApplySection, onUnapplySection, onUpdateSec
                       onClick={(e) => { e.stopPropagation(); onUnapplySection?.(key); }}
                       title="撤回本节采纳并从已确认内容中删除"
                       style={{
-                        fontSize: 11, padding: "3px 11px", borderRadius: 8, cursor: "pointer",
+                        fontSize: 12, padding: "3px 11px", borderRadius: 8, cursor: "pointer",
                         background: "rgba(100,160,100,.08)",
                         border: "1px solid rgba(100,160,100,.28)",
                         color: "#4a8a4a",
@@ -131,7 +131,7 @@ function ProfileDraftCard({ draft, onApplySection, onUnapplySection, onUpdateSec
                     <button
                       onClick={(e) => { e.stopPropagation(); onApplySection(key); }}
                       style={{
-                        fontSize: 11, padding: "3px 11px", borderRadius: 8, cursor: "pointer",
+                        fontSize: 12, padding: "3px 11px", borderRadius: 8, cursor: "pointer",
                         background: col.bg || "rgba(106,122,174,.1)",
                         border: `1px solid ${col.border || "rgba(106,122,174,.25)"}`,
                         color: col.accent || "#6a7aae",
@@ -141,7 +141,7 @@ function ProfileDraftCard({ draft, onApplySection, onUnapplySection, onUpdateSec
                       采纳本节
                     </button>
                   )}
-                  <span style={{ fontSize: 10, color: "var(--text-faint)" }}>{isOpen ? "▲" : "▼"}</span>
+                  <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{isOpen ? "▲" : "▼"}</span>
                 </div>
               </div>
 
@@ -152,7 +152,7 @@ function ProfileDraftCard({ draft, onApplySection, onUnapplySection, onUpdateSec
                   borderTop: `1px solid ${col.border || "rgba(196,166,184,.15)"}`,
                 }}>
                   {isCurrentState && (
-                    <div style={{ fontSize: 10, color: "#4a8a4a", marginBottom: 6, lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 12, color: "#4a8a4a", marginBottom: 6, lineHeight: 1.5 }}>
                       ⚠️ 近期状态采纳后会标注「近期」，不会被当作永久事实
                     </div>
                   )}
@@ -177,7 +177,7 @@ function ProfileDraftCard({ draft, onApplySection, onUnapplySection, onUpdateSec
                         <button
                           onClick={(e) => { e.stopPropagation(); setEditingSection(null); }}
                           style={{
-                            fontSize: 11, padding: "4px 12px", borderRadius: 8, cursor: "pointer",
+                            fontSize: 12, padding: "4px 12px", borderRadius: 8, cursor: "pointer",
                             background: "transparent", border: "1px solid rgba(196,166,184,.3)",
                             color: "var(--text-faint)", fontFamily: "var(--font-main)",
                           }}
@@ -190,7 +190,7 @@ function ProfileDraftCard({ draft, onApplySection, onUnapplySection, onUpdateSec
                             setEditingSection(null);
                           }}
                           style={{
-                            flex: 1, fontSize: 11, padding: "4px 0", borderRadius: 8, cursor: "pointer",
+                            flex: 1, fontSize: 12, padding: "4px 0", borderRadius: 8, cursor: "pointer",
                             background: col.bg || "rgba(106,122,174,.12)",
                             border: `1px solid ${col.border || "rgba(106,122,174,.25)"}`,
                             color: col.accent || "#6a7aae", fontFamily: "var(--font-main)",
@@ -218,7 +218,7 @@ function ProfileDraftCard({ draft, onApplySection, onUnapplySection, onUpdateSec
                             setEditingSection({ key, text: items.join("\n") });
                           }}
                           style={{
-                            marginTop: 8, fontSize: 11, padding: "4px 12px", borderRadius: 8, cursor: "pointer",
+                            marginTop: 8, fontSize: 12, padding: "4px 12px", borderRadius: 8, cursor: "pointer",
                             background: "transparent", border: `1px dashed ${col.border || "rgba(196,166,184,.3)"}`,
                             color: col.accent || "var(--text-faint)", fontFamily: "var(--font-main)",
                           }}
@@ -311,26 +311,26 @@ function HomeSectionPanel({ section, entries, onDelete, onAdd }) {
           <span>{section.emoji}</span>
           <span style={{ fontSize: 13, color: "var(--text-mid)", fontWeight: 500 }}>{section.label}</span>
           {section.isCurrentState && (
-            <span style={{ fontSize: 9, color: "#4a8a4a", background: "rgba(100,180,100,.12)", padding: "1px 6px", borderRadius: 6 }}>
+            <span style={{ fontSize: 12, color: "#4a8a4a", background: "rgba(100,180,100,.12)", padding: "1px 6px", borderRadius: 6 }}>
               近期
             </span>
           )}
           {entries.length > 0 && (
-            <span style={{ fontSize: 11, color: "var(--text-faint)" }}>({entries.length})</span>
+            <span style={{ fontSize: 12, color: "var(--text-faint)" }}>({entries.length})</span>
           )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {entries.length === 0 && (
-            <span style={{ fontSize: 11, color: "var(--text-faint)" }}>未填写</span>
+            <span style={{ fontSize: 12, color: "var(--text-faint)" }}>未填写</span>
           )}
-          <span style={{ fontSize: 10, color: "var(--text-faint)" }}>{open ? "▲" : "▼"}</span>
+          <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{open ? "▲" : "▼"}</span>
         </div>
       </div>
 
       {/* 展开内容 */}
       {open && (
         <div style={{ padding: "0 14px 12px", borderTop: `1px solid ${col.border || "rgba(196,166,184,.15)"}` }}>
-          <div style={{ fontSize: 11, color: "var(--text-faint)", margin: "8px 0 10px", lineHeight: 1.6 }}>
+          <div style={{ fontSize: 12, color: "var(--text-faint)", margin: "8px 0 10px", lineHeight: 1.6 }}>
             {section.hint}
             {section.isCurrentState && "·近期状态注入时会加「近期」标注，请定期更新"}
           </div>
@@ -350,7 +350,7 @@ function HomeSectionPanel({ section, entries, onDelete, onAdd }) {
               <div style={{ flex: 1, fontSize: 12, color: "var(--text-main)", lineHeight: 1.7 }}>
                 {entry.text}
                 {entry.source === "draft" && entry.sourceCharName && (
-                  <span style={{ marginLeft: 6, fontSize: 10, color: "var(--text-faint)" }}>
+                  <span style={{ marginLeft: 6, fontSize: 12, color: "var(--text-faint)" }}>
                     (来自{entry.sourceCharName}迁入)
                   </span>
                 )}
@@ -358,7 +358,7 @@ function HomeSectionPanel({ section, entries, onDelete, onAdd }) {
               <button
                 onClick={() => onDelete(section.key, entry.id)}
                 style={{
-                  fontSize: 11, color: "#c09090", background: "none",
+                  fontSize: 12, color: "#c09090", background: "none",
                   border: "none", cursor: "pointer", padding: "2px 4px", flexShrink: 0,
                 }}
               >
@@ -388,7 +388,7 @@ function HomeSectionPanel({ section, entries, onDelete, onAdd }) {
                 <button
                   onClick={() => { setShowAdd(false); setAddText(""); }}
                   style={{
-                    fontSize: 11, padding: "5px 12px", borderRadius: 8, cursor: "pointer",
+                    fontSize: 12, padding: "5px 12px", borderRadius: 8, cursor: "pointer",
                     background: "transparent", border: "1px solid rgba(196,166,184,.3)",
                     color: "var(--text-faint)", fontFamily: "var(--font-main)",
                   }}
@@ -414,7 +414,7 @@ function HomeSectionPanel({ section, entries, onDelete, onAdd }) {
             <button
               onClick={() => setShowAdd(true)}
               style={{
-                marginTop: 10, width: "100%", fontSize: 11, padding: "6px 0",
+                marginTop: 10, width: "100%", fontSize: 12, padding: "6px 0",
                 borderRadius: 8, cursor: "pointer",
                 background: "transparent",
                 border: `1px dashed ${col.border || "rgba(196,166,184,.3)"}`,
@@ -507,7 +507,7 @@ export default function ProfileHomePage({
           <div style={{ fontSize: 15, fontWeight: 600, color: "#5a4a6a", letterSpacing: 2 }}>
             🏠 声声档案
           </div>
-          <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 1 }}>
+          <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 1 }}>
             全家共享的地基 · {totalEntries > 0 ? `已有 ${totalEntries} 条` : "还没有内容"}
           </div>
         </div>
@@ -570,7 +570,7 @@ export default function ProfileHomePage({
               ✏️ 手动写入声声档案
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label style={{ fontSize: 11, color: "var(--text-faint)", display: "block", marginBottom: 5 }}>
+              <label style={{ fontSize: 12, color: "var(--text-faint)", display: "block", marginBottom: 5 }}>
                 写入分区
               </label>
               <select
@@ -590,7 +590,7 @@ export default function ProfileHomePage({
                 ))}
               </select>
               {HOME_SECTIONS.find((s) => s.key === manualSection)?.isCurrentState && (
-                <div style={{ fontSize: 10, color: "#4a8a4a", marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: "#4a8a4a", marginTop: 4 }}>
                   ⚠️ 近期状态注入时会加「近期」标注，不会被当作永久事实
                 </div>
               )}
@@ -646,7 +646,7 @@ export default function ProfileHomePage({
             <div style={{ fontSize: 12, color: "var(--text-mid)", marginBottom: 4, fontWeight: 500 }}>
               📄 从文字中提炼声声档案草稿
             </div>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 10, lineHeight: 1.6 }}>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 10, lineHeight: 1.6 }}>
               粘贴一段故事、日记或聊天记录，AI 会提炼出关于你的信息，生成草稿等你审批
             </div>
             <textarea
@@ -670,7 +670,7 @@ export default function ProfileHomePage({
                 width: "100%", marginTop: 8, padding: "7px 10px", borderRadius: 8,
                 border: "1px solid rgba(196,166,184,.3)",
                 background: "rgba(255,255,255,.7)",
-                fontSize: 11, color: "var(--text-mid)",
+                fontSize: 12, color: "var(--text-mid)",
                 fontFamily: "var(--font-main)", outline: "none", boxSizing: "border-box",
               }}
             />
@@ -732,7 +732,7 @@ export default function ProfileHomePage({
         {/* ── 待审批草稿 ── */}
         {pendingDrafts.length > 0 && (
           <>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 8, marginTop: 4 }}>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 8, marginTop: 4 }}>
               待审批草稿 ({pendingDrafts.length})
             </div>
             {pendingDrafts.map((draft) => (
@@ -750,7 +750,7 @@ export default function ProfileHomePage({
         )}
 
         {/* ── 已确认内容（各分区） ── */}
-        <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 1, margin: "16px 0 8px" }}>
+        <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: 1, margin: "16px 0 8px" }}>
           已确认内容
         </div>
         {HOME_SECTIONS.map((section) => (
@@ -769,7 +769,7 @@ export default function ProfileHomePage({
             fontSize: 12, lineHeight: 2.2, padding: "20px 0",
           }}>
             还没有任何档案内容<br />
-            <span style={{ fontSize: 11 }}>
+            <span style={{ fontSize: 12 }}>
               点「手动添加」直接写入，或「从文字提炼草稿」让 AI 帮你整理
             </span>
           </div>
@@ -783,7 +783,7 @@ export default function ProfileHomePage({
               style={{
                 width: "100%", padding: "8px 0", borderRadius: 10,
                 background: "transparent", border: "1px solid rgba(196,166,184,.2)",
-                color: "var(--text-faint)", fontSize: 11, cursor: "pointer",
+                color: "var(--text-faint)", fontSize: 12, cursor: "pointer",
                 fontFamily: "var(--font-main)", letterSpacing: 0.5,
               }}
             >
@@ -804,7 +804,7 @@ export default function ProfileHomePage({
                     {new Date(draft.createdAt).toLocaleDateString("zh-CN")} ·{" "}
                     {{ paste: "粘贴文字", migration: "迁入记录", diary: "日记", chat: "聊天" }[draft.sourceType] || "未知"}
                   </div>
-                  <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 1 }}>
+                  <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 1 }}>
                     {draft.status === "approved"
                       ? `全部采纳`
                       : draft.appliedSections?.length > 0
@@ -815,7 +815,7 @@ export default function ProfileHomePage({
                 <button
                   onClick={() => deleteProfileDraft(draft.id)}
                   style={{
-                    fontSize: 11, color: "#c07070", background: "none",
+                    fontSize: 12, color: "#c07070", background: "none",
                     border: "none", cursor: "pointer", padding: "2px 6px",
                   }}
                 >

@@ -181,7 +181,7 @@ function JournalMemoryDraftPanel({ draft, journal, char, onClose }) {
             <div style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>
               💡 看看有什么值得记住
             </div>
-            <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>
               {char?.name || "ta"} · {journal.title}
             </div>
           </div>
@@ -191,7 +191,7 @@ function JournalMemoryDraftPanel({ draft, journal, char, onClose }) {
         {/* 提示 */}
         <div style={{
           padding: "8px 16px",
-          fontSize: 11, color: "#8a7898", lineHeight: 1.7,
+          fontSize: 12, color: "#8a7898", lineHeight: 1.7,
           background: "rgba(196,166,184,.06)",
           borderBottom: "1px solid rgba(196,166,184,.1)",
           flexShrink: 0,
@@ -216,7 +216,7 @@ function JournalMemoryDraftPanel({ draft, journal, char, onClose }) {
                     <span style={{ fontSize: 14 }}>{emoji}</span>
                     <span style={{ fontSize: 12, fontWeight: 500, color: "#5a4a6a" }}>{label}</span>
                     <span style={{
-                      fontSize: 10, color: "var(--text-faint)",
+                      fontSize: 12, color: "var(--text-faint)",
                       background: "rgba(196,166,184,.14)",
                       padding: "1px 7px", borderRadius: 8,
                     }}>{hint}</span>
@@ -225,7 +225,7 @@ function JournalMemoryDraftPanel({ draft, journal, char, onClose }) {
                     <button
                       onClick={() => copySection(key, items)}
                       style={{
-                        padding: "3px 10px", borderRadius: 8, fontSize: 10,
+                        padding: "3px 10px", borderRadius: 8, fontSize: 12,
                         background: copiedSection === key ? "rgba(120,100,160,.2)" : "rgba(120,100,160,.08)",
                         border: "1px solid rgba(120,100,160,.18)",
                         color: "#7a5aaa", cursor: "pointer", fontFamily: "var(--font-main)",
@@ -257,7 +257,7 @@ function JournalMemoryDraftPanel({ draft, journal, char, onClose }) {
                         border: `1.5px solid ${isIgnored ? "rgba(196,166,184,.3)" : "rgba(120,100,160,.3)"}`,
                         background: isIgnored ? "transparent" : "rgba(120,100,160,.08)",
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 8, color: "#7a5aaa",
+                        fontSize: 12, color: "#7a5aaa",
                       }}>
                         {isIgnored ? "" : "✓"}
                       </div>
@@ -292,7 +292,7 @@ function JournalMemoryDraftPanel({ draft, journal, char, onClose }) {
                   <button
                     onClick={() => setShowRaw((v) => !v)}
                     style={{
-                      padding: "6px 16px", borderRadius: 10, fontSize: 11,
+                      padding: "6px 16px", borderRadius: 10, fontSize: 12,
                       background: "rgba(120,100,160,.08)",
                       border: "1px solid rgba(120,100,160,.18)",
                       color: "#7a5aaa", cursor: "pointer",
@@ -305,7 +305,7 @@ function JournalMemoryDraftPanel({ draft, journal, char, onClose }) {
                     <pre style={{
                       marginTop: 12, padding: "12px 14px", borderRadius: 10, textAlign: "left",
                       background: "rgba(255,255,255,.6)", border: "1px solid rgba(196,166,184,.2)",
-                      fontSize: 11, color: "#5a4a6a", lineHeight: 1.7,
+                      fontSize: 12, color: "#5a4a6a", lineHeight: 1.7,
                       whiteSpace: "pre-wrap", wordBreak: "break-all", overflow: "auto",
                       maxHeight: 240,
                     }}>
@@ -429,12 +429,12 @@ function JournalDetailPanel({
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
                 <span style={{
-                  fontSize: 10, padding: "1px 7px", borderRadius: 8,
+                  fontSize: 12, padding: "1px 7px", borderRadius: 8,
                   background: "rgba(196,166,184,.18)", color: "#7a6a8e",
                 }}>
                   {src.emoji} {src.label}
                 </span>
-                <span style={{ fontSize: 10, color: "var(--text-faint)" }}>{dateStr}</span>
+                <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{dateStr}</span>
                 {journal.important && <span style={{ fontSize: 12 }}>⭐</span>}
               </div>
             </div>
@@ -467,12 +467,12 @@ function JournalDetailPanel({
           {/* 错误提示 */}
           {draftError && (
             <div style={{
-              padding: "8px 16px", fontSize: 11, color: "#9a5050",
+              padding: "8px 16px", fontSize: 12, color: "#9a5050",
               background: "rgba(200,140,140,.08)", borderTop: "1px solid rgba(200,140,140,.12)",
               flexShrink: 0, display: "flex", alignItems: "center", gap: 8,
             }}>
               <span style={{ flex: 1 }}>{draftError}</span>
-              <button onClick={() => setDraftError("")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "#9a5050" }}>✕</button>
+              <button onClick={() => setDraftError("")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#9a5050" }}>✕</button>
             </div>
           )}
 
@@ -518,7 +518,7 @@ function JournalDetailPanel({
               <button
                 onClick={handleSaveToTreasure}
                 style={{
-                  flex: 1, padding: "9px 8px", borderRadius: 10, fontSize: 11,
+                  flex: 1, padding: "9px 8px", borderRadius: 10, fontSize: 12,
                   background: "rgba(255,255,255,.6)", border: "1px solid rgba(196,166,184,.25)",
                   color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)",
                 }}
@@ -529,7 +529,7 @@ function JournalDetailPanel({
                 <button
                   onClick={() => setDeleteConfirm(true)}
                   style={{
-                    padding: "9px 14px", borderRadius: 10, fontSize: 11,
+                    padding: "9px 14px", borderRadius: 10, fontSize: 12,
                     background: "none", border: "1px solid rgba(196,166,184,.25)",
                     color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)",
                   }}
@@ -538,8 +538,8 @@ function JournalDetailPanel({
                 </button>
               ) : (
                 <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => onDelete?.(journal.id)} style={{ padding: "9px 12px", borderRadius: 10, fontSize: 11, background: "rgba(180,80,80,.85)", border: "none", color: "white", cursor: "pointer", fontFamily: "var(--font-main)" }}>确认删除</button>
-                  <button onClick={() => setDeleteConfirm(false)} style={{ padding: "9px 10px", borderRadius: 10, fontSize: 11, background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)", color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)" }}>取消</button>
+                  <button onClick={() => onDelete?.(journal.id)} style={{ padding: "9px 12px", borderRadius: 10, fontSize: 12, background: "rgba(180,80,80,.85)", border: "none", color: "white", cursor: "pointer", fontFamily: "var(--font-main)" }}>确认删除</button>
+                  <button onClick={() => setDeleteConfirm(false)} style={{ padding: "9px 10px", borderRadius: 10, fontSize: 12, background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)", color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)" }}>取消</button>
                 </div>
               )}
             </div>
@@ -595,14 +595,14 @@ function JournalCard({ journal, char, onClick }) {
               overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
             }}>
               {journal.title}
-              {journal.important && <span style={{ marginLeft: 4, fontSize: 11 }}>⭐</span>}
+              {journal.important && <span style={{ marginLeft: 4, fontSize: 12 }}>⭐</span>}
             </div>
           </div>
-          <span style={{ fontSize: 10, color: "var(--text-faint)", flexShrink: 0 }}>{dateStr}</span>
+          <span style={{ fontSize: 12, color: "var(--text-faint)", flexShrink: 0 }}>{dateStr}</span>
         </div>
         {/* 内容摘要 */}
         <div style={{
-          fontSize: 11.5, color: "#6a5a7a", lineHeight: 1.7,
+          fontSize: 12, color: "#6a5a7a", lineHeight: 1.7,
           overflow: "hidden",
           display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
         }}>
@@ -611,14 +611,14 @@ function JournalCard({ journal, char, onClick }) {
         {/* 来源 + 草稿状态 */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
           <span style={{
-            fontSize: 10, color: "#8a7898",
+            fontSize: 12, color: "#8a7898",
             background: "rgba(196,166,184,.15)", padding: "1px 7px", borderRadius: 8,
           }}>
             {src.emoji} {src.label}
           </span>
           {journal.memoryDraft && (
             <span style={{
-              fontSize: 10, color: "#7a9878",
+              fontSize: 12, color: "#7a9878",
               background: "rgba(140,180,140,.12)", padding: "1px 7px", borderRadius: 8,
               border: "1px solid rgba(140,180,140,.2)",
             }}>
@@ -626,7 +626,7 @@ function JournalCard({ journal, char, onClick }) {
             </span>
           )}
           {journal.sourceTitle && (
-            <span style={{ fontSize: 10, color: "var(--text-faint)" }}>
+            <span style={{ fontSize: 12, color: "var(--text-faint)" }}>
               {journal.sourceTitle}
             </span>
           )}
@@ -730,7 +730,7 @@ export default function ResidentJournalPage({
           <button
             onClick={() => setSelectedCharId(null)}
             style={{
-              padding: "5px 14px", borderRadius: 20, fontSize: 11,
+              padding: "5px 14px", borderRadius: 20, fontSize: 12,
               background: !selectedCharId ? "rgba(120,100,160,.14)" : "rgba(255,255,255,.7)",
               border: `1px solid ${!selectedCharId ? "rgba(120,100,160,.35)" : "rgba(196,166,184,.25)"}`,
               color: !selectedCharId ? "#5a4a8a" : "#7a6a8e",
@@ -745,7 +745,7 @@ export default function ResidentJournalPage({
               key={c.id}
               onClick={() => setSelectedCharId(c.id)}
               style={{
-                padding: "5px 14px", borderRadius: 20, fontSize: 11,
+                padding: "5px 14px", borderRadius: 20, fontSize: 12,
                 background: selectedCharId === c.id ? "rgba(120,100,160,.14)" : "rgba(255,255,255,.7)",
                 border: `1px solid ${selectedCharId === c.id ? "rgba(120,100,160,.35)" : "rgba(196,166,184,.25)"}`,
                 color: selectedCharId === c.id ? "#5a4a8a" : "#7a6a8e",
@@ -772,7 +772,7 @@ export default function ResidentJournalPage({
             {residentJournals.length === 0 ? (
               <>
                 还没有入住者日记。<br />
-                <span style={{ fontSize: 11 }}>
+                <span style={{ fontSize: 12 }}>
                   在单聊页「让他记下今天」，<br />
                   或在客厅记录里生成日记。
                 </span>

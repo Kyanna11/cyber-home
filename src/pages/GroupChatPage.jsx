@@ -79,7 +79,7 @@ function CreateGroupForm({ characters, onConfirm, onCancel }) {
 
         <div style={{ flex: 1, overflow: "auto", padding: "16px 18px 32px" }}>
           <div style={{ marginBottom: 18 }}>
-            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 1, display: "block", marginBottom: 6 }}>
+            <label style={{ fontSize: 12, color: "#7a6a8e", letterSpacing: 1, display: "block", marginBottom: 6 }}>
               客厅名称
             </label>
             <input
@@ -95,12 +95,12 @@ function CreateGroupForm({ characters, onConfirm, onCancel }) {
             />
           </div>
 
-          <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7, padding: "8px 10px", background: "rgba(196,166,184,.08)", borderRadius: 8 }}>
+          <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7, padding: "8px 10px", background: "rgba(196,166,184,.08)", borderRadius: 8 }}>
             客厅记录会保存为群聊会话，不会自动写入长期记忆。
           </div>
 
           <div style={{ marginBottom: 18 }}>
-            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 1, display: "block", marginBottom: 8 }}>
+            <label style={{ fontSize: 12, color: "#7a6a8e", letterSpacing: 1, display: "block", marginBottom: 8 }}>
               邀请哪些入住者（至少 2 位）
             </label>
             {characters.length === 0 ? (
@@ -126,14 +126,14 @@ function CreateGroupForm({ characters, onConfirm, onCancel }) {
                       <Avatar char={char} size={36} radius={12} fontSize={18} />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 13, color: "#5a4a6a", fontWeight: 500 }}>{char.name || "未命名"}</div>
-                        <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{char.relation || ""}</div>
+                        <div style={{ fontSize: 12, color: "var(--text-faint)" }}>{char.relation || ""}</div>
                       </div>
                       <div style={{
                         width: 18, height: 18, borderRadius: "50%", flexShrink: 0,
                         border: `1.5px solid ${checked ? "rgba(120,100,160,.6)" : "rgba(196,166,184,.4)"}`,
                         background: checked ? "rgba(120,100,160,.85)" : "transparent",
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 10, color: "white",
+                        fontSize: 12, color: "white",
                       }}>
                         {checked ? "✓" : ""}
                       </div>
@@ -145,11 +145,11 @@ function CreateGroupForm({ characters, onConfirm, onCancel }) {
           </div>
 
           {selected.length < 2 && selected.length > 0 && (
-            <div style={{ fontSize: 11, color: "#9a7878", marginBottom: 10 }}>至少再选一位~</div>
+            <div style={{ fontSize: 12, color: "#9a7878", marginBottom: 10 }}>至少再选一位~</div>
           )}
 
           <div style={{ marginBottom: 18 }}>
-            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 1, display: "block", marginBottom: 6 }}>
+            <label style={{ fontSize: 12, color: "#7a6a8e", letterSpacing: 1, display: "block", marginBottom: 6 }}>
               这次想聊什么 <span style={{ opacity: 0.5 }}>（可选）</span>
             </label>
             <textarea
@@ -235,7 +235,7 @@ function TreasureSaveSheet({ msg, char, groupName, onConfirm, onCancel }) {
           </div>
 
           {/* 标题输入 */}
-          <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
+          <label style={{ fontSize: 12, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
             给这句话起个名字
           </label>
           <input
@@ -249,7 +249,7 @@ function TreasureSaveSheet({ msg, char, groupName, onConfirm, onCancel }) {
             }}
           />
 
-          <div style={{ fontSize: 10, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7 }}>
+          <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14, lineHeight: 1.7 }}>
             将保存到「我的宝库」，不会影响任何入住者的长期记忆
           </div>
 
@@ -321,7 +321,7 @@ function TimelineEventSheet({ msg, char, group, characters, onConfirm, onCancel 
         <div style={{ flex: 1, overflow: "auto", padding: "14px 18px 32px", display: "flex", flexDirection: "column", gap: 14 }}>
           {/* 标题 */}
           <div>
-            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
+            <label style={{ fontSize: 12, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
               时刻标题
             </label>
             <input
@@ -337,7 +337,7 @@ function TimelineEventSheet({ msg, char, group, characters, onConfirm, onCancel 
 
           {/* 短描述 */}
           <div>
-            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
+            <label style={{ fontSize: 12, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
               想记住什么
             </label>
             <textarea
@@ -355,7 +355,7 @@ function TimelineEventSheet({ msg, char, group, characters, onConfirm, onCancel 
 
           {/* 日期 */}
           <div>
-            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
+            <label style={{ fontSize: 12, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
               发生日期
             </label>
             <input
@@ -372,7 +372,7 @@ function TimelineEventSheet({ msg, char, group, characters, onConfirm, onCancel 
 
           {/* 归属 */}
           <div>
-            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 8 }}>
+            <label style={{ fontSize: 12, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 8 }}>
               记在谁的时间线
             </label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -410,7 +410,7 @@ function TimelineEventSheet({ msg, char, group, characters, onConfirm, onCancel 
             </div>
           </div>
 
-          <div style={{ fontSize: 10, color: "var(--text-faint)", lineHeight: 1.7, marginTop: -4 }}>
+          <div style={{ fontSize: 12, color: "var(--text-faint)", lineHeight: 1.7, marginTop: -4 }}>
             保存到关系时间线，不会影响任何入住者的长期记忆
           </div>
 
@@ -474,7 +474,7 @@ function MoreMenuSheet({ onClose, onSettle, onViewRecords }) {
             <span style={{ fontSize: 20 }}>📚</span>
             <div>
               <div style={{ fontSize: 13, color: "#5a4a6a", fontWeight: 500 }}>整理这次客厅</div>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 1 }}>保存完整对话到记录册</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 1 }}>保存完整对话到记录册</div>
             </div>
           </button>
 
@@ -492,7 +492,7 @@ function MoreMenuSheet({ onClose, onSettle, onViewRecords }) {
             <span style={{ fontSize: 20 }}>🗂</span>
             <div>
               <div style={{ fontSize: 13, color: "#5a4a6a", fontWeight: 500 }}>客厅记录册</div>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 1 }}>查看已保存的客厅对话</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 1 }}>查看已保存的客厅对话</div>
             </div>
           </button>
 
@@ -614,19 +614,19 @@ function LoungeListPanel({ groupChats, groupThreads, characters, activeGroupId, 
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
                         <span style={{ fontSize: 13, color: "#5a4a6a", fontWeight: 500 }}>{g.name}</span>
-                        {isActive && <span style={{ fontSize: 9, color: "#7a6a8e", background: "rgba(120,100,160,.12)", padding: "1px 6px", borderRadius: 6 }}>进行中</span>}
+                        {isActive && <span style={{ fontSize: 12, color: "#7a6a8e", background: "rgba(120,100,160,.12)", padding: "1px 6px", borderRadius: 6 }}>进行中</span>}
                       </div>
-                      <div style={{ fontSize: 10, color: "var(--text-faint)", marginBottom: lastMsg ? 4 : 0 }}>
+                      <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: lastMsg ? 4 : 0 }}>
                         {memberChars.map((c) => c.emoji || "💜").join(" ")} {memberChars.map((c) => c.name || "ta").join("、")}
                       </div>
                       {lastMsg && (
-                        <div style={{ fontSize: 11, color: "#8a7898", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <div style={{ fontSize: 12, color: "#8a7898", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {lastMsg.role === "user" ? "你：" : `${lastMsg.authorName}：`}{lastMsg.content?.slice(0, 30)}{(lastMsg.content?.length || 0) > 30 ? "…" : ""}
                         </div>
                       )}
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
-                      <span style={{ fontSize: 9, color: "var(--text-faint)" }}>
+                      <span style={{ fontSize: 12, color: "var(--text-faint)" }}>
                         {new Date(g.updatedAt).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" })}
                       </span>
                     </div>
@@ -636,7 +636,7 @@ function LoungeListPanel({ groupChats, groupThreads, characters, activeGroupId, 
                     <button
                       onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(g.id); }}
                       style={{
-                        padding: "3px 10px", borderRadius: 8, fontSize: 10,
+                        padding: "3px 10px", borderRadius: 8, fontSize: 12,
                         background: "none", border: "1px solid rgba(196,166,184,.3)",
                         color: "var(--text-faint)", cursor: "pointer",
                         fontFamily: "var(--font-main)",
@@ -689,7 +689,7 @@ function CharBubble({ msg, char, isActive, onToggleActive, onTreasure, onTimelin
         </div>
         <div style={{ maxWidth: "72%", minWidth: 0 }}>
           {/* 名字 + 时间 */}
-          <div style={{ fontSize: 10, color: "var(--text-faint)", marginBottom: 4, display: "flex", gap: 6, alignItems: "baseline" }}>
+          <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 4, display: "flex", gap: 6, alignItems: "baseline" }}>
             <span style={{ fontWeight: 500, color: "#7a6a8e" }}>{msg.authorName}</span>
             <span>{msg.time}</span>
           </div>
@@ -722,7 +722,7 @@ function CharBubble({ msg, char, isActive, onToggleActive, onTreasure, onTimelin
           <button
             onClick={onTreasure}
             style={{
-              padding: "5px 12px", borderRadius: 10, fontSize: 11,
+              padding: "5px 12px", borderRadius: 10, fontSize: 12,
               background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.22)",
               color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)",
               letterSpacing: 0.3, transition: "all .15s",
@@ -733,7 +733,7 @@ function CharBubble({ msg, char, isActive, onToggleActive, onTreasure, onTimelin
           <button
             onClick={onTimeline}
             style={{
-              padding: "5px 12px", borderRadius: 10, fontSize: 11,
+              padding: "5px 12px", borderRadius: 10, fontSize: 12,
               background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.22)",
               color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)",
               letterSpacing: 0.3, transition: "all .15s",
@@ -768,13 +768,13 @@ function UserBubble({ msg, isActive, onToggleActive, onTimeline, onCharTreasure 
           }}>
             {msg.content}
           </div>
-          <div style={{ fontSize: 10, color: "var(--text-faint)", textAlign: "right", marginTop: 3 }}>
+          <div style={{ fontSize: 12, color: "var(--text-faint)", textAlign: "right", marginTop: 3 }}>
             {msg.time}
           </div>
           {msg.designatedCharName && (
             <div style={{ textAlign: "right", marginTop: 4 }}>
               <span style={{
-                display: "inline-block", fontSize: 10, color: "#8a7898",
+                display: "inline-block", fontSize: 12, color: "#8a7898",
                 background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.18)",
                 borderRadius: 8, padding: "2px 8px", letterSpacing: 0.3,
               }}>
@@ -798,7 +798,7 @@ function UserBubble({ msg, isActive, onToggleActive, onTimeline, onCharTreasure 
             <button
               onClick={onCharTreasure}
               style={{
-                padding: "5px 12px", borderRadius: 10, fontSize: 11,
+                padding: "5px 12px", borderRadius: 10, fontSize: 12,
                 background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.22)",
                 color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)",
                 letterSpacing: 0.3, transition: "all .15s",
@@ -810,7 +810,7 @@ function UserBubble({ msg, isActive, onToggleActive, onTimeline, onCharTreasure 
           <button
             onClick={onTimeline}
             style={{
-              padding: "5px 12px", borderRadius: 10, fontSize: 11,
+              padding: "5px 12px", borderRadius: 10, fontSize: 12,
               background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.22)",
               color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)",
               letterSpacing: 0.3, transition: "all .15s",
@@ -828,7 +828,7 @@ function UserBubble({ msg, isActive, onToggleActive, onTimeline, onCharTreasure 
 function SystemMsg({ text }) {
   return (
     <div style={{
-      textAlign: "center", padding: "8px 24px", fontSize: 11,
+      textAlign: "center", padding: "8px 24px", fontSize: 12,
       color: "var(--text-faint)", letterSpacing: 0.6, lineHeight: 1.7,
     }}>{text}</div>
   );
@@ -839,7 +839,7 @@ function RoundDivider({ index }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "6px 16px 12px" }}>
       <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.2)" }} />
-      <span style={{ fontSize: 9, color: "rgba(196,166,184,.6)", letterSpacing: 1 }}>第 {index} 轮</span>
+      <span style={{ fontSize: 12, color: "rgba(196,166,184,.6)", letterSpacing: 1 }}>第 {index} 轮</span>
       <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.2)" }} />
     </div>
   );
@@ -864,7 +864,7 @@ function TypingFor({ char }) {
         <div className="typing-dot" />
         <div className="typing-dot" />
       </div>
-      <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{char?.name || "ta"} 正在回复…</span>
+      <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{char?.name || "ta"} 正在回复…</span>
     </div>
   );
 }
@@ -930,7 +930,7 @@ function GroupCharTreasureSheet({ msg, group, characters, onConfirm, onCancel })
 
           {/* 选择珍藏给谁 */}
           <div>
-            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 8 }}>
+            <label style={{ fontSize: 12, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 8 }}>
               交给谁珍藏
             </label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -956,7 +956,7 @@ function GroupCharTreasureSheet({ msg, group, characters, onConfirm, onCancel })
 
           {/* 备注 */}
           <div>
-            <label style={{ fontSize: 11, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
+            <label style={{ fontSize: 12, color: "#7a6a8e", letterSpacing: 0.8, display: "block", marginBottom: 6 }}>
               备注（可不填）
             </label>
             <textarea
@@ -1057,7 +1057,7 @@ function SettleConfirmPanel({ group, messages, onConfirm, onCancel }) {
             borderRadius: 14, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8,
           }}>
             <div style={{ fontSize: 13, color: "#5a4a6a", fontWeight: 500 }}>☕ {group?.name}</div>
-            <div style={{ fontSize: 11, color: "var(--text-faint)" }}>共 {msgCount} 条消息</div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)" }}>共 {msgCount} 条消息</div>
           </div>
 
           {/* 说明 */}
@@ -1177,25 +1177,25 @@ function LoungeRecordListPanel({ loungeRecords, groupChats, onView, onDelete, on
                       <div style={{ fontSize: 13, color: "#5a4a6a", fontWeight: 500 }}>
                         📚 {rec.groupName}
                       </div>
-                      <span style={{ fontSize: 10, color: "var(--text-faint)", flexShrink: 0 }}>
+                      <span style={{ fontSize: 12, color: "var(--text-faint)", flexShrink: 0 }}>
                         {new Date(rec.savedAt).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" })}
                       </span>
                     </div>
-                    <div style={{ fontSize: 11, color: "#8a7898", marginBottom: 4 }}>
+                    <div style={{ fontSize: 12, color: "#8a7898", marginBottom: 4 }}>
                       {(rec.memberNames || []).join("、")}
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--text-faint)" }}>
+                    <div style={{ fontSize: 12, color: "var(--text-faint)" }}>
                       {rec.messageCount} 条消息
                     </div>
                   </div>
                   <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 14px 10px", gap: 6 }}>
                     <button
                       onClick={() => onView(rec)}
-                      style={{ padding: "4px 12px", borderRadius: 8, fontSize: 11, background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.2)", color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)" }}
+                      style={{ padding: "4px 12px", borderRadius: 8, fontSize: 12, background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.2)", color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)" }}
                     >查看原文</button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(rec.id); }}
-                      style={{ padding: "4px 10px", borderRadius: 8, fontSize: 11, background: "none", border: "1px solid rgba(196,166,184,.3)", color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)" }}
+                      style={{ padding: "4px 10px", borderRadius: 8, fontSize: 12, background: "none", border: "1px solid rgba(196,166,184,.3)", color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)" }}
                     >删除</button>
                   </div>
                 </div>
@@ -1464,7 +1464,7 @@ function DiaryMemoryDraftPanel({ draft, diary, char, onClose }) {
                 {diary.charName} · 记忆沉淀草稿
               </span>
             </div>
-            <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 3 }}>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 3 }}>
               共 {totalCount} 条建议 · 草稿状态，不会自动写入任何记忆
             </div>
           </div>
@@ -1476,7 +1476,7 @@ function DiaryMemoryDraftPanel({ draft, diary, char, onClose }) {
           padding: "8px 16px 10px",
           background: "rgba(120,100,160,.04)",
           borderBottom: "1px solid rgba(196,166,184,.1)",
-          fontSize: 11, color: "#7a6a8e", lineHeight: 1.8, flexShrink: 0,
+          fontSize: 12, color: "#7a6a8e", lineHeight: 1.8, flexShrink: 0,
         }}>
           以下建议来自 AI 分析，<strong>不会自动写入任何长期记忆</strong>。点"忽略"划掉不需要的条目；点"复制"把建议带到对应功能手动操作。
         </div>
@@ -1499,12 +1499,12 @@ function DiaryMemoryDraftPanel({ draft, diary, char, onClose }) {
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                     <span style={{ fontSize: 14 }}>{section.emoji}</span>
                     <span style={{ fontSize: 12, color: "#5a4a6a", fontWeight: 500, flex: 1 }}>{section.label}</span>
-                    <span style={{ fontSize: 10, color: "var(--text-faint)", marginRight: 4 }}>{section.hint}</span>
+                    <span style={{ fontSize: 12, color: "var(--text-faint)", marginRight: 4 }}>{section.hint}</span>
                     <button
                       onClick={() => copySection(section.key, items)}
                       disabled={activeCount === 0}
                       style={{
-                        padding: "3px 10px", borderRadius: 7, fontSize: 10, flexShrink: 0,
+                        padding: "3px 10px", borderRadius: 7, fontSize: 12, flexShrink: 0,
                         background: copiedSection === section.key ? "rgba(120,100,160,.2)" : "rgba(120,100,160,.08)",
                         border: "1px solid rgba(120,100,160,.18)",
                         color: activeCount === 0 ? "var(--text-faint)" : "#6a5a7a",
@@ -1536,7 +1536,7 @@ function DiaryMemoryDraftPanel({ draft, diary, char, onClose }) {
                           <button
                             onClick={() => toggleIgnore(itemKey)}
                             style={{
-                              flexShrink: 0, padding: "3px 9px", borderRadius: 7, fontSize: 10,
+                              flexShrink: 0, padding: "3px 9px", borderRadius: 7, fontSize: 12,
                               background: isIgnored ? "rgba(196,166,184,.12)" : "rgba(180,120,120,.08)",
                               border: `1px solid ${isIgnored ? "rgba(196,166,184,.2)" : "rgba(180,120,120,.2)"}`,
                               color: isIgnored ? "var(--text-faint)" : "#9a6a6a",
@@ -1555,9 +1555,9 @@ function DiaryMemoryDraftPanel({ draft, diary, char, onClose }) {
           {/* 原始输出（折叠查看，调试用）*/}
           {draft.rawOutput && (
             <details style={{ marginTop: 4 }}>
-              <summary style={{ fontSize: 10, color: "var(--text-faint)", cursor: "pointer", userSelect: "none" }}>查看 AI 原始输出</summary>
+              <summary style={{ fontSize: 12, color: "var(--text-faint)", cursor: "pointer", userSelect: "none" }}>查看 AI 原始输出</summary>
               <pre style={{
-                fontSize: 10, color: "#7a6a8e", lineHeight: 1.6, marginTop: 6,
+                fontSize: 12, color: "#7a6a8e", lineHeight: 1.6, marginTop: 6,
                 whiteSpace: "pre-wrap", wordBreak: "break-word",
                 padding: "10px", borderRadius: 8,
                 background: "rgba(255,255,255,.5)", border: "1px solid rgba(196,166,184,.18)",
@@ -1623,12 +1623,12 @@ function DiaryCard({ diary, char, onSaveToTreasure, onSaveToCharTreasure, onDele
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 12, color: "#5a4a6a", fontWeight: 500 }}>{diary.title}</div>
-          <div style={{ fontSize: 10, color: "var(--text-faint)" }}>
+          <div style={{ fontSize: 12, color: "var(--text-faint)" }}>
             {new Date(diary.createdAt).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
           </div>
         </div>
         <span style={{
-          fontSize: 9, color: "#8a7898", padding: "2px 7px",
+          fontSize: 12, color: "#8a7898", padding: "2px 7px",
           background: "rgba(120,100,160,.08)", border: "1px solid rgba(120,100,160,.15)",
           borderRadius: 6,
         }}>草稿</span>
@@ -1646,7 +1646,7 @@ function DiaryCard({ diary, char, onSaveToTreasure, onSaveToCharTreasure, onDele
             onClick={diary.memoryDraft ? onViewDraft : onGenerateDraft}
             disabled={isGeneratingDraft}
             style={{
-              width: "100%", padding: "8px 12px", borderRadius: 10, fontSize: 11,
+              width: "100%", padding: "8px 12px", borderRadius: 10, fontSize: 12,
               background: diary.memoryDraft
                 ? "rgba(120,100,160,.1)"
                 : isGeneratingDraft
@@ -1675,28 +1675,28 @@ function DiaryCard({ diary, char, onSaveToTreasure, onSaveToCharTreasure, onDele
       {/* 操作行 */}
       {deleteConfirm ? (
         <div style={{ padding: "8px 14px 12px", display: "flex", gap: 8 }}>
-          <div style={{ fontSize: 11, color: "#7a5a5a", flex: 1, alignSelf: "center" }}>确认删除这篇日记？</div>
-          <button onClick={() => { onDelete(); setDeleteConfirm(false); }} style={{ padding: "5px 12px", borderRadius: 8, fontSize: 11, background: "rgba(180,80,80,.85)", border: "none", color: "white", cursor: "pointer", fontFamily: "var(--font-main)" }}>删除</button>
-          <button onClick={() => setDeleteConfirm(false)} style={{ padding: "5px 12px", borderRadius: 8, fontSize: 11, background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)", color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)" }}>取消</button>
+          <div style={{ fontSize: 12, color: "#7a5a5a", flex: 1, alignSelf: "center" }}>确认删除这篇日记？</div>
+          <button onClick={() => { onDelete(); setDeleteConfirm(false); }} style={{ padding: "5px 12px", borderRadius: 8, fontSize: 12, background: "rgba(180,80,80,.85)", border: "none", color: "white", cursor: "pointer", fontFamily: "var(--font-main)" }}>删除</button>
+          <button onClick={() => setDeleteConfirm(false)} style={{ padding: "5px 12px", borderRadius: 8, fontSize: 12, background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.3)", color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)" }}>取消</button>
         </div>
       ) : (
         <div style={{ padding: "4px 14px 12px", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
           {savedFeedback ? (
-            <span style={{ fontSize: 11, color: "#7a6a8e" }}>{savedFeedback}</span>
+            <span style={{ fontSize: 12, color: "#7a6a8e" }}>{savedFeedback}</span>
           ) : (
-            <button onClick={handleSave} style={{ padding: "5px 12px", borderRadius: 9, fontSize: 11, background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.2)", color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)" }}>
+            <button onClick={handleSave} style={{ padding: "5px 12px", borderRadius: 9, fontSize: 12, background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.2)", color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)" }}>
               💎 保存到我的宝库
             </button>
           )}
           <button
             disabled
             title="他的宝库还在准备中"
-            style={{ padding: "5px 12px", borderRadius: 9, fontSize: 11, background: "rgba(196,166,184,.08)", border: "1px solid rgba(196,166,184,.2)", color: "var(--text-faint)", cursor: "not-allowed", fontFamily: "var(--font-main)" }}
+            style={{ padding: "5px 12px", borderRadius: 9, fontSize: 12, background: "rgba(196,166,184,.08)", border: "1px solid rgba(196,166,184,.2)", color: "var(--text-faint)", cursor: "not-allowed", fontFamily: "var(--font-main)" }}
           >
             💝 他的宝库（稍后开放）
           </button>
           <div style={{ flex: 1 }} />
-          <button onClick={() => setDeleteConfirm(true)} style={{ padding: "4px 10px", borderRadius: 8, fontSize: 10, background: "none", border: "1px solid rgba(196,166,184,.25)", color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)" }}>删除</button>
+          <button onClick={() => setDeleteConfirm(true)} style={{ padding: "4px 10px", borderRadius: 8, fontSize: 12, background: "none", border: "1px solid rgba(196,166,184,.25)", color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)" }}>删除</button>
         </div>
       )}
     </div>
@@ -1872,7 +1872,7 @@ function LoungeRecordDetailPanel({
         }}>
           <div>
             <div style={{ fontSize: 14, color: "#5a4a6a", fontWeight: 500 }}>📚 {record.groupName}</div>
-            <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>
               {(record.memberNames || []).join("、")} · {record.messageCount} 条 · {new Date(record.savedAt).toLocaleDateString("zh-CN", { month: "long", day: "numeric" })}整理
             </div>
           </div>
@@ -1888,7 +1888,7 @@ function LoungeRecordDetailPanel({
           <button
             onClick={handleCopy}
             style={{
-              padding: "6px 14px", borderRadius: 10, fontSize: 11,
+              padding: "6px 14px", borderRadius: 10, fontSize: 12,
               background: copied ? "rgba(120,100,160,.2)" : "rgba(120,100,160,.1)",
               border: "1px solid rgba(120,100,160,.22)",
               color: "#6a5a7a", cursor: "pointer", fontFamily: "var(--font-main)",
@@ -1900,7 +1900,7 @@ function LoungeRecordDetailPanel({
             onClick={handleGenerateAll}
             disabled={generating}
             style={{
-              padding: "6px 14px", borderRadius: 10, fontSize: 11,
+              padding: "6px 14px", borderRadius: 10, fontSize: 12,
               background: generating ? "rgba(196,166,184,.15)" : "rgba(120,100,160,.88)",
               border: "none",
               color: generating ? "#9a8aac" : "white",
@@ -1912,19 +1912,19 @@ function LoungeRecordDetailPanel({
             {generating ? `${currentGenChar?.name || "…"} 正在写…` : "📓 生成入住者日记"}
           </button>
           {diaryFeedback && (
-            <span style={{ fontSize: 11, color: "#7a6a8e", marginLeft: 2 }}>{diaryFeedback}</span>
+            <span style={{ fontSize: 12, color: "#7a6a8e", marginLeft: 2 }}>{diaryFeedback}</span>
           )}
         </div>
 
         {/* 错误提示 */}
         {genError && (
           <div style={{
-            padding: "6px 16px", fontSize: 11, color: "#9a5050",
+            padding: "6px 16px", fontSize: 12, color: "#9a5050",
             background: "rgba(200,140,140,.08)", borderBottom: "1px solid rgba(200,140,140,.12)",
             flexShrink: 0, display: "flex", alignItems: "center", gap: 8,
           }}>
             <span style={{ flex: 1 }}>{genError}</span>
-            <button onClick={() => setGenError("")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "#9a5050", padding: 0 }}>✕</button>
+            <button onClick={() => setGenError("")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#9a5050", padding: 0 }}>✕</button>
           </div>
         )}
 
@@ -1935,7 +1935,7 @@ function LoungeRecordDetailPanel({
           {diaries.length > 0 && (
             <div style={{ marginBottom: 20 }}>
               <div style={{
-                fontSize: 11, color: "#8a7898", letterSpacing: 1,
+                fontSize: 12, color: "#8a7898", letterSpacing: 1,
                 marginBottom: 10, display: "flex", alignItems: "center", gap: 8,
               }}>
                 <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
@@ -1982,7 +1982,7 @@ function LoungeRecordDetailPanel({
               <div className="typing-indicator" style={{ background: "rgba(255,255,255,.75)", border: "1px solid rgba(196,166,184,.22)", gap: 3, padding: "6px 10px" }}>
                 <div className="typing-dot" /><div className="typing-dot" /><div className="typing-dot" />
               </div>
-              <span style={{ fontSize: 11, color: "var(--text-faint)" }}>
+              <span style={{ fontSize: 12, color: "var(--text-faint)" }}>
                 {currentGenChar?.name || "ta"} 正在写日记…
               </span>
             </div>
@@ -1999,7 +1999,7 @@ function LoungeRecordDetailPanel({
               }}
             >
               <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
-              <span style={{ fontSize: 11, color: "#8a7898", letterSpacing: 1, whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: 12, color: "#8a7898", letterSpacing: 1, whiteSpace: "nowrap" }}>
                 {showRaw ? "▲ 收起原文" : "▼ 查看完整对话"}
               </span>
               <div style={{ flex: 1, height: 1, background: "rgba(196,166,184,.25)" }} />
@@ -2613,7 +2613,7 @@ export default function GroupChatPage({
 
           {groupChats.length > 0 && (
             <div style={{ marginTop: 8, width: "100%", maxWidth: 320 }}>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 8, letterSpacing: 0.5 }}>或者选择已有客厅</div>
+              <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 8, letterSpacing: 0.5 }}>或者选择已有客厅</div>
               {groupChats.map((g) => (
                 <div
                   key={g.id}
@@ -2627,9 +2627,9 @@ export default function GroupChatPage({
                   <span style={{ fontSize: 18 }}>☕</span>
                   <div style={{ flex: 1, textAlign: "left" }}>
                     <div style={{ fontSize: 13, color: "#5a4a6a" }}>{g.name}</div>
-                    <div style={{ fontSize: 10, color: "var(--text-faint)" }}>{g.memberIds.length} 位入住者</div>
+                    <div style={{ fontSize: 12, color: "var(--text-faint)" }}>{g.memberIds.length} 位入住者</div>
                   </div>
-                  <span style={{ fontSize: 11, color: "var(--text-faint)" }}>→</span>
+                  <span style={{ fontSize: 12, color: "var(--text-faint)" }}>→</span>
                 </div>
               ))}
             </div>
@@ -2730,7 +2730,7 @@ export default function GroupChatPage({
                 width: 20, height: 20, borderRadius: 7, flexShrink: 0,
                 background: "rgba(196,166,184,.18)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 11, overflow: "hidden",
+                fontSize: 12, overflow: "hidden",
                 border: "1px solid rgba(196,166,184,.3)",
               }}>
                 {char.avatarImg
@@ -2738,7 +2738,7 @@ export default function GroupChatPage({
                   : (char.emoji || "💜")}
               </div>
             ))}
-            <span style={{ fontSize: 10, color: "var(--text-faint)", marginLeft: 2 }}>
+            <span style={{ fontSize: 12, color: "var(--text-faint)", marginLeft: 2 }}>
               {members.map((c) => c.name || "ta").join("、")}
             </span>
           </div>
@@ -2764,7 +2764,7 @@ export default function GroupChatPage({
           onClick={() => setShowGroupList(true)}
           style={{
             background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.18)",
-            borderRadius: 10, padding: "5px 10px", fontSize: 11,
+            borderRadius: 10, padding: "5px 10px", fontSize: 12,
             color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)", flexShrink: 0,
           }}
         >
@@ -2813,14 +2813,14 @@ export default function GroupChatPage({
       {/* 错误提示 */}
       {sendError && (
         <div style={{
-          padding: "6px 16px", fontSize: 11, color: "#9a5050",
+          padding: "6px 16px", fontSize: 12, color: "#9a5050",
           background: "rgba(200,140,140,.08)", borderTop: "1px solid rgba(200,140,140,.12)",
           flexShrink: 0, textAlign: "center",
         }}>
           {sendError}
           <button
             onClick={() => setSendError("")}
-            style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "#9a5050", padding: 0 }}
+            style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#9a5050", padding: 0 }}
           >✕</button>
         </div>
       )}
@@ -2885,7 +2885,7 @@ export default function GroupChatPage({
         {designatedCharId && !showAtPicker && (
           <div style={{ padding: "5px 14px 0", display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{
-              fontSize: 10, color: "#8a7898",
+              fontSize: 12, color: "#8a7898",
               background: "rgba(120,100,160,.1)", border: "1px solid rgba(120,100,160,.18)",
               borderRadius: 8, padding: "2px 8px", letterSpacing: 0.3,
             }}>
@@ -2893,7 +2893,7 @@ export default function GroupChatPage({
             </span>
             <button
               onClick={() => setDesignatedCharId(null)}
-              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "var(--text-faint)", padding: 0 }}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--text-faint)", padding: 0 }}
             >✕</button>
           </div>
         )}

@@ -33,7 +33,7 @@ function EntryCard({ emoji, title, subtitle, onClick, accent }) {
         <div style={{ fontSize: 14, fontWeight: 500, color: "#4a3a5a", letterSpacing: 1 }}>
           {title}
         </div>
-        <div style={{ fontSize: 11, color: "#b0a0c0", marginTop: 2, letterSpacing: 0.5 }}>
+        <div style={{ fontSize: 12, color: "#b0a0c0", marginTop: 2, letterSpacing: 0.5 }}>
           {subtitle}
         </div>
       </div>
@@ -139,7 +139,7 @@ export default function ProfileEditPage({
                     {editingChar.avatarImg && (
                       <button
                         className="btn-ghost"
-                        style={{ fontSize: 11, padding: "5px 12px" }}
+                        style={{ fontSize: 12, padding: "5px 12px" }}
                         onClick={() => setEditingChar((prev) => ({ ...prev, avatarImg: "" }))}
                       >
                         移除图片，改用 emoji
@@ -151,7 +151,7 @@ export default function ProfileEditPage({
                   📷 上传头像图片
                   <input type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: "none" }} />
                 </label>
-                <div style={{ fontSize: 11.5, color: "var(--text-faint)", marginBottom: 8, letterSpacing: ".5px" }}>
+                <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 8, letterSpacing: ".5px" }}>
                   或者选一个 emoji：
                 </div>
                 <div className="emoji-grid">
@@ -263,7 +263,7 @@ export default function ProfileEditPage({
 
               {/* 工具入口 */}
               <div style={{
-                fontSize: 11, color: "var(--text-faint)", letterSpacing: 1,
+                fontSize: 12, color: "var(--text-faint)", letterSpacing: 1,
                 padding: "12px 4px 8px",
               }}>
                 📂 记忆与工具
@@ -421,7 +421,7 @@ export default function ProfileEditPage({
               {/* 世界观（折叠展示，进阶） */}
               <div className="section-card">
                 <div className="section-title" style={{ color: "var(--text-mid)" }}>🌍 世界观补充</div>
-                <div style={{ fontSize: 11, color: "rgba(155,149,181,.6)", marginBottom: 14, letterSpacing: ".5px" }}>
+                <div style={{ fontSize: 12, color: "rgba(155,149,181,.6)", marginBottom: 14, letterSpacing: ".5px" }}>
                   ✦ 进阶设定 · 随记忆宫殿总结自动积累
                 </div>
                 {[
@@ -563,7 +563,7 @@ export default function ProfileEditPage({
                     onChange={(e) => setEditingChar((prev) => ({ ...prev, modelOverride: e.target.value }))}
                   />
                 </div>
-                <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.6, marginTop: -6 }}>
+                <div style={{ fontSize: 12, color: "var(--text-faint)", lineHeight: 1.6, marginTop: -6 }}>
                   常用：{PRESET_MODELS.filter(m => m.value !== "__custom__").slice(0, 3).map(m => m.label).join(" · ")}
                 </div>
               </div>
@@ -574,7 +574,7 @@ export default function ProfileEditPage({
                 <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 6, lineHeight: 1.7 }}>
                   直接附加到 system prompt 末尾。写任何上面分类放不下的细节设定。
                 </div>
-                <div style={{ fontSize: 11, color: "rgba(155,149,181,.6)", marginBottom: 14, letterSpacing: ".5px" }}>
+                <div style={{ fontSize: 12, color: "rgba(155,149,181,.6)", marginBottom: 14, letterSpacing: ".5px" }}>
                   ✦ 进阶设定 · 直接注入 prompt
                 </div>
                 <textarea

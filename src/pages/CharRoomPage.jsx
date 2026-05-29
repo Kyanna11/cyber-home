@@ -34,7 +34,7 @@ function ActionCard({ emoji, label, sublabel, onClick, disabled, coming }) {
         letterSpacing: 0.3, marginBottom: sublabel ? 3 : 0,
       }}>{label}</div>
       {sublabel && (
-        <div style={{ fontSize: 10, color: "var(--text-faint)", lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, color: "var(--text-faint)", lineHeight: 1.5 }}>
           {sublabel}
         </div>
       )}
@@ -60,7 +60,7 @@ function RecentCard({ icon, label, preview, sub, onClick }) {
       <div style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{icon}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: 10, color: "#9a8aac", marginBottom: 3, letterSpacing: 0.5,
+          fontSize: 12, color: "#9a8aac", marginBottom: 3, letterSpacing: 0.5,
         }}>{label}</div>
         <div style={{
           fontSize: 13, color: "#4a3a5e", lineHeight: 1.6,
@@ -70,7 +70,7 @@ function RecentCard({ icon, label, preview, sub, onClick }) {
           {preview}
         </div>
         {sub && (
-          <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 3 }}>
+          <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 3 }}>
             {sub}
           </div>
         )}
@@ -121,7 +121,7 @@ function InitiativeCard({ initiative, onAccept, onDismiss, onSnooze }) {
             {initiative.title}
           </div>
           {initiative.description && (
-            <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2, lineHeight: 1.6 }}>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2, lineHeight: 1.6 }}>
               {initiative.description}
             </div>
           )}
@@ -132,7 +132,7 @@ function InitiativeCard({ initiative, onAccept, onDismiss, onSnooze }) {
         <button
           onClick={() => onAccept(initiative.id)}
           style={{
-            flex: 2, padding: "7px 10px", borderRadius: 9, fontSize: 11,
+            flex: 2, padding: "7px 10px", borderRadius: 9, fontSize: 12,
             background: "rgba(120,100,160,.82)", border: "none",
             color: "white", cursor: "pointer", fontFamily: "var(--font-main)",
             letterSpacing: 0.3,
@@ -141,7 +141,7 @@ function InitiativeCard({ initiative, onAccept, onDismiss, onSnooze }) {
         <button
           onClick={() => onSnooze(initiative.id)}
           style={{
-            flex: 1, padding: "7px 10px", borderRadius: 9, fontSize: 11,
+            flex: 1, padding: "7px 10px", borderRadius: 9, fontSize: 12,
             background: "rgba(255,255,255,.7)", border: "1px solid rgba(196,166,184,.28)",
             color: "#8a7898", cursor: "pointer", fontFamily: "var(--font-main)",
           }}
@@ -149,7 +149,7 @@ function InitiativeCard({ initiative, onAccept, onDismiss, onSnooze }) {
         <button
           onClick={() => onDismiss(initiative.id)}
           style={{
-            flex: 1, padding: "7px 10px", borderRadius: 9, fontSize: 11,
+            flex: 1, padding: "7px 10px", borderRadius: 9, fontSize: 12,
             background: "none", border: "1px solid rgba(196,166,184,.2)",
             color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)",
           }}
@@ -333,7 +333,7 @@ export default function CharRoomPage({
           {/* 来源平台 */}
           {char.migration?.sourcePlatform && (
             <div style={{
-              fontSize: 11, color: "var(--text-faint)", marginBottom: 10,
+              fontSize: 12, color: "var(--text-faint)", marginBottom: 10,
             }}>
               来自 {char.migration.sourcePlatform}
             </div>
@@ -353,13 +353,13 @@ export default function CharRoomPage({
         {pendingInitiatives.length > 0 && (
           <div style={{ padding: "0 14px 16px" }}>
             <div style={{
-              fontSize: 11, color: "#9a8aac", letterSpacing: 1,
+              fontSize: 12, color: "#9a8aac", letterSpacing: 1,
               marginBottom: 10, paddingLeft: 4,
               display: "flex", alignItems: "center", gap: 6,
             }}>
               他想做的事
               <span style={{
-                fontSize: 10, background: "rgba(180,100,120,.12)",
+                fontSize: 12, background: "rgba(180,100,120,.12)",
                 color: "#9a5060", padding: "1px 7px", borderRadius: 8,
                 border: "1px solid rgba(180,100,120,.18)",
               }}>{pendingInitiatives.length}</span>
@@ -379,7 +379,7 @@ export default function CharRoomPage({
         {/* ── 快捷入口卡片 ── */}
         <div style={{ padding: "0 14px 20px" }}>
           <div style={{
-            fontSize: 11, color: "#9a8aac", letterSpacing: 1,
+            fontSize: 12, color: "#9a8aac", letterSpacing: 1,
             marginBottom: 10, paddingLeft: 4,
           }}>
             快捷入口
@@ -462,7 +462,7 @@ export default function CharRoomPage({
         {hasRecentActivity && (
           <div style={{ padding: "0 14px" }}>
             <div style={{
-              fontSize: 11, color: "#9a8aac", letterSpacing: 1,
+              fontSize: 12, color: "#9a8aac", letterSpacing: 1,
               marginBottom: 10, paddingLeft: 4,
             }}>
               最近动态
