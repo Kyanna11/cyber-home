@@ -169,9 +169,9 @@ export default function BedroomPage({
         <HotspotCard
           label="我的手札"
           sublabel="📔 书桌上的日记本"
-          onClick={() => navigateTo("notes")}
-          zone={{ position: "absolute", top: "50%", left: "30%", width: "26%", height: "16%" }}
-          position={{ top: "50%", left: "30%" }}
+          onClick={() => navigateTo("diary")}
+          zone={{ position: "absolute", top: "44%", left: "30%", width: "26%", height: "16%" }}
+          position={{ top: "44%", left: "30%" }}
           cardAnchor="center"
         />
 
@@ -189,7 +189,7 @@ export default function BedroomPage({
         <HotspotCard
           label="我的宝库"
           sublabel="💎 珍藏的心动片段"
-          onClick={() => navigateTo("treasures")}
+          onClick={() => navigateTo("treasure")}
           zone={{ position: "absolute", top: "52%", left: "2%", width: "24%", height: "18%" }}
           position={{ top: "52%", left: "2%" }}
           cardAnchor="left"
