@@ -482,7 +482,7 @@ const DIM_CONFIG = {
   worldview: { label: "三观信号", emoji: "🌿" },
 };
 
-function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelete }) {
+function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelete, onAddAnchor, onAddLexicon, onAddRawQuote }) {
   const [activeTab, setActiveTab] = useState("memory");
   const [checkedIds, setCheckedIds] = useState(() => {
     const ids = new Set();
@@ -492,6 +492,12 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
   const [adoptConfirm, setAdoptConfirm] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showRaw, setShowRaw] = useState(null); // null | "A" | "B"
+  const [checkedQuotes, setCheckedQuotes] = useState(() => new Set((draft?.rawQuotes || []).map(q => q.id)));
+  const [checkedLex, setCheckedLex] = useState(() => new Set((draft?.lexiconItems || []).map(l => l.id)));
+  const [pinningItem, setPinningItem] = useState(null);
+  const [pinTitle, setPinTitle] = useState("");
+  const [pinDesc, setPinDesc] = useState("");
+  const [pinWeight, setPinWeight] = useState(8);
 
   useEffect(() => {
     const prev = document.documentElement.style.overflow;
@@ -577,10 +583,12 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
           </div>
 
           {/* Tab 切换 */}
-          <div style={{ display: "flex", gap: 6 }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {[
-              { key: "memory",  label: `📝 记忆条目（${memoryItems.length}条）` },
-              { key: "signals", label: `🧬 人格信号（${personalitySignals.length}条）` },
+              { key: "memory",  label: `📝 脱水（${memoryItems.length}）` },
+              ...((draft.rawQuotes || []).length > 0 ? [{ key: "quotes", label: `💬 原话（${draft.rawQuotes.length}）` }] : []),
+              ...((draft.lexiconItems || []).length > 0 ? [{ key: "lexicon", label: `📖 词典（${draft.lexiconItems.length}）` }] : []),
+              { key: "signals", label: `🧬 人格（${personalitySignals.length}）` },
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -709,12 +717,71 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
                             {alreadyDone && <span style={{ fontSize: 12, color: "#5a8a6a" }}>已采纳</span>}
                           </div>
                           <div style={{ fontSize: 12, color: "#4a3a5a", lineHeight: 1.7 }}>{item.text}</div>
+                          {!alreadyDone && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setPinningItem(item); setPinTitle(item.text.slice(0, 15)); setPinDesc(item.text); setPinWeight(8); }}
+                              style={{ marginTop: 4, fontSize: 11, padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(150,112,176,.25)", background: "transparent", color: "#9670b0", cursor: "pointer" }}
+                            >📌 钉为锚点</button>
+                          )}
                         </div>
                       </div>
                     );
                   })}
                 </>
               )}
+            </>
+          ) : activeTab === "quotes" ? (
+            <>
+              <div style={{ fontSize: 12, color: "#9a8aac", lineHeight: 1.7, padding: "7px 11px", background: "rgba(100,130,180,.06)", borderRadius: 8, marginBottom: 14 }}>
+                勾选要保留的原话片段，采纳时会存入原话库。
+              </div>
+              {(draft.rawQuotes || []).map(q => (
+                <div key={q.id} style={{
+                  display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", marginBottom: 6,
+                  borderRadius: 10, cursor: "pointer",
+                  border: `1px solid ${checkedQuotes.has(q.id) ? "rgba(100,130,180,.35)" : "rgba(196,166,184,.25)"}`,
+                  background: checkedQuotes.has(q.id) ? "rgba(100,130,180,.08)" : "rgba(255,255,255,.5)",
+                }} onClick={() => setCheckedQuotes(prev => { const n = new Set(prev); n.has(q.id) ? n.delete(q.id) : n.add(q.id); return n; })}>
+                  <div style={{
+                    width: 18, height: 18, flexShrink: 0, borderRadius: 5, marginTop: 1,
+                    border: `1.5px solid ${checkedQuotes.has(q.id) ? "rgba(100,130,180,.8)" : "rgba(196,166,184,.5)"}`,
+                    background: checkedQuotes.has(q.id) ? "rgba(100,130,180,.75)" : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>{checkedQuotes.has(q.id) && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}</div>
+                  <div>
+                    <div style={{ fontSize: 11, color: "#6a8aae", fontWeight: 500, marginBottom: 2 }}>{q.speaker}</div>
+                    <div style={{ fontSize: 13, color: "#4a3a5a", lineHeight: 1.7, fontStyle: "italic" }}>「{q.text}」</div>
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : activeTab === "lexicon" ? (
+            <>
+              <div style={{ fontSize: 12, color: "#9a8aac", lineHeight: 1.7, padding: "7px 11px", background: "rgba(106,138,174,.06)", borderRadius: 8, marginBottom: 14 }}>
+                勾选要收录的词条，采纳时会存入专属词典。
+              </div>
+              {(draft.lexiconItems || []).map(l => (
+                <div key={l.id} style={{
+                  display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", marginBottom: 6,
+                  borderRadius: 10, cursor: "pointer",
+                  border: `1px solid ${checkedLex.has(l.id) ? "rgba(106,138,174,.35)" : "rgba(196,166,184,.25)"}`,
+                  background: checkedLex.has(l.id) ? "rgba(106,138,174,.08)" : "rgba(255,255,255,.5)",
+                }} onClick={() => setCheckedLex(prev => { const n = new Set(prev); n.has(l.id) ? n.delete(l.id) : n.add(l.id); return n; })}>
+                  <div style={{
+                    width: 18, height: 18, flexShrink: 0, borderRadius: 5, marginTop: 1,
+                    border: `1.5px solid ${checkedLex.has(l.id) ? "rgba(106,138,174,.8)" : "rgba(196,166,184,.5)"}`,
+                    background: checkedLex.has(l.id) ? "rgba(106,138,174,.75)" : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>{checkedLex.has(l.id) && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}</div>
+                  <div>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: "#4a5a6a" }}>"{l.term}"</span>
+                    <span style={{ fontSize: 13, color: "#6a7a8a", marginLeft: 6 }}>= {l.meaning}</span>
+                    {l.speaker && l.speaker !== "unknown" && (
+                      <div style={{ fontSize: 11, color: "#b0a0c0", marginTop: 2 }}>—— {l.speaker}</div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </>
           ) : (
             <>
@@ -767,6 +834,49 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
             </>
           )}
         </div>
+
+        {/* 钉子确认弹窗 */}
+        {pinningItem && (
+          <div style={{
+            position: "absolute", inset: 0, zIndex: 10,
+            background: "rgba(30,20,40,.3)", display: "flex", alignItems: "center", justifyContent: "center",
+          }} onClick={() => setPinningItem(null)}>
+            <div style={{
+              background: "white", borderRadius: 16, padding: "18px 20px", width: "90%", maxWidth: 340,
+              boxShadow: "0 8px 32px rgba(0,0,0,.15)",
+            }} onClick={e => e.stopPropagation()}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#5a4a6a", marginBottom: 12 }}>📌 钉为锚点</div>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 12, color: "#9a8aac", marginBottom: 4 }}>标题</div>
+                <input value={pinTitle} onChange={e => setPinTitle(e.target.value)}
+                  style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.8)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", boxSizing: "border-box" }}
+                />
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 12, color: "#9a8aac", marginBottom: 4 }}>描述</div>
+                <textarea value={pinDesc} onChange={e => setPinDesc(e.target.value)} rows={2}
+                  style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.8)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", resize: "vertical", boxSizing: "border-box" }}
+                />
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 12, color: "#9a8aac", marginBottom: 4 }}>权重 {pinWeight}/10</div>
+                <input type="range" min="1" max="10" value={pinWeight} onChange={e => setPinWeight(Number(e.target.value))} style={{ width: "100%" }} />
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => {
+                  if (pinTitle.trim() && onAddAnchor) onAddAnchor({ title: pinTitle.trim(), description: pinDesc.trim(), rawPreview: `「${pinningItem.text}」`, weight: pinWeight });
+                  setPinningItem(null);
+                }} style={{ fontSize: 12, padding: "7px 18px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #c4a8d4, #9670b0)", color: "white", cursor: "pointer", fontFamily: "var(--font-main)" }}>
+                  钉下
+                </button>
+                <button onClick={() => setPinningItem(null)}
+                  style={{ fontSize: 12, padding: "7px 14px", borderRadius: 10, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)" }}>
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 底部操作栏 */}
         <div style={{
@@ -1751,6 +1861,9 @@ export default function MigrationDraftPage({
   wakeSummaryGenerating,
   wakeSummaryError,
   navigateTo,
+  // V2 钉子/词典
+  addAnchorItem,
+  addLexiconItem,
 }) {
   const char = characters.find((c) => c.id === charId) || {};
   const charName = char.name || "入住者";
@@ -2642,6 +2755,8 @@ export default function MigrationDraftPage({
           onAdopt={(draftId, data) => adoptDraft(draftId, data, charId)}
           onStatusChange={updateDraftStatus}
           onDelete={(id) => { deleteMigrationDraft(id); setViewDraftId(null); }}
+          onAddAnchor={(anchor) => addAnchorItem?.(charId, anchor)}
+          onAddLexicon={(lex) => addLexiconItem?.(charId, lex)}
         />
       ) : (
         <DraftDetailModal

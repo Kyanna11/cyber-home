@@ -244,9 +244,25 @@ export default function MemoryPalacePage({
   setReflectSettings,
   openCharTreasure,
   charTreasures,
+  // V2 钉子/词典
+  updateAnchorWeight,
+  deleteAnchor,
+  addLexiconItem,
+  updateLexiconItem,
+  deleteLexiconItem,
+  addAnchorItem,
 }) {
-  const charName = (characters.find((c) => c.id === memCharId) || {}).name || "记忆";
+  const char = characters.find((c) => c.id === memCharId) || {};
+  const charName = char.name || "记忆";
   const [viewMode, setViewMode] = useState("list");
+  const [editingWeight, setEditingWeight] = useState(null);
+  const [deletingAnchor, setDeletingAnchor] = useState(null);
+  const [deletingLex, setDeletingLex] = useState(null);
+  const [editingLex, setEditingLex] = useState(null);
+  const [showAddLex, setShowAddLex] = useState(false);
+  const [newLexTerm, setNewLexTerm] = useState("");
+  const [newLexMeaning, setNewLexMeaning] = useState("");
+  const [newLexSpeaker, setNewLexSpeaker] = useState("");
 
   // ── 概览预计算 ──
   const _mem = getCharMemories(memCharId);
@@ -380,10 +396,24 @@ export default function MemoryPalacePage({
             }} />
           )}
         </button>
+        <button
+          className={`mem-tab ${memTab === "anchors" ? "active" : ""}`}
+          onClick={() => setMemTab("anchors")}
+          style={memTab === "anchors" ? { borderBottomColor: "#9670b0" } : {}}
+        >
+          📌 钉子{(char.anchors || []).length > 0 && ` ${(char.anchors || []).length}`}
+        </button>
+        <button
+          className={`mem-tab ${memTab === "lexicon" ? "active" : ""}`}
+          onClick={() => setMemTab("lexicon")}
+          style={memTab === "lexicon" ? { borderBottomColor: "#6a8aae" } : {}}
+        >
+          📖 词典{(char.lexicon || []).length > 0 && ` ${(char.lexicon || []).length}`}
+        </button>
       </div>
 
       {/* 排序/筛选工具栏（非总结页显示） */}
-      {memTab !== "summary" && (() => {
+      {memTab !== "summary" && memTab !== "anchors" && memTab !== "lexicon" && (() => {
         const entries = getCharMemories(memCharId)[memTab] || [];
         const cnt = {
           all:       entries.length,
@@ -416,7 +446,7 @@ export default function MemoryPalacePage({
 
       <div className="mem-scroll">
         {/* ── 记忆列表（事实/情绪/觉察）── */}
-        {memTab !== "summary" && (
+        {memTab !== "summary" && memTab !== "anchors" && memTab !== "lexicon" && (
           <>
             <div className="mem-add-row">
               <input
@@ -767,6 +797,182 @@ export default function MemoryPalacePage({
           </>
         )}
       </div>
+
+      {/* ═══ 钉子 Tab ═══ */}
+      {memTab === "anchors" && (
+        <div className="mem-scroll" style={{ padding: "0 12px 24px" }}>
+          {(char.anchors || []).length === 0 ? (
+            <div style={{ textAlign: "center", padding: "48px 20px", color: "var(--text-faint)", fontSize: 13, lineHeight: 1.8 }}>
+              还没有钉子<br/>在聊天中，入住者会在重要时刻自动钉下记忆
+            </div>
+          ) : (
+            (char.anchors || []).sort((a, b) => (b.weight || 0) - (a.weight || 0)).map(anchor => (
+              <div key={anchor.id} style={{
+                background: "rgba(150,112,176,.08)", border: "1px solid rgba(150,112,176,.2)",
+                borderRadius: 14, padding: "14px 16px", marginBottom: 10,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "#5a4a6a" }}>📌 {anchor.title}</div>
+                  <span style={{ fontSize: 11, color: "#b0a0c0", flexShrink: 0 }}>
+                    权重 {anchor.weight || 0}/10
+                  </span>
+                </div>
+                {anchor.description && (
+                  <div style={{ fontSize: 13, color: "#6a5a7a", marginBottom: 6, lineHeight: 1.6 }}>{anchor.description}</div>
+                )}
+                {anchor.rawPreview && (
+                  <div style={{ fontSize: 12, color: "#9a8aac", fontStyle: "italic", marginBottom: 8, lineHeight: 1.5 }}>
+                    {anchor.rawPreview}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  {editingWeight === anchor.id ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                      <input type="range" min="1" max="10" value={anchor.weight || 8}
+                        onChange={e => updateAnchorWeight(memCharId, anchor.id, Number(e.target.value))}
+                        style={{ flex: 1 }}
+                      />
+                      <span style={{ fontSize: 12, color: "#7a6a8e", minWidth: 20 }}>{anchor.weight || 8}</span>
+                      <button onClick={() => setEditingWeight(null)}
+                        style={{ fontSize: 11, padding: "3px 8px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#7a6a8e", cursor: "pointer" }}>
+                        完成
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setEditingWeight(anchor.id)}
+                      style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#7a6a8e", cursor: "pointer" }}>
+                      调整权重
+                    </button>
+                  )}
+                  {deletingAnchor === anchor.id ? (
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button onClick={() => { deleteAnchor(memCharId, anchor.id); setDeletingAnchor(null); }}
+                        style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid rgba(200,120,120,.3)", background: "rgba(200,120,120,.08)", color: "#c07070", cursor: "pointer" }}>
+                        确认删除
+                      </button>
+                      <button onClick={() => setDeletingAnchor(null)}
+                        style={{ fontSize: 11, padding: "3px 8px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#999", cursor: "pointer" }}>
+                        取消
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setDeletingAnchor(anchor.id)}
+                      style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.2)", background: "transparent", color: "#bbb", cursor: "pointer" }}>
+                      删除
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* ═══ 词典 Tab ═══ */}
+      {memTab === "lexicon" && (
+        <div className="mem-scroll" style={{ padding: "0 12px 24px" }}>
+          {(char.lexicon || []).length === 0 && !showAddLex ? (
+            <div style={{ textAlign: "center", padding: "48px 20px", color: "var(--text-faint)", fontSize: 13, lineHeight: 1.8 }}>
+              还没有专属词条<br/>在聊天或迁入时会自动收录你们之间的语言
+            </div>
+          ) : (
+            (char.lexicon || []).map(lex => (
+              <div key={lex.id} style={{
+                background: "rgba(106,138,174,.06)", border: "1px solid rgba(106,138,174,.18)",
+                borderRadius: 14, padding: "12px 16px", marginBottom: 8,
+              }}>
+                {editingLex === lex.id ? (
+                  <div>
+                    <input value={lex.meaning}
+                      onChange={e => updateLexiconItem(memCharId, lex.id, { meaning: e.target.value })}
+                      style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.65)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", boxSizing: "border-box" }}
+                    />
+                    <button onClick={() => setEditingLex(null)}
+                      style={{ marginTop: 6, fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#7a6a8e", cursor: "pointer" }}>
+                      完成
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: "#4a5a6a" }}>"{lex.term}"</span>
+                        <span style={{ fontSize: 13, color: "#6a7a8a", marginLeft: 6 }}>= {lex.meaning}</span>
+                      </div>
+                    </div>
+                    {lex.speaker && lex.speaker !== "unknown" && (
+                      <div style={{ fontSize: 11, color: "#b0a0c0", marginTop: 4 }}>—— {lex.speaker}</div>
+                    )}
+                    {lex.rawPreview && (
+                      <div style={{ fontSize: 12, color: "#9a8aac", fontStyle: "italic", marginTop: 4 }}>{lex.rawPreview}</div>
+                    )}
+                    <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                      <button onClick={() => setEditingLex(lex.id)}
+                        style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#7a6a8e", cursor: "pointer" }}>
+                        编辑
+                      </button>
+                      {deletingLex === lex.id ? (
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button onClick={() => { deleteLexiconItem(memCharId, lex.id); setDeletingLex(null); }}
+                            style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid rgba(200,120,120,.3)", background: "rgba(200,120,120,.08)", color: "#c07070", cursor: "pointer" }}>
+                            确认
+                          </button>
+                          <button onClick={() => setDeletingLex(null)}
+                            style={{ fontSize: 11, padding: "3px 8px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#999", cursor: "pointer" }}>
+                            取消
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setDeletingLex(lex.id)}
+                          style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.2)", background: "transparent", color: "#bbb", cursor: "pointer" }}>
+                          删除
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+
+          {/* 手动添加词条 */}
+          {showAddLex ? (
+            <div style={{ background: "rgba(106,138,174,.06)", border: "1px solid rgba(106,138,174,.25)", borderRadius: 14, padding: "14px 16px", marginTop: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#4a5a6a", marginBottom: 10 }}>添加新词条</div>
+              <input placeholder="词条（比如：笨祁久）" value={newLexTerm} onChange={e => setNewLexTerm(e.target.value)}
+                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.65)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", boxSizing: "border-box", marginBottom: 8 }}
+              />
+              <input placeholder="含义（比如：嗔怪撒娇时的叫法）" value={newLexMeaning} onChange={e => setNewLexMeaning(e.target.value)}
+                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.65)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", boxSizing: "border-box", marginBottom: 8 }}
+              />
+              <input placeholder="谁说的（可选）" value={newLexSpeaker} onChange={e => setNewLexSpeaker(e.target.value)}
+                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.65)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", boxSizing: "border-box", marginBottom: 10 }}
+              />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => {
+                  if (newLexTerm.trim() && newLexMeaning.trim()) {
+                    addLexiconItem(memCharId, { term: newLexTerm.trim(), meaning: newLexMeaning.trim(), speaker: newLexSpeaker.trim() || "unknown" });
+                    setNewLexTerm(""); setNewLexMeaning(""); setNewLexSpeaker(""); setShowAddLex(false);
+                  }
+                }}
+                  style={{ fontSize: 12, padding: "7px 18px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #c4a8d4, #9670b0)", color: "white", cursor: "pointer", fontFamily: "var(--font-main)" }}>
+                  收录
+                </button>
+                <button onClick={() => { setShowAddLex(false); setNewLexTerm(""); setNewLexMeaning(""); setNewLexSpeaker(""); }}
+                  style={{ fontSize: 12, padding: "7px 14px", borderRadius: 10, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)" }}>
+                  取消
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setShowAddLex(true)}
+              style={{ width: "100%", marginTop: 8, padding: "10px", borderRadius: 12, border: "1px dashed rgba(106,138,174,.3)", background: "transparent", color: "#6a8aae", fontSize: 13, cursor: "pointer", fontFamily: "var(--font-main)" }}>
+              + 手动添加词条
+            </button>
+          )}
+        </div>
+      )}
+
       </>}
 
       {/* ═══ 概览模式 ═══ */}

@@ -3080,6 +3080,56 @@ ${recentLines}
     setAllMemories((prev) => ({ ...prev, [charId]: mem }));
   };
 
+  // ═══ V2 钉子/词典管理 ═══
+
+  const updateAnchorWeight = (charId, anchorId, newWeight) => {
+    setCharacters(prev => prev.map(c =>
+      c.id === charId
+        ? { ...c, anchors: (c.anchors || []).map(a => a.id === anchorId ? { ...a, weight: newWeight } : a) }
+        : c
+    ));
+  };
+
+  const deleteAnchor = (charId, anchorId) => {
+    setCharacters(prev => prev.map(c =>
+      c.id === charId
+        ? { ...c, anchors: (c.anchors || []).filter(a => a.id !== anchorId) }
+        : c
+    ));
+  };
+
+  const addLexiconItem = (charId, item) => {
+    setCharacters(prev => prev.map(c =>
+      c.id === charId
+        ? { ...c, lexicon: [{ ...item, id: genId(), createdAt: Date.now() }, ...(c.lexicon || [])] }
+        : c
+    ));
+  };
+
+  const updateLexiconItem = (charId, lexId, updates) => {
+    setCharacters(prev => prev.map(c =>
+      c.id === charId
+        ? { ...c, lexicon: (c.lexicon || []).map(l => l.id === lexId ? { ...l, ...updates } : l) }
+        : c
+    ));
+  };
+
+  const deleteLexiconItem = (charId, lexId) => {
+    setCharacters(prev => prev.map(c =>
+      c.id === charId
+        ? { ...c, lexicon: (c.lexicon || []).filter(l => l.id !== lexId) }
+        : c
+    ));
+  };
+
+  const addAnchorItem = (charId, anchor) => {
+    setCharacters(prev => prev.map(c =>
+      c.id === charId
+        ? { ...c, anchors: [{ ...anchor, id: genId(), createdAt: Date.now(), neverDecay: true, neverArchive: true }, ...(c.anchors || [])] }
+        : c
+    ));
+  };
+
   const addSummary = (charId, text) => {
     if (!text.trim()) return;
     const mem = getCharMemories(charId);
@@ -4581,6 +4631,8 @@ ${chatLines}
           wakeSummaryGenerating={wakeSummaryGenerating}
           wakeSummaryError={wakeSummaryError}
           navigateTo={navigateTo}
+          addAnchorItem={addAnchorItem}
+          addLexiconItem={addLexiconItem}
         />
       )}
 
@@ -4682,6 +4734,12 @@ ${chatLines}
           setReflectSettings={setReflectSettings}
           openCharTreasure={openCharTreasure}
           charTreasures={charTreasures}
+          updateAnchorWeight={updateAnchorWeight}
+          deleteAnchor={deleteAnchor}
+          addLexiconItem={addLexiconItem}
+          updateLexiconItem={updateLexiconItem}
+          deleteLexiconItem={deleteLexiconItem}
+          addAnchorItem={addAnchorItem}
         />
       )}
 

@@ -388,6 +388,48 @@ export default function WakePreviewPage({
           <pre style={{ ...preStyle, paddingTop: 8 }}>{mig.wakeSummary}</pre>
         </Block>
 
+        {/* L1 · 钉子层 */}
+        <Block
+          emoji="📌" title={`钉子 · 最重要的记忆（${(char?.anchors || []).length} 颗）`}
+          isEmpty={(char?.anchors || []).length === 0}
+          isOpen={(char?.anchors || []).length > 0}
+        >
+          <div style={{ paddingTop: 6 }}>
+            {(char?.anchors || []).length === 0 ? (
+              <div style={{ fontSize: 12, color: "#b0a0c0", padding: "8px 0" }}>暂无钉子</div>
+            ) : (
+              (char.anchors || []).sort((a, b) => (b.weight || 0) - (a.weight || 0)).slice(0, 3).map((a, i) => (
+                <div key={a.id || i} style={{ marginBottom: 10, padding: "8px 12px", background: "rgba(150,112,176,.06)", borderRadius: 10 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#5a4a6a", marginBottom: 3 }}>
+                    {a.title} <span style={{ fontSize: 11, color: "#b0a0c0", fontWeight: 400 }}>权重 {a.weight || 0}</span>
+                  </div>
+                  {a.description && <div style={{ fontSize: 12, color: "#6a5a7a", lineHeight: 1.6 }}>{a.description}</div>}
+                  {a.rawPreview && <div style={{ fontSize: 12, color: "#9a8aac", fontStyle: "italic", marginTop: 2 }}>{a.rawPreview}</div>}
+                </div>
+              ))
+            )}
+          </div>
+        </Block>
+
+        {/* L1.5 · 词典层 */}
+        <Block
+          emoji="📖" title={`你们的语言（${(char?.lexicon || []).length} 条）`}
+          isEmpty={(char?.lexicon || []).length === 0}
+          isOpen={(char?.lexicon || []).length > 0}
+        >
+          <div style={{ paddingTop: 6 }}>
+            {(char?.lexicon || []).length === 0 ? (
+              <div style={{ fontSize: 12, color: "#b0a0c0", padding: "8px 0" }}>暂无专属词条</div>
+            ) : (
+              (char.lexicon || []).slice(0, 8).map((l, i) => (
+                <div key={l.id || i} style={{ fontSize: 12, color: "#5a4a6a", lineHeight: 1.8 }}>
+                  <span style={{ fontWeight: 600 }}>"{l.term}"</span> = {l.meaning}
+                </div>
+              ))
+            )}
+          </div>
+        </Block>
+
         {/* 记忆注入 */}
         <Block
           emoji="🧠" title={`本次注入记忆（${memCount} 条）`}
