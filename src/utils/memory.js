@@ -452,31 +452,41 @@ export function selectInjectableMemories(entries, limit) {
   return [...pinned, ...impSlice, ...restSlice];
 }
 
+// V2 脱水分区映射（兼容 V1 旧标签 + V2 新标签）
+const MEMORY_TAG_MAP = {
+  // V1 旧标签
+  "事实": "fact", "情绪": "emotion", "觉察": "insight",
+  // V2 新标签
+  "她的世界": "fact", "我们之间": "insight", "我懂她的": "insight", "我想记住的": "emotion",
+};
+const MEMORY_TAG_KEYS = Object.keys(MEMORY_TAG_MAP).join("|");
+const MEMORY_REGEX = new RegExp(`\\[记忆:(${MEMORY_TAG_KEYS})\\](.*?)\\[/记忆\\]`, "gs");
+
 // 从 AI 回复中提取记忆标签，自动存入记忆库（含质量门槛）
-// 返回清理掉标签后的干净回复文本
-export function extractAndSaveMemories(raw, charId, allMemories, setAllMemories) {
+// 支持 V1 旧标签（事实/情绪/觉察）和 V2 新标签（她的世界/我们之间/我懂她的/我想记住的）
+// opts: { recentMessages, characters, setCharacters, charName, userName }
+export function extractAndSaveMemories(raw, charId, allMemories, setAllMemories, opts = {}) {
   if (!raw || !charId) return raw;
 
-  const memoryRegex = /\[记忆:(事实|情绪|觉察)\](.*?)\[\/记忆\]/gs;
-  const typeMap = { 事实: "fact", 情绪: "emotion", 觉察: "insight" };
   let match;
   const newMemories = [];
 
-  while ((match = memoryRegex.exec(raw)) !== null) {
-    const type = typeMap[match[1]];
+  while ((match = MEMORY_REGEX.exec(raw)) !== null) {
+    const type = MEMORY_TAG_MAP[match[1]];
     const text = match[2].trim();
     if (type && text) {
-      newMemories.push({ type, text });
+      newMemories.push({ type, text, v2Tag: match[1] });
     }
   }
 
   if (newMemories.length > 0) {
     const charMem = allMemories[charId] || {
       fact: [], emotion: [], insight: [], summaries: [],
-      consolidated: [], archived: [],
+      consolidated: [], archived: [], distill: [],
     };
 
     let saved = 0;
+    const savedEntryIds = [];
     newMemories.forEach(({ type, text }) => {
       // ── 质量门槛：三重检查 ──
       if (!shouldSaveAutoMemory({ text }, charMem[type] || [])) {
@@ -503,19 +513,106 @@ export function extractAndSaveMemories(raw, charId, allMemories, setAllMemories)
         injectable:    true,
         priority:      0,
         source:        "auto",
-        keywords:      extractKeywords(text), // 预计算关键词，加速话题召回
+        keywords:      extractKeywords(text),
+        rawIds:        [],
+        anchorLevel:   "normal",
       };
       charMem[type] = [entry, ...(charMem[type] || [])];
+      savedEntryIds.push(entry.id);
       saved++;
     });
 
     if (saved > 0) {
+      // ── V2：截取最近对话原文，存入角色的 rawQuotes 并关联 ──
+      const { recentMessages, characters, setCharacters, charName, userName } = opts;
+      if (recentMessages?.length && characters && setCharacters) {
+        const snippets = recentMessages.slice(-6).map(m => ({
+          speaker: m.role === "user" ? (userName || "用户") : (charName || "入住者"),
+          text: (m.content || "").slice(0, 200),
+          timestamp: m.timestamp || new Date().toISOString(),
+        }));
+        const rawQuoteEntry = {
+          id: genId(),
+          snippets,
+          source: "chat",
+          linkedDistill: savedEntryIds,
+          createdAt: Date.now(),
+        };
+        setCharacters(prev => prev.map(c =>
+          c.id === charId
+            ? { ...c, rawQuotes: [rawQuoteEntry, ...(c.rawQuotes || [])] }
+            : c
+        ));
+      }
+
       setAllMemories((prev) => ({ ...prev, [charId]: charMem }));
       console.log(`🧠 AI 写入了 ${saved}/${newMemories.length} 条记忆（质量门槛通过）`);
     }
   }
 
-  return raw.replace(/\[记忆:(事实|情绪|觉察)\].*?\[\/记忆\]/gs, "").trim();
+  return raw.replace(MEMORY_REGEX, "").trim();
+}
+
+// ══════════════════════════════════════════════════════════
+//  V2 落钉标签解析（锚点 + 词典）
+// ══════════════════════════════════════════════════════════
+
+/**
+ * 从 AI 回复中解析落钉标签，写入角色的 anchors / lexicon
+ * 返回 { cleaned, anchorResults, lexiconResults }
+ */
+export function extractAnchorsAndLexicon(raw, charId, characters, setCharacters) {
+  if (!raw || !charId) return { cleaned: raw, anchorResults: [], lexiconResults: [] };
+
+  const anchorRegex = /\[落钉:锚点\](.*?)::(.*?)::(.*?)\[\/落钉\]/gs;
+  const lexiconRegex = /\[落钉:词典\](.*?)::(.*?)::(.*?)\[\/落钉\]/gs;
+
+  const anchorResults = [];
+  const lexiconResults = [];
+  let match;
+
+  while ((match = anchorRegex.exec(raw)) !== null) {
+    anchorResults.push({
+      id:           genId(),
+      title:        match[1].trim(),
+      description:  match[2].trim(),
+      rawPreview:   `「${match[3].trim()}」`,
+      weight:       8,
+      neverDecay:   true,
+      neverArchive: true,
+      createdAt:    Date.now(),
+    });
+  }
+
+  while ((match = lexiconRegex.exec(raw)) !== null) {
+    lexiconResults.push({
+      id:         genId(),
+      term:       match[1].trim(),
+      meaning:    match[2].trim(),
+      rawPreview: match[3].trim(),
+      createdAt:  Date.now(),
+    });
+  }
+
+  if ((anchorResults.length > 0 || lexiconResults.length > 0) && setCharacters) {
+    setCharacters(prev => prev.map(c => {
+      if (c.id !== charId) return c;
+      return {
+        ...c,
+        anchors: [...anchorResults, ...(c.anchors || [])],
+        lexicon: [...lexiconResults, ...(c.lexicon || [])],
+      };
+    }));
+    if (anchorResults.length) console.log(`📌 落钉：写入 ${anchorResults.length} 颗钉子`);
+    if (lexiconResults.length) console.log(`📖 词典：收录 ${lexiconResults.length} 个词条`);
+  }
+
+  const cleaned = raw
+    .replace(/\[落钉:锚点\].*?\[\/落钉\]/gs, "")
+    .replace(/\[落钉:词典\].*?\[\/落钉\]/gs, "")
+    .trim();
+
+  return { cleaned, anchorResults, lexiconResults };
 }
 
 // ══════════════════════════════════════════════════════════

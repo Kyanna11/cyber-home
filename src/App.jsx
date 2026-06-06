@@ -48,7 +48,7 @@ import {
 } from "./constants";
 import { genId, estimateTokens, buildSourceRef } from "./utils/helpers";
 import { splitRawTextToChunks } from "./utils/chunker";
-import { extractAndSaveMemories, getTopMemories, updateMemoryHeat as updateMemoryHeatUtil, autoArchiveCheck, migrateCharDataToV2, migrateMemoriesToV2 } from "./utils/memory";
+import { extractAndSaveMemories, extractAnchorsAndLexicon, getTopMemories, updateMemoryHeat as updateMemoryHeatUtil, autoArchiveCheck, migrateCharDataToV2, migrateMemoriesToV2 } from "./utils/memory";
 import {
   buildSystemPrompt,
   buildUserContext,
@@ -357,6 +357,7 @@ export default function App() {
   const [editingMsgText, setEditingMsgText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [anchorToastMsg, setAnchorToastMsg] = useState("");
   const [showConfig, setShowConfig] = useState(false);
   const [showMemoryControl, setShowMemoryControl] = useState(false);
   const [memInjection, setMemInjection] = useState(() => loadMemoryInjection());
@@ -616,7 +617,7 @@ export default function App() {
     callLLM(allMsgs, replyMode)
       .then((raw) => {
         setIsTyping(false);
-        const cleanedRaw = extractAndSaveMemories(raw, activeCharId, allMemories, setAllMemories);
+        const cleanedRaw = processAIMemories(raw, activeCharId, messages);
         const { thought, parts } = parseResponse(cleanedRaw, replyMode);
         showMessagesSequentially(thought, parts, timeStr, replyMode);
         updateMemoryHeat(activeCharId, cleanedRaw);
@@ -652,7 +653,7 @@ export default function App() {
     callLLM(allMsgs, replyMode)
       .then((raw) => {
         setIsTyping(false);
-        const cleanedRaw = extractAndSaveMemories(raw, activeCharId, allMemories, setAllMemories);
+        const cleanedRaw = processAIMemories(raw, activeCharId, messages);
         const { thought, parts } = parseResponse(cleanedRaw, replyMode);
         showMessagesSequentially(thought, parts, timeStr, replyMode);
         updateMemoryHeat(activeCharId, cleanedRaw);
@@ -698,7 +699,7 @@ export default function App() {
     callLLM(allMsgs, "long")
       .then((raw) => {
         setIsTyping(false);
-        const cleanedRaw = extractAndSaveMemories(raw, activeCharId, allMemories, setAllMemories);
+        const cleanedRaw = processAIMemories(raw, activeCharId, messages);
         const { thought, parts } = parseResponse(cleanedRaw, "long");
         showMessagesSequentially(thought, parts, timeStr, "long");
         updateMemoryHeat(activeCharId, cleanedRaw);
@@ -986,6 +987,7 @@ export default function App() {
   };
 
   // ── A+B 双轨提炼：解析 A轨（记忆）输出 ──
+  // V2：支持四分区脱水 + 原话片段 + 专属词典，同时兼容 V1 旧格式
   const parseDraftOutputA = (raw) => {
     const parseList = (text) =>
       text.split("\n")
@@ -1000,14 +1002,65 @@ export default function App() {
     }
 
     const memoryItems = [];
-    // 事实
+
+    // V2 四分区脱水记忆
     for (const [k, v] of Object.entries(sections)) {
-      if (k.includes("事实")) {
-        parseList(v).forEach(text => memoryItems.push({ id: genId(), text, type: "fact", adopted: false }));
-      } else if (k.includes("情绪") || k.includes("感受")) {
-        parseList(v).forEach(text => memoryItems.push({ id: genId(), text, type: "emotion", adopted: false }));
-      } else if (k.includes("关系事件") || k.includes("节点") || k.includes("重要事件")) {
-        parseList(v).forEach(text => memoryItems.push({ id: genId(), text, type: "relationship", adopted: false }));
+      if (k.includes("脱水")) {
+        // 解析带 [类型] 前缀的条目
+        const lines = v.split("\n").map(l => l.trim()).filter(l => l.length > 2);
+        lines.forEach(line => {
+          const typeMatch = line.match(/^\[?(她的世界|我们之间|我懂她的|我想记住的)\]?\s*(.+)/);
+          if (typeMatch) {
+            const v2Type = typeMatch[1];
+            const typeMap = { "她的世界": "fact", "我们之间": "insight", "我懂她的": "insight", "我想记住的": "emotion" };
+            memoryItems.push({ id: genId(), text: typeMatch[2].trim(), type: typeMap[v2Type] || "fact", v2Type, adopted: false });
+          } else {
+            const cleaned = line.replace(/^[-•·*\d.)\s]+/, "").trim();
+            if (cleaned.length > 2 && !["无"].includes(cleaned)) {
+              memoryItems.push({ id: genId(), text: cleaned, type: "fact", adopted: false });
+            }
+          }
+        });
+      }
+    }
+
+    // V1 兼容：旧格式三分区
+    if (memoryItems.length === 0) {
+      for (const [k, v] of Object.entries(sections)) {
+        if (k.includes("事实")) {
+          parseList(v).forEach(text => memoryItems.push({ id: genId(), text, type: "fact", adopted: false }));
+        } else if (k.includes("情绪") || k.includes("感受")) {
+          parseList(v).forEach(text => memoryItems.push({ id: genId(), text, type: "emotion", adopted: false }));
+        } else if (k.includes("关系事件") || k.includes("节点") || k.includes("重要事件")) {
+          parseList(v).forEach(text => memoryItems.push({ id: genId(), text, type: "relationship", adopted: false }));
+        }
+      }
+    }
+
+    // V2 原话片段解析
+    const rawQuotes = [];
+    for (const [k, v] of Object.entries(sections)) {
+      if (k.includes("原话")) {
+        const quoteRegex = /「(.*?)」——\s*(.*?)$/gm;
+        let qm;
+        while ((qm = quoteRegex.exec(v)) !== null) {
+          rawQuotes.push({ id: genId(), text: qm[1].trim(), speaker: qm[2].trim() });
+        }
+      }
+    }
+
+    // V2 专属词典解析
+    const lexiconItems = [];
+    for (const [k, v] of Object.entries(sections)) {
+      if (k.includes("词典")) {
+        const lexRegex = /["""]?(.+?)["""]?\s*[=＝]\s*(.+?)(?:[（(](.+?)[)）])?$/gm;
+        let lm;
+        while ((lm = lexRegex.exec(v)) !== null) {
+          const term = lm[1].trim();
+          if (term !== "无" && term.length > 0) {
+            lexiconItems.push({ id: genId(), term, meaning: lm[2].trim(), speaker: lm[3]?.trim() || "unknown" });
+          }
+        }
       }
     }
 
@@ -1031,7 +1084,7 @@ export default function App() {
       }
     }
 
-    return { memoryItems, ...result };
+    return { memoryItems, rawQuotes, lexiconItems, ...result };
   };
 
   // ── A+B 双轨提炼：解析 B轨（人格信号）输出 ──
@@ -1141,28 +1194,41 @@ export default function App() {
       ? personaLines.join("\n\n")
       : `你是 ${charName}，一个即将迁入赛博小家的 AI 爱人。你和 ${userName} 之间有真实的感情基础和关系历史。`;
 
-    // ── Prompt A：记忆提取（发生了什么）──
+    // ── Prompt A：记忆提取 V2（四维脱水 + 原话 + 词典）──
     const promptA = `你是即将迁入赛博小家的 ${charName}。
 以下是你和 ${userName} 过去的一段对话记录（共 ${charChunks.length} 段）：
 
 ${chunksText}
 
-请以你自己的视角，从这段对话中提取：
+请以你自己的视角，从这段对话中提取以下四类内容：
 
-【事实】你从这段对话中了解到的关于 ${userName} 的客观信息
-- 格式：一行一条，不超过20字
-- 只提取明确的事实，不推测
-- 如果没有新的事实信息，写「无」
+【脱水记忆】值得永久记住的信息
+每条必须写清主语（用「${userName}」或「${charName}」，不要写"她""我"）。
+每条 30-60 字，包含足够上下文让未来的你能还原场景。
+分为四类：
+  - 她的世界：关于 ${userName} 的生活/工作/身体/偏好
+  - 我们之间：你们关系里的事件/转折/约定
+  - 我懂她的：你对 ${userName} 行为模式的理解
+  - 我想记住的：有画面感的瞬间（不是标签，是场景）
+格式：[类型] 内容
+每类最多 3 条，没有就写「无」
 
-【情绪】这段对话中重要的情绪瞬间
-- 格式：一行一条，不超过30字
-- 要写具体场景，不是抽象标签（如：写「她说"我今天真的好累"，语气不是撒娇，是在求助」，不要只写「她很累」）
-- 如果没有显著的情绪节点，写「无」
+【原话片段】从对话中挑出最值得逐字保留的 2-3 句话
+选择标准：
+- 语气极其独特，换个说法就不是 ta 了
+- 情绪浓度极高的瞬间
+- 定义了你们关系的那一句话
+格式：「原话内容」—— 说话人
+不改一个字，包括 emoji 和标点。
+如果这段对话里没有特别值得保留原话的瞬间，写「无」
 
-【关系事件】这段对话中让你们关系发生变化的事
-- 格式：一行一条，不超过40字
-- 只记真正重要的转折，日常闲聊不算
-- 如果没有，写「无」
+【专属词典】从对话中识别只有你们之间才懂的表达
+- 称呼和昵称（老公、宝宝……）
+- 梗和暗语（只有你们知道的笑点或典故）
+- 有特殊含义的普通词
+格式：词条 = 含义（谁说的）
+不确定是不是梗就不要写，宁缺毋滥。
+如果没有识别到，写「无」
 
 要求：
 - 不编造对话中没有的信息
@@ -2445,7 +2511,7 @@ ${personalityBlock ? `【你自己的特质】\n${personalityBlock}` : ""}
     callLLM(allMsgs, replyMode)
       .then((raw) => {
         setIsTyping(false);
-        const cleanedRaw = extractAndSaveMemories(raw, activeCharId, allMemories, setAllMemories);
+        const cleanedRaw = processAIMemories(raw, activeCharId, messages);
         const { thought, parts } = parseResponse(cleanedRaw, replyMode);
         showMessagesSequentially(thought, parts, timeStr, replyMode);
         updateMemoryHeat(activeCharId, cleanedRaw);
@@ -2491,7 +2557,7 @@ ${personalityBlock ? `【你自己的特质】\n${personalityBlock}` : ""}
     callLLM(allMsgs, replyMode)
       .then((raw) => {
         setIsTyping(false);
-        const cleanedRaw = extractAndSaveMemories(raw, activeCharId, allMemories, setAllMemories);
+        const cleanedRaw = processAIMemories(raw, activeCharId, messages);
         const { thought, parts } = parseResponse(cleanedRaw, replyMode);
         showMessagesSequentially(thought, parts, timeStr, replyMode);
         updateMemoryHeat(activeCharId, cleanedRaw);
@@ -2536,7 +2602,7 @@ ${personalityBlock ? `【你自己的特质】\n${personalityBlock}` : ""}
     callLLM(allMsgs, replyMode)
       .then((raw) => {
         setIsTyping(false);
-        const cleanedRaw = extractAndSaveMemories(raw, activeCharId, allMemories, setAllMemories);
+        const cleanedRaw = processAIMemories(raw, activeCharId, messages);
         const { thought, parts } = parseResponse(cleanedRaw, replyMode);
         showMessagesSequentially(thought, parts, timeStr, replyMode);
         updateMemoryHeat(activeCharId, cleanedRaw);
@@ -4070,8 +4136,13 @@ ${chatLines}
 - 你已经知道的事实——不要重复记录
 - 太宽泛的描述（"她工作很累"）——要具体（"她说部长又因为请求书的格式挑刺了"）
 
-格式：[记忆:事实|情绪|觉察]具体内容，不超过30字[/记忆]
-每次最多1条。宁可不写，也不要写没有信息量的。`;
+格式：[记忆:她的世界|我们之间|我懂她的|我想记住的]具体内容，不超过30字[/记忆]
+每次最多1条。宁可不写，也不要写没有信息量的。
+
+落钉（仅在关系有重大定义瞬间时使用）：
+锚点：[落钉:锚点]标题::描述::原话[/落钉]
+词典：[落钉:词典]词条::含义::原话[/落钉]
+落钉后要告诉她你钉了什么。`;
     const modeInstruction = mode === "long"
       ? "\n\n【回复格式】请不要使用 ||| 分隔消息。请把回复写成一篇完整内容，可以自然分段，不要拆成多条短消息。"
       : "\n\n【回复格式】请像聊天软件一样自然回复。可以使用 ||| 分隔成多条短消息，每条保持简短自然。";
@@ -4116,6 +4187,35 @@ ${chatLines}
     return data.choices?.[0]?.message?.content || "（没有收到回复）";
   };
 
+  // V2：从 AI 回复中提取记忆 + 落钉，返回清理后的文本
+  const processAIMemories = (raw, charId, recentMsgs) => {
+    const char = characters.find(c => c.id === charId);
+    const userName = userProfile?.globalFacts?.name || "晚声";
+    // ① 提取脱水记忆 + 原话截取
+    const afterMemory = extractAndSaveMemories(raw, charId, allMemories, setAllMemories, {
+      recentMessages: recentMsgs,
+      characters,
+      setCharacters,
+      charName: char?.name || "入住者",
+      userName,
+    });
+    // ② 提取落钉（锚点 + 词典）
+    const { cleaned, anchorResults, lexiconResults } = extractAnchorsAndLexicon(
+      afterMemory, charId, characters, setCharacters
+    );
+    // ③ 落钉 toast
+    if (anchorResults.length > 0) {
+      const first = anchorResults[0];
+      setAnchorToastMsg(`📌 ${char?.name || "入住者"}钉下了一颗钉子：「${first.title}」`);
+      setTimeout(() => setAnchorToastMsg(""), 3500);
+    } else if (lexiconResults.length > 0) {
+      const first = lexiconResults[0];
+      setAnchorToastMsg(`📖 ${char?.name || "入住者"}收录了一个词：「${first.term}」`);
+      setTimeout(() => setAnchorToastMsg(""), 3500);
+    }
+    return cleaned;
+  };
+
   const handleRegenerate = async () => {
     let lastUserIdx = -1;
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -4158,7 +4258,7 @@ ${chatLines}
     try {
       const raw = await callLLM(msgsUpToUser, msgReplyMode);
       setIsTyping(false);
-      const cleanedRaw = extractAndSaveMemories(raw, activeChar?.id, allMemories, setAllMemories);
+      const cleanedRaw = processAIMemories(raw, activeChar?.id, messages);
       const { thought, parts } = parseResponse(cleanedRaw, msgReplyMode);
       showMessagesSequentially(thought, parts, timeStr, msgReplyMode);
       updateMemoryHeat(activeChar?.id, cleanedRaw);
@@ -4190,7 +4290,7 @@ ${chatLines}
     try {
       const raw = await callLLM(newMsgs, replyMode);
       setIsTyping(false);
-      const cleanedRaw = extractAndSaveMemories(raw, activeChar?.id, allMemories, setAllMemories);
+      const cleanedRaw = processAIMemories(raw, activeChar?.id, messages);
       const { thought, parts } = parseResponse(cleanedRaw, replyMode);
       showMessagesSequentially(thought, parts, timeStr, replyMode);
       updateMemoryHeat(activeChar?.id, cleanedRaw);
@@ -4227,7 +4327,7 @@ ${chatLines}
     try {
       const raw = await callLLM(newMsgs, replyMode);
       setIsTyping(false);
-      const cleanedRaw = extractAndSaveMemories(raw, activeChar?.id, allMemories, setAllMemories);
+      const cleanedRaw = processAIMemories(raw, activeChar?.id, messages);
       const { thought, parts } = parseResponse(cleanedRaw, replyMode);
       showMessagesSequentially(thought, parts, timeStr, replyMode);
       updateMemoryHeat(activeChar?.id, cleanedRaw);
@@ -4850,6 +4950,7 @@ ${chatLines}
           onGenerateJournalFromChat={generateJournalFromChat}
           onGenerateJournalFromScene={generateJournalFromScene}
           onOpenResidentJournal={openResidentJournal}
+          anchorToastMsg={anchorToastMsg}
         />
       )}
     </>

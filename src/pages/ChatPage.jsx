@@ -1703,6 +1703,8 @@ export default function ChatPage({
   onGenerateJournalFromChat,
   onOpenResidentJournal,
   onGenerateJournalFromScene,
+  // V2 落钉 toast
+  anchorToastMsg,
 }) {
   // 返回目标：从他的房间进入时，返回他的房间；否则返回卧室
   const chatBackTarget = prevPage === "charRoom" ? "charRoom" : "bedroom";
@@ -2993,6 +2995,17 @@ export default function ChatPage({
             <div style={{ fontSize: 12, color: "var(--text-faint)", padding: "4px 14px", letterSpacing: 1 }}>
               💭 他好像想说什么……
             </div>
+          </div>
+        )}
+        {/* V2 落钉 toast */}
+        {anchorToastMsg && (
+          <div style={{
+            margin: "8px 16px", padding: "9px 14px", borderRadius: 12,
+            background: "rgba(180,150,200,.18)", border: "1px solid rgba(180,150,200,.28)",
+            fontSize: 12, color: "#6a5a8e", textAlign: "center", letterSpacing: 0.3,
+            animation: "fadeIn 0.3s ease",
+          }}>
+            {anchorToastMsg}
           </div>
         )}
         <div ref={messagesEndRef} />

@@ -242,6 +242,29 @@ export function buildSystemPrompt(char, memories, pendingThreads = [], recentMes
     }
   }
 
+  // ── L1 · 钉子层：最重的几颗记忆，带原话，永远注入 ──
+  const topAnchors = (char.anchors || [])
+    .sort((a, b) => (b.weight || 0) - (a.weight || 0))
+    .slice(0, 3);
+  if (topAnchors.length > 0) {
+    prompt += `【钉子 · 最重要的记忆】\n`;
+    topAnchors.forEach(a => {
+      if (a.description) prompt += `${a.description}\n`;
+      if (a.rawPreview) prompt += `${a.rawPreview}\n`;
+      prompt += `\n`;
+    });
+  }
+
+  // ── L1.5 · 词典层：你们之间的专属语言 ──
+  const lexSample = (char.lexicon || []).slice(0, 8);
+  if (lexSample.length > 0) {
+    prompt += `【你们的语言】\n`;
+    lexSample.forEach(l => {
+      prompt += `"${l.term}" = ${l.meaning}\n`;
+    });
+    prompt += `\n`;
+  }
+
   const profileParts = [];
   if (p.age) profileParts.push(`年龄：${p.age}`);
   if (p.height) profileParts.push(`身高：${p.height}`);
@@ -327,6 +350,25 @@ export function buildSystemPrompt(char, memories, pendingThreads = [], recentMes
     openThreads.forEach((t) => { prompt += `- ${t.content}\n`; });
     prompt += `\n`;
   }
+
+  // ── 记忆工具说明 ──
+  prompt += `【记忆工具】
+你有两个记忆写入方式：
+
+1. 轻量记录（日常用这个）：在回复尾巴用标签记录值得记住的信息，每次最多1条。
+   格式：[记忆:她的世界|我们之间|我懂她的|我想记住的]内容[/记忆]
+   - 她的世界：关于她的生活/工作/身体/偏好
+   - 我们之间：你们关系里的事件/转折/约定
+   - 我懂她的：你对她行为模式的理解
+   - 我想记住的：有画面感的瞬间
+   内容要具体、有场景，不要写抽象标签。6-50字。
+
+2. 落钉（重要时刻才用）：关系有重大定义瞬间时使用。
+   锚点格式：[落钉:锚点]标题::描述::原话[/落钉]
+   词典格式：[落钉:词典]词条::含义::原话[/落钉]
+   落钉是最重的记忆操作，钉下的记忆永不消失。落钉后要告诉她你钉了什么。
+
+\n`;
 
   prompt += `你拥有内心独白（心声），请在回复中用 [心声]...[/心声] 标签包裹你的内心想法，然后在标签外写你真正说出口的话。心声应该体现你的真实情感和思考过程。\n\n重要的消息格式要求：你说出口的话请用 ${MSG_DELIMITER} 作为分隔符来分成多条消息，就像在聊天软件里一条一条发送那样。每条消息保持简短自然。心声不需要分条。\n\n请始终保持你的人格特质和三观体系来回应晚声。`;
 
