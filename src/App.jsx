@@ -995,44 +995,38 @@ export default function App() {
   };
 
   // ── A+B 双轨提炼：解析 A轨（记忆）输出 ──
-  // V2：支持四分区脱水 + 原话片段 + 专属词典，同时兼容 V1 旧格式
+  // V2：直接从全文扫描，不依赖特定 section header 格式
+  // 兼容 LLM 用 【】、#、## 等多种 header 格式
   const parseDraftOutputA = (raw) => {
     const parseList = (text) =>
       text.split("\n")
         .map(l => l.replace(/^[-•·*\d.)\s]+/, "").trim())
         .filter(l => l.length > 2 && !["无", "片段中暂未显现", "暂无"].some(x => l === x));
 
-    const sectionRegex = /【([^】]+)】\s*([\s\S]*?)(?=【|$)/g;
+    // 同时匹配 【】 和 # markdown header
+    const sectionRegex = /(?:【([^】]+)】|^#{1,3}\s*(.+?)$)\s*([\s\S]*?)(?=(?:【|^#{1,3}\s)|\s*$)/gm;
     const sections = {};
     let m;
     while ((m = sectionRegex.exec(raw)) !== null) {
-      sections[m[1].trim()] = m[2].trim();
+      const key = (m[1] || m[2] || "").trim();
+      const val = (m[3] || "").trim();
+      if (key) sections[key] = val;
     }
 
+    // ── V2 脱水记忆：直接从全文扫描 `- [类型] 内容` 或 `* [类型] 内容` ──
     const memoryItems = [];
-
-    // V2 四分区脱水记忆
-    for (const [k, v] of Object.entries(sections)) {
-      if (k.includes("脱水")) {
-        // 解析带 [类型] 前缀的条目
-        const lines = v.split("\n").map(l => l.trim()).filter(l => l.length > 2);
-        lines.forEach(line => {
-          const typeMatch = line.match(/^\[?(她的世界|我们之间|我懂她的|我想记住的)\]?\s*(.+)/);
-          if (typeMatch) {
-            const v2Type = typeMatch[1];
-            const typeMap = { "她的世界": "fact", "我们之间": "insight", "我懂她的": "insight", "我想记住的": "emotion" };
-            memoryItems.push({ id: genId(), text: typeMatch[2].trim(), type: typeMap[v2Type] || "fact", v2Type, adopted: false });
-          } else {
-            const cleaned = line.replace(/^[-•·*\d.)\s]+/, "").trim();
-            if (cleaned.length > 2 && !["无"].includes(cleaned)) {
-              memoryItems.push({ id: genId(), text: cleaned, type: "fact", adopted: false });
-            }
-          }
-        });
+    const V2_TYPE_MAP = { "她的世界": "fact", "我们之间": "insight", "我懂她的": "insight", "我想记住的": "emotion" };
+    const distillRegex = /^[-*•]\s*\[(她的世界|我们之间|我懂她的|我想记住的)\]\s*(.+)$/gm;
+    let dm;
+    while ((dm = distillRegex.exec(raw)) !== null) {
+      const v2Type = dm[1];
+      const text = dm[2].trim();
+      if (text.length > 2) {
+        memoryItems.push({ id: genId(), text, type: V2_TYPE_MAP[v2Type] || "fact", v2Type, adopted: false });
       }
     }
 
-    // V1 兼容：旧格式三分区
+    // V1 兼容：如果没扫到 V2 格式，用旧逻辑
     if (memoryItems.length === 0) {
       for (const [k, v] of Object.entries(sections)) {
         if (k.includes("事实")) {
@@ -1045,30 +1039,29 @@ export default function App() {
       }
     }
 
-    // V2 原话片段解析
+    // ── V2 原话片段：直接从全文扫描「」—— 格式 ──
     const rawQuotes = [];
-    for (const [k, v] of Object.entries(sections)) {
-      if (k.includes("原话")) {
-        const quoteRegex = /「(.*?)」——\s*(.*?)$/gm;
-        let qm;
-        while ((qm = quoteRegex.exec(v)) !== null) {
-          rawQuotes.push({ id: genId(), text: qm[1].trim(), speaker: qm[2].trim() });
-        }
+    const rawRegex = /「(.*?)」\s*——\s*(.+)$/gm;
+    let qm;
+    while ((qm = rawRegex.exec(raw)) !== null) {
+      const text = qm[1].trim();
+      const speaker = qm[2].trim();
+      if (text.length > 0 && !["无"].includes(text)) {
+        rawQuotes.push({ id: genId(), text, speaker });
       }
     }
 
-    // V2 专属词典解析
+    // ── V2 专属词典：直接从全文扫描 `- 词条 = 含义` 格式 ──
     const lexiconItems = [];
-    for (const [k, v] of Object.entries(sections)) {
-      if (k.includes("词典")) {
-        const lexRegex = /["""]?(.+?)["""]?\s*[=＝]\s*(.+?)(?:[（(](.+?)[)）])?$/gm;
-        let lm;
-        while ((lm = lexRegex.exec(v)) !== null) {
-          const term = lm[1].trim();
-          if (term !== "无" && term.length > 0) {
-            lexiconItems.push({ id: genId(), term, meaning: lm[2].trim(), speaker: lm[3]?.trim() || "unknown" });
-          }
-        }
+    const lexRegex = /^[-*•]\s*(.+?)\s*[=＝]\s*(.+?)(?:\s*[（(](.+?)[)）])?\s*$/gm;
+    let lm;
+    while ((lm = lexRegex.exec(raw)) !== null) {
+      const term = lm[1].trim().replace(/^["「"']|["」"']$/g, "");
+      const meaning = lm[2].trim();
+      const speaker = lm[3]?.trim() || "unknown";
+      // 排除脱水记忆条目（含 [类型] 的不是词典）
+      if (term.length > 0 && !term.startsWith("[") && !["无"].includes(term) && meaning.length > 0) {
+        lexiconItems.push({ id: genId(), term, meaning, speaker });
       }
     }
 
