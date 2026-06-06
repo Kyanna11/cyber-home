@@ -1,283 +1,166 @@
-// ─── 记忆宫殿页 ───
-// 管理角色的三类记忆（事实/情绪/觉察）和总结，含 AI 反思、人格成长功能
+// ─── 记忆宫殿页 V2 ───
+// 垂直分层布局：钉子 → 词典 → 记忆 → 总结
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import BackButton from "../components/BackButton";
-import { MEMORY_TYPES } from "../constants";
+import { MEMORY_TYPES, V1_TO_V2_TYPE_MAP } from "../constants";
 import { calculateHeat, getHeatLevel } from "../utils/memory";
 
+// ── 区域标题组件 ──
+function AreaTitle({ emoji, title, count, right }) {
+  return (
+    <div style={{
+      fontSize: 13, fontWeight: 500, letterSpacing: 2, color: "var(--text-deep)",
+      display: "flex", alignItems: "center", gap: 8, margin: "20px 0 12px",
+    }}>
+      <span>{emoji}</span>
+      <span>{title}</span>
+      {count !== undefined && (
+        <span style={{ fontSize: 11, color: "var(--text-faint)", fontWeight: 400, letterSpacing: 0 }}>{count}</span>
+      )}
+      <span style={{ flex: 1, height: 1, background: "linear-gradient(90deg, rgba(196,166,184,.3), transparent)" }} />
+      {right}
+    </div>
+  );
+}
+
 // ── 阶段沉淀草稿卡片 ──
-// key      = 传给 applySettlementSection 的 section 标识符（需与 App.jsx 一致）
-// dataKey  = draft 对象上实际存储数据的字段名
 const SETTLEMENT_SECTIONS = [
-  {
-    key: "relationship", dataKey: "relationshipChange",
-    label: "关系变化记录", emoji: "📖",
-    hint: "追加到入住档案 · 关系基础",
-    target: "入住档案 · 关系基础", navTarget: "charEdit",
-  },
-  {
-    key: "wakeSummary",  dataKey: "wakeSummaryUpdate",
-    label: "唤醒摘要建议", emoji: "🌙",
-    hint: "替换入住档案 · 唤醒摘要",
-    target: "入住档案 · 唤醒摘要", navTarget: "charEdit",
-  },
-  {
-    key: "rules",        dataKey: "newRules",
-    label: "不可遗忘追加", emoji: "🔒",
-    hint: "追加到入住档案 · 不可遗忘事项",
-    target: "入住档案 · 不可遗忘", navTarget: "charEdit",
-  },
-  {
-    key: "memories",     dataKey: "suggestedMemories",
-    label: "记忆锚点建议", emoji: "📌",
-    hint: "写入记忆宫殿 · 固定锚点",
-    target: "记忆宫殿 · 固定锚点", navTarget: "memFact",
-  },
+  { key: "relationship", dataKey: "relationshipChange", label: "关系变化记录", emoji: "📖", hint: "追加到入住档案 · 关系基础", target: "入住档案 · 关系基础", navTarget: "charEdit" },
+  { key: "wakeSummary", dataKey: "wakeSummaryUpdate", label: "唤醒摘要建议", emoji: "🌙", hint: "替换入住档案 · 唤醒摘要", target: "入住档案 · 唤醒摘要", navTarget: "charEdit" },
+  { key: "rules", dataKey: "newRules", label: "不可遗忘追加", emoji: "🔒", hint: "追加到入住档案 · 不可遗忘事项", target: "入住档案 · 不可遗忘", navTarget: "charEdit" },
+  { key: "memories", dataKey: "suggestedMemories", label: "记忆锚点建议", emoji: "📌", hint: "写入记忆宫殿 · 固定锚点", target: "记忆宫殿 · 固定锚点", navTarget: "memFact" },
 ];
 
 function SettlementDraftCard({ draft, onApplySection, onDismiss, onDelete, onNavigate }) {
   const applied = draft.appliedSections || [];
   const date = new Date(draft.createdAt).toLocaleDateString("zh-CN");
-
-  // 把 suggestedMemories 数组项（{type,text} 对象）转成可读字符串
   const toDisplayText = (raw) => {
     if (!raw) return "";
-    if (Array.isArray(raw)) {
-      return raw.map((item) => {
-        if (typeof item === "object" && item !== null) {
-          const label = item.type ? `【${item.type}】` : "";
-          return label + (item.text || item.content || item.title || JSON.stringify(item));
-        }
-        return String(item);
-      }).join("\n");
-    }
+    if (Array.isArray(raw)) return raw.map(item => typeof item === "object" && item !== null ? (item.type ? `【${item.type}】` : "") + (item.text || item.content || item.title || JSON.stringify(item)) : String(item)).join("\n");
     return String(raw);
   };
-
-  const totalSections = SETTLEMENT_SECTIONS.filter(({ dataKey }) => {
-    const c = draft[dataKey];
-    return c && (Array.isArray(c) ? c.length > 0 : String(c).trim());
-  }).length;
+  const totalSections = SETTLEMENT_SECTIONS.filter(({ dataKey }) => { const c = draft[dataKey]; return c && (Array.isArray(c) ? c.length > 0 : String(c).trim()); }).length;
 
   return (
-    <div style={{
-      borderRadius: 14, marginBottom: 16,
-      border: "1px solid rgba(106,122,174,.25)",
-      background: "rgba(106,122,174,.06)",
-      overflow: "hidden",
-    }}>
-      {/* 头部 */}
-      <div style={{
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-        padding: "12px 16px 10px",
-        borderBottom: "1px solid rgba(106,122,174,.12)",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 16 }}>🌿</span>
+    <div style={{ borderRadius: 14, marginBottom: 12, border: "1px solid rgba(106,122,174,.25)", background: "rgba(106,122,174,.06)", overflow: "hidden" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px 8px", borderBottom: "1px solid rgba(106,122,174,.12)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 14 }}>🌿</span>
           <div>
-            <div style={{ fontSize: 13, color: "var(--text-mid)", fontWeight: 500 }}>阶段沉淀草稿</div>
-            <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 1 }}>{date} · 等待确认</div>
+            <div style={{ fontSize: 12, color: "var(--text-mid)", fontWeight: 500 }}>阶段沉淀草稿</div>
+            <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 1 }}>{date}</div>
           </div>
         </div>
-        {applied.length > 0 && (
-          <span style={{ fontSize: 12, color: "#6a9a6a", background: "rgba(100,160,100,.1)", padding: "2px 8px", borderRadius: 8 }}>
-            已采纳 {applied.length} / {totalSections} 节
-          </span>
-        )}
+        {applied.length > 0 && <span style={{ fontSize: 11, color: "#6a9a6a", background: "rgba(100,160,100,.1)", padding: "2px 7px", borderRadius: 8 }}>已采纳 {applied.length}/{totalSections}</span>}
       </div>
-
-      {/* 说明提示 */}
-      <div style={{
-        margin: "10px 14px 0",
-        padding: "8px 12px",
-        borderRadius: 8,
-        background: "rgba(106,122,174,.06)",
-        border: "1px solid rgba(106,122,174,.12)",
-        fontSize: 12, color: "#7a7aaa", lineHeight: 1.7,
-      }}>
-        采纳后的内容会<strong>追加写入</strong>对应位置，不会覆盖你手写的内容。若需要修改，可前往写入位置编辑。
-      </div>
-
-      {/* 各节内容 */}
-      <div style={{ padding: "10px 14px 6px" }}>
-        {SETTLEMENT_SECTIONS.map(({ key, dataKey, label, emoji, hint, target, navTarget }) => {
+      <div style={{ padding: "8px 12px 6px" }}>
+        {SETTLEMENT_SECTIONS.map(({ key, dataKey, label, emoji, target, navTarget }) => {
           const raw = draft[dataKey];
           if (!raw || (Array.isArray(raw) ? raw.length === 0 : !String(raw).trim())) return null;
-          const displayText = toDisplayText(raw);
           const isApplied = applied.includes(key);
-
           return (
-            <div key={key} style={{
-              marginBottom: 10, padding: "10px 12px",
-              borderRadius: 10,
-              background: isApplied ? "rgba(100,160,100,.06)" : "rgba(255,255,255,.55)",
-              border: `1px solid ${isApplied ? "rgba(100,160,100,.2)" : "rgba(196,166,184,.2)"}`,
-              transition: "all .2s",
-            }}>
-              {/* 节标题行 */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 5 }}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <span>{emoji}</span>
-                    <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-mid)" }}>{label}</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2, paddingLeft: 20 }}>
-                    写入位置：{target}
-                  </div>
-                </div>
-                {isApplied ? (
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
-                    <span style={{ fontSize: 12, color: "#6a9a6a" }}>✓ 已采纳</span>
-                    <button
-                      onClick={() => onNavigate?.(navTarget)}
-                      style={{
-                        fontSize: 12, padding: "2px 9px", borderRadius: 7, cursor: "pointer",
-                        background: "rgba(100,160,100,.1)", border: "1px solid rgba(100,160,100,.25)",
-                        color: "#4a8a4a", fontFamily: "var(--font-main)",
-                      }}
-                    >去查看</button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => onApplySection(key)}
-                    style={{
-                      fontSize: 12, padding: "3px 12px", borderRadius: 8, cursor: "pointer",
-                      background: "rgba(106,122,174,.15)", border: "1px solid rgba(106,122,174,.3)",
-                      color: "#6a7aae", fontFamily: "var(--font-main)", flexShrink: 0,
-                    }}
-                  >采纳</button>
-                )}
+            <div key={key} style={{ marginBottom: 8, padding: "8px 10px", borderRadius: 10, background: isApplied ? "rgba(100,160,100,.06)" : "rgba(255,255,255,.55)", border: `1px solid ${isApplied ? "rgba(100,160,100,.2)" : "rgba(196,166,184,.2)"}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-mid)" }}>{emoji} {label}</span>
+                {isApplied
+                  ? <button onClick={() => onNavigate?.(navTarget)} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, background: "rgba(100,160,100,.1)", border: "1px solid rgba(100,160,100,.25)", color: "#4a8a4a", cursor: "pointer", fontFamily: "var(--font-main)" }}>✓ 去查看</button>
+                  : <button onClick={() => onApplySection(key)} style={{ fontSize: 11, padding: "2px 10px", borderRadius: 6, background: "rgba(106,122,174,.15)", border: "1px solid rgba(106,122,174,.3)", color: "#6a7aae", cursor: "pointer", fontFamily: "var(--font-main)" }}>采纳</button>
+                }
               </div>
-
-              {/* 内容 */}
-              <div style={{
-                fontSize: 12, color: isApplied ? "#999" : "var(--text-main)",
-                lineHeight: 1.75, whiteSpace: "pre-wrap",
-                maxHeight: 160, overflowY: "auto",
-                opacity: isApplied ? 0.6 : 1,
-              }}>
-                {displayText}
-              </div>
-
-              {/* 采纳成功提示 */}
-              {isApplied && (
-                <div style={{
-                  marginTop: 6, fontSize: 12, color: "#6a9a6a",
-                  padding: "4px 8px", borderRadius: 6,
-                  background: "rgba(100,160,100,.07)",
-                }}>
-                  已写入「{target}」，可前往查看或编辑。
-                </div>
-              )}
+              <div style={{ fontSize: 12, color: isApplied ? "#999" : "var(--text-main)", lineHeight: 1.7, whiteSpace: "pre-wrap", maxHeight: 100, overflowY: "auto", opacity: isApplied ? 0.6 : 1 }}>{toDisplayText(raw)}</div>
             </div>
           );
         })}
       </div>
-
-      {/* 底部操作 */}
-      <div style={{
-        display: "flex", gap: 8, padding: "8px 14px 12px",
-        borderTop: "1px solid rgba(106,122,174,.1)",
-      }}>
-        <button
-          onClick={onDismiss}
-          style={{
-            flex: 1, fontSize: 12, padding: "6px 0", borderRadius: 8, cursor: "pointer",
-            background: "transparent", border: "1px solid rgba(196,166,184,.3)",
-            color: "var(--text-faint)", fontFamily: "var(--font-main)",
-          }}
-        >暂不采纳</button>
-        <button
-          onClick={onDelete}
-          style={{
-            fontSize: 12, padding: "6px 14px", borderRadius: 8, cursor: "pointer",
-            background: "transparent", border: "1px solid rgba(200,120,120,.2)",
-            color: "#c07070", fontFamily: "var(--font-main)",
-          }}
-        >删除</button>
+      <div style={{ display: "flex", gap: 6, padding: "6px 12px 10px", borderTop: "1px solid rgba(106,122,174,.1)" }}>
+        <button onClick={onDismiss} style={{ flex: 1, fontSize: 11, padding: "5px 0", borderRadius: 8, background: "transparent", border: "1px solid rgba(196,166,184,.3)", color: "var(--text-faint)", cursor: "pointer", fontFamily: "var(--font-main)" }}>暂不</button>
+        <button onClick={onDelete} style={{ fontSize: 11, padding: "5px 12px", borderRadius: 8, background: "transparent", border: "1px solid rgba(200,120,120,.2)", color: "#c07070", cursor: "pointer", fontFamily: "var(--font-main)" }}>删除</button>
       </div>
     </div>
   );
 }
 
 export default function MemoryPalacePage({
-  memCharId,
-  memEntryFrom,
-  characters,
-  navigateTo,
-  openTimeline,
-  setEditingChar,
-  setEditSection,
-  memTab,
-  setMemTab,
-  memSort,
-  setMemSort,
-  memFilter,
-  setMemFilter,
-  memInput,
-  setMemInput,
-  summaryInput,
-  setSummaryInput,
-  showAddSummary,
-  setShowAddSummary,
-  getCharMemories,
-  addMemory,
-  deleteMemory,
-  toggleMemoryImportant,
-  pinMemory,
-  toggleInjectable,
-  getReflectSetting,
-  shouldReflect,
-  reflecting,
-  generateSettlement,
-  settlementDrafts,
-  settlementNotice,
-  setSettlementNotice,
-  applySettlementSection,
-  dismissSettlementDraft,
-  deleteSettlementDraft,
-  addSummary,
-  worldViews,
-  applyFeedbackToProfile,
-  reflectSettings,
-  setReflectSettings,
-  openCharTreasure,
-  charTreasures,
-  // V2 钉子/词典
-  updateAnchorWeight,
-  deleteAnchor,
-  addLexiconItem,
-  updateLexiconItem,
-  deleteLexiconItem,
-  addAnchorItem,
+  memCharId, memEntryFrom, characters, navigateTo, openTimeline,
+  setEditingChar, setEditSection,
+  memTab, setMemTab, memSort, setMemSort, memFilter, setMemFilter,
+  memInput, setMemInput, summaryInput, setSummaryInput, showAddSummary, setShowAddSummary,
+  getCharMemories, addMemory, deleteMemory, toggleMemoryImportant, pinMemory, toggleInjectable,
+  getReflectSetting, shouldReflect, reflecting, generateSettlement,
+  settlementDrafts, settlementNotice, setSettlementNotice,
+  applySettlementSection, dismissSettlementDraft, deleteSettlementDraft,
+  addSummary, worldViews, applyFeedbackToProfile, reflectSettings, setReflectSettings,
+  openCharTreasure, charTreasures,
+  updateAnchorWeight, deleteAnchor, addLexiconItem, updateLexiconItem, deleteLexiconItem, addAnchorItem,
 }) {
   const char = characters.find((c) => c.id === memCharId) || {};
   const charName = char.name || "记忆";
   const [viewMode, setViewMode] = useState("list");
+
+  // 钉子状态
   const [editingWeight, setEditingWeight] = useState(null);
   const [deletingAnchor, setDeletingAnchor] = useState(null);
-  const [deletingLex, setDeletingLex] = useState(null);
+
+  // 词典状态
+  const [expandedLex, setExpandedLex] = useState(null);
   const [editingLex, setEditingLex] = useState(null);
+  const [deletingLex, setDeletingLex] = useState(null);
   const [showAddLex, setShowAddLex] = useState(false);
   const [newLexTerm, setNewLexTerm] = useState("");
   const [newLexMeaning, setNewLexMeaning] = useState("");
   const [newLexSpeaker, setNewLexSpeaker] = useState("");
 
-  // ── 概览预计算 ──
+  // 记忆状态
+  const [memTypeFilter, setMemTypeFilter] = useState("all");
+  const [memSortMode, setMemSortMode] = useState("heat");
+  const [expandedMemId, setExpandedMemId] = useState(null);
+
+  // 总结折叠
+  const [summaryOpen, setSummaryOpen] = useState(false);
+
+  // 滚动锚点
+  const anchorRef = useRef(null);
+  const lexRef = useRef(null);
+  const memRef = useRef(null);
+  const summaryRef = useRef(null);
+
+  // 数据
+  const anchors = (char.anchors || []).sort((a, b) => (b.weight || 0) - (a.weight || 0));
+  const lexicon = char.lexicon || [];
   const _mem = getCharMemories(memCharId);
-  const _totalMem = MEMORY_TYPES.reduce((s, mt) => s + (_mem[mt.key] || []).length, 0);
-  const _totalPin = MEMORY_TYPES.reduce((s, mt) => s + (_mem[mt.key] || []).filter(m => m.pinned).length, 0);
-  const _allPinned = MEMORY_TYPES.flatMap(mt =>
-    (_mem[mt.key] || []).filter(m => m.pinned).map(m => ({ ...m, _key: mt.key, _emoji: mt.emoji, _label: mt.label }))
-  );
-  const _pendingDrafts = (settlementDrafts || []).filter(d => d.loverId === memCharId && d.status === "pending").length;
-  const _dayLabel = (ts) => {
-    if (!ts) return "暂无";
-    const d = Math.floor((Date.now() - ts) / 86400000);
-    if (d === 0) return "今日活跃"; if (d === 1) return "昨天"; if (d < 7) return `${d}天前`;
-    const dt = new Date(ts); return `${dt.getMonth() + 1}/${dt.getDate()}`;
-  };
+
+  // 合并所有记忆类型（fact/emotion/insight + V1 兼容映射）
+  const allMemories = [
+    ...(_mem.fact || []).map(m => ({ ...m, _type: "fact", _v2: "her_world" })),
+    ...(_mem.emotion || []).map(m => ({ ...m, _type: "emotion", _v2: "moments" })),
+    ...(_mem.insight || []).map(m => ({ ...m, _type: "insight", _v2: "understanding" })),
+  ];
+  const filteredMemories = allMemories
+    .filter(m => {
+      if (memTypeFilter === "all") return true;
+      return m._v2 === memTypeFilter;
+    })
+    .sort((a, b) => {
+      if (memSortMode === "heat") {
+        if ((a.pinned ?? false) !== (b.pinned ?? false)) return (b.pinned ?? false) ? 1 : -1;
+        return calculateHeat(b) - calculateHeat(a);
+      }
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    });
+
+  const pendingDrafts = (settlementDrafts || []).filter(d => d.loverId === memCharId && d.status === "pending");
+  const _totalMem = allMemories.length;
+
+  // 概览数据
+  const overviewStats = [
+    { emoji: "📌", val: anchors.length, label: "颗钉子" },
+    { emoji: "📖", val: lexicon.length, label: "个词条" },
+    { emoji: "🧠", val: _totalMem, label: "条记忆" },
+  ];
+
+  const btnSmall = { fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)" };
+  const btnDanger = { ...btnSmall, border: "1px solid rgba(200,120,120,.3)", background: "rgba(200,120,120,.08)", color: "#c07070" };
 
   return (
     <div className="memory-page page-fade">
@@ -285,16 +168,11 @@ export default function MemoryPalacePage({
       <div className="memory-header">
         <BackButton
           onClick={() => {
-            if (memEntryFrom === "chat") {
-              navigateTo("chat");
-            } else if (memEntryFrom === "charRoom") {
-              navigateTo("charRoom");
-            } else {
-              const char = characters.find((c) => c.id === memCharId);
-              if (char) {
-                setEditingChar(JSON.parse(JSON.stringify(char)));
-                setEditSection("basic");
-              }
+            if (memEntryFrom === "chat") navigateTo("chat");
+            else if (memEntryFrom === "charRoom") navigateTo("charRoom");
+            else {
+              const c = characters.find(c => c.id === memCharId);
+              if (c) { setEditingChar(JSON.parse(JSON.stringify(c))); setEditSection("basic"); }
               navigateTo("profileEdit");
             }
           }}
@@ -302,60 +180,18 @@ export default function MemoryPalacePage({
         />
         <div className="memory-header-title">🏛️ {charName}的记忆宫殿</div>
         {openTimeline ? (
-          <button
-            onClick={() => openTimeline(memCharId)}
-            style={{
-              padding: "6px 13px",
-              background: "rgba(106,122,174,.12)",
-              border: "1px solid rgba(106,122,174,.3)",
-              borderRadius: 12,
-              color: "#6a7aae",
-              fontSize: 12,
-              cursor: "pointer",
-              fontFamily: "var(--font-main)",
-              letterSpacing: 0.5,
-              whiteSpace: "nowrap",
-            }}
-          >
-            📅 年表
-          </button>
-        ) : (
-          <div className="memory-header-spacer" />
-        )}
+          <button onClick={() => openTimeline(memCharId)} style={{ padding: "6px 13px", background: "rgba(106,122,174,.12)", border: "1px solid rgba(106,122,174,.3)", borderRadius: 12, color: "#6a7aae", fontSize: 12, cursor: "pointer", fontFamily: "var(--font-main)", letterSpacing: 0.5, whiteSpace: "nowrap" }}>📅 年表</button>
+        ) : <div className="memory-header-spacer" />}
       </div>
 
-      {/* 他的宝库快捷入口 */}
-      {openCharTreasure && (
-        <div style={{ padding: "6px 16px 2px", display: "flex", alignItems: "center", gap: 8 }}>
-          <button
-            onClick={() => openCharTreasure(memCharId)}
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "5px 14px", borderRadius: 10, fontSize: 12,
-              background: "rgba(196,166,184,.12)",
-              border: "1px solid rgba(196,166,184,.3)",
-              color: "#7a6a8e", cursor: "pointer",
-              fontFamily: "var(--font-main)", letterSpacing: 0.3,
-            }}
-          >
+      {/* 快捷入口 + 视图切换 */}
+      <div style={{ padding: "6px 16px 4px", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        {openCharTreasure && (
+          <button onClick={() => openCharTreasure(memCharId)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 12px", borderRadius: 10, fontSize: 12, background: "rgba(196,166,184,.12)", border: "1px solid rgba(196,166,184,.3)", color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)" }}>
             💝 他的宝库
-            {(() => {
-              const cnt = (charTreasures || []).filter((t) => t.charId === memCharId).length;
-              return cnt > 0 ? (
-                <span style={{
-                  fontSize: 12, background: "rgba(120,100,160,.15)",
-                  padding: "1px 6px", borderRadius: 6, color: "#6a5a8a",
-                }}>
-                  {cnt}
-                </span>
-              ) : null;
-            })()}
           </button>
-        </div>
-      )}
-
-      {/* ─ 视图切换 ─ */}
-      <div style={{ display: "flex", gap: 8, padding: "6px 16px 4px", flexShrink: 0 }}>
+        )}
+        <div style={{ flex: 1 }} />
         {[["list", "📋 列表"], ["overview", "🧩 概览"]].map(([v, lbl]) => (
           <button key={v} onClick={() => setViewMode(v)} style={{
             padding: "5px 14px", borderRadius: 20, fontSize: 12, cursor: "pointer",
@@ -367,694 +203,386 @@ export default function MemoryPalacePage({
         ))}
       </div>
 
-      {/* ═══ 列表模式 ═══ */}
-      {viewMode === "list" && <>
+      {/* ═══ 列表模式：垂直分层滚动 ═══ */}
+      {viewMode === "list" && (
+        <div className="mem-scroll" style={{ padding: "0 14px 32px" }}>
 
-      {/* Tab 栏 */}
-      <div className="mem-tabs">
-        {MEMORY_TYPES.map((mt) => (
-          <button
-            key={mt.key}
-            className={`mem-tab ${memTab === mt.key ? "active" : ""}`}
-            onClick={() => setMemTab(mt.key)}
-            style={memTab === mt.key ? { borderBottomColor: mt.color } : {}}
-          >
-            {mt.emoji} {mt.label}
-          </button>
-        ))}
-        <button
-          className={`mem-tab ${memTab === "summary" ? "active" : ""}`}
-          onClick={() => setMemTab("summary")}
-          style={{ ...(memTab === "summary" ? { borderBottomColor: "#8882a5" } : {}), position: "relative" }}
-        >
-          📖 总结
-          {shouldReflect(memCharId) && (
-            <span style={{
-              position: "absolute", top: 8, right: 8,
-              width: 7, height: 7, borderRadius: "50%",
-              background: "#e88", boxShadow: "0 0 4px rgba(232,120,120,.4)",
-            }} />
-          )}
-        </button>
-        <button
-          className={`mem-tab ${memTab === "anchors" ? "active" : ""}`}
-          onClick={() => setMemTab("anchors")}
-          style={memTab === "anchors" ? { borderBottomColor: "#9670b0" } : {}}
-        >
-          📌 钉子{(char.anchors || []).length > 0 && ` ${(char.anchors || []).length}`}
-        </button>
-        <button
-          className={`mem-tab ${memTab === "lexicon" ? "active" : ""}`}
-          onClick={() => setMemTab("lexicon")}
-          style={memTab === "lexicon" ? { borderBottomColor: "#6a8aae" } : {}}
-        >
-          📖 词典{(char.lexicon || []).length > 0 && ` ${(char.lexicon || []).length}`}
-        </button>
-      </div>
-
-      {/* 排序/筛选工具栏（非总结页显示） */}
-      {memTab !== "summary" && memTab !== "anchors" && memTab !== "lexicon" && (() => {
-        const entries = getCharMemories(memCharId)[memTab] || [];
-        const cnt = {
-          all:       entries.length,
-          important: entries.filter((m) => m.important).length,
-          pinned:    entries.filter((m) => m.pinned ?? false).length,
-          blocked:   entries.filter((m) => (m.injectable ?? true) === false).length,
-          active:    entries.filter((m) => (m.mentions || 0) > 0).length,
-        };
-        const badge = (n) => n > 0
-          ? <span style={{ marginLeft: 3, fontSize: 12, opacity: 0.7 }}>{n}</span>
-          : null;
-        return (
-          <div className="mem-toolbar">
-            <div className="mem-toolbar-group">
-              <span className="mem-toolbar-label">排序</span>
-              <button className={`mem-toolbar-btn ${memSort === "heat" ? "active" : ""}`} onClick={() => setMemSort("heat")}>热度</button>
-              <button className={`mem-toolbar-btn ${memSort === "time" ? "active" : ""}`} onClick={() => setMemSort("time")}>时间</button>
-            </div>
-            <div className="mem-toolbar-group">
-              <span className="mem-toolbar-label">筛选</span>
-              <button className={`mem-toolbar-btn ${memFilter === "all" ? "active" : ""}`} onClick={() => setMemFilter("all")}>全部{badge(cnt.all)}</button>
-              <button className={`mem-toolbar-btn ${memFilter === "important" ? "active" : ""}`} onClick={() => setMemFilter("important")}>重要{badge(cnt.important)}</button>
-              <button className={`mem-toolbar-btn ${memFilter === "pinned" ? "active" : ""}`} onClick={() => setMemFilter("pinned")}>📌 锚点{badge(cnt.pinned)}</button>
-              <button className={`mem-toolbar-btn ${memFilter === "blocked" ? "active" : ""}`} onClick={() => setMemFilter("blocked")}>🔕 暂停{badge(cnt.blocked)}</button>
-              <button className={`mem-toolbar-btn ${memFilter === "active" ? "active" : ""}`} onClick={() => setMemFilter("active")}>活跃{badge(cnt.active)}</button>
-            </div>
-          </div>
-        );
-      })()}
-
-      <div className="mem-scroll">
-        {/* ── 记忆列表（事实/情绪/觉察）── */}
-        {memTab !== "summary" && memTab !== "anchors" && memTab !== "lexicon" && (
-          <>
-            <div className="mem-add-row">
-              <input
-                className="mem-add-input"
-                placeholder={MEMORY_TYPES.find((m) => m.key === memTab)?.desc || "写点什么…"}
-                value={memInput}
-                onChange={(e) => setMemInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-                    addMemory(memCharId, memTab, memInput);
-                  }
-                }}
-              />
-              <button
-                className="mem-add-btn"
-                disabled={!memInput.trim()}
-                onClick={() => addMemory(memCharId, memTab, memInput)}
-              >
-                记录
-              </button>
-            </div>
-
-            {/* 注入策略说明 */}
-            <div style={{
-              fontSize: 12, color: "var(--text-faint)", lineHeight: 1.7,
-              padding: "7px 12px", marginBottom: 8,
-              background: "rgba(100,100,160,.05)", borderRadius: 8,
-              letterSpacing: ".2px",
-            }}>
-              📌 固定锚点优先进入 system prompt · 🔕 暂停唤醒的记忆保留在这里但不会被注入
-            </div>
-
-            {(getCharMemories(memCharId)[memTab] || []).length === 0 && (
-              <div className="empty-hint">
-                还没有{MEMORY_TYPES.find((m) => m.key === memTab)?.label}类记忆
-                <br />
-                在上方输入框添加第一条
-              </div>
-            )}
-
-            {(getCharMemories(memCharId)[memTab] || [])
-              .filter((mem) => {
-                if (memFilter === "all")       return true;
-                if (memFilter === "important") return mem.important;
-                if (memFilter === "pinned")    return mem.pinned ?? false;
-                if (memFilter === "blocked")   return (mem.injectable ?? true) === false;
-                if (memFilter === "active")    return (mem.mentions || 0) > 0;
-                return true;
-              })
-              .sort((a, b) => {
-                if (memSort === "heat") {
-                  // pinned 永远排最前
-                  if ((a.pinned ?? false) !== (b.pinned ?? false)) return (b.pinned ?? false) ? 1 : -1;
-                  return (b.mentions || 0) - (a.mentions || 0);
-                }
-                return 0;
-              })
-              .map((mem) => {
-                const heat = calculateHeat(mem);
-                const heatInfo = getHeatLevel(heat);
-                const isFading = heatInfo.level === "fading" || heatInfo.level === "cold";
-                const isPinned    = mem.pinned    ?? false;
-                const isBlocked   = (mem.injectable ?? true) === false;
-                const srcLabel    = { migration: "迁入", auto: "AI", diary: "日记", manual: "" }[mem.source] || "";
-
-                // 卡片背景：pinned > important > fading
-                let cardBg = undefined;
-                let cardBorder = undefined;
-                if (isBlocked) {
-                  cardBg = "rgba(180,180,180,.08)";
-                  cardBorder = "rgba(180,180,180,.15)";
-                } else if (isPinned) {
-                  cardBg = "rgba(100,110,200,.07)";
-                  cardBorder = "rgba(100,110,200,.18)";
-                } else if (mem.important) {
-                  cardBg = "rgba(255,248,225,.6)";
-                  cardBorder = "rgba(245,166,35,.15)";
-                } else if (isFading) {
-                  cardBg = "rgba(248,245,250,.3)";
-                  cardBorder = "rgba(205,193,217,.08)";
-                }
-
-                return (
-                  <div
-                    key={mem.id}
-                    className="mem-entry"
-                    style={{
-                      background: cardBg,
-                      opacity: isBlocked ? 0.5 : heatInfo.level === "cold" ? 0.55 : heatInfo.level === "fading" ? 0.75 : 1,
-                      borderColor: cardBorder,
-                      transition: "all .3s",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                      <div className="mem-entry-text" style={{ flex: 1, textDecoration: isBlocked ? "line-through" : "none" }}>
-                        {isPinned && <span style={{ marginRight: 3 }}>📌</span>}
-                        {mem.important && !isPinned && "⭐ "}
-                        {srcLabel && (
-                          <span style={{ fontSize: 12, color: "var(--accent-iris)", marginRight: 4, fontWeight: 400 }}>
-                            {srcLabel === "AI" ? "🤖AI" : `【${srcLabel}】`}
-                          </span>
-                        )}
-                        {mem.text}
-                      </div>
-                      <div style={{
-                        fontSize: 12, padding: "2px 8px", borderRadius: 8, flexShrink: 0,
-                        background: isBlocked ? "rgba(150,150,150,.1)" :
-                          heatInfo.level === "hot"    ? "rgba(232,120,120,.1)" :
-                          heatInfo.level === "warm"   ? "rgba(220,180,80,.1)"  :
-                          heatInfo.level === "fading" ? "rgba(200,180,120,.08)" :
-                                                        "rgba(155,149,181,.06)",
-                        color: isBlocked ? "#999" :
-                          heatInfo.level === "hot"  ? "#c47070" :
-                          heatInfo.level === "warm" ? "#b09050" : "var(--text-faint)",
-                        whiteSpace: "nowrap",
-                      }}>
-                        {isBlocked ? "🔕 暂停" : `${heatInfo.emoji} ${heatInfo.label}`}
-                      </div>
-                    </div>
-                    <div className="mem-entry-meta">
-                      <span className="mem-entry-time">
-                        {mem.time}
-                        {mem.mentions > 0 && <span style={{ marginLeft: 6 }}>🔥×{mem.mentions}</span>}
-                      </span>
-                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                        {/* 固定锚点 */}
-                        <button
-                          className="mem-entry-del"
-                          style={{ color: isPinned ? "#6070c8" : "#bbb", fontSize: 12 }}
-                          onClick={() => pinMemory && pinMemory(memCharId, memTab, mem.id)}
-                          title={isPinned ? "取消固定" : "固定为锚点（优先注入）"}
-                        >
-                          {isPinned ? "📌" : "📍"}
-                        </button>
-                        {/* 注入开关 */}
-                        <button
-                          className="mem-entry-del"
-                          style={{ color: isBlocked ? "#bbb" : "#8a9ac8", fontSize: 12 }}
-                          onClick={() => toggleInjectable && toggleInjectable(memCharId, memTab, mem.id)}
-                          title={isBlocked ? "允许唤醒（加入 prompt）" : "暂停唤醒（不注入 prompt）"}
-                        >
-                          {isBlocked ? "🔕" : "✨"}
-                        </button>
-                        {/* 重要标记 */}
-                        <button
-                          className="mem-entry-del"
-                          style={{ color: mem.important ? "#f5a623" : "#999" }}
-                          onClick={() => toggleMemoryImportant(memCharId, memTab, mem.id)}
-                          title={mem.important ? "取消重要标记" : "标记为重要记忆"}
-                        >
-                          {mem.important ? "★" : "☆"}
-                        </button>
-                        <button className="mem-entry-del" onClick={() => deleteMemory(memCharId, memTab, mem.id)}>
-                          删除
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-          </>
-        )}
-
-        {/* ── 关系沉淀 tab ── */}
-        {memTab === "summary" && (
-          <>
-            {/* 功能说明 */}
-            <div style={{
-              fontSize: 12, lineHeight: 1.8, letterSpacing: ".3px",
-              padding: "10px 14px", borderRadius: 10, marginBottom: 14,
-              background: "rgba(106,122,174,.06)",
-              border: "1px solid rgba(106,122,174,.15)",
-              color: "var(--text-faint)",
-            }}>
-              <div style={{ marginBottom: 4, color: "var(--text-mid)", fontWeight: 500, fontSize: 12 }}>🌿 关于阶段沉淀</div>
-              阶段沉淀用于整理<strong>最近新增</strong>的关系变化，不是迁入旧记录。
-              导入旧对话请使用<span style={{ color: "var(--accent-iris)" }}>原始档案馆</span>和<span style={{ color: "var(--accent-iris)" }}>迁入草稿</span>。
-              AI 生成草稿后，你逐节确认，不会自动覆盖任何手写内容。
-            </div>
-
-            {/* 生成按钮 + 周期设置 */}
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: settlementNotice ? 8 : 14, flexWrap: "wrap" }}>
-              <button
-                className="btn-ghost"
-                style={{ flex: 1, minWidth: 160 }}
-                onClick={() => {
-                  setSettlementNotice && setSettlementNotice("");
-                  generateSettlement && generateSettlement(memCharId);
-                }}
-                disabled={reflecting}
-              >
-                {reflecting ? "🌿 沉淀中……" : "🌿 生成阶段沉淀"}
-              </button>
-              <select
-                value={getReflectSetting(memCharId).periodDays}
-                onChange={(e) =>
-                  setReflectSettings((prev) => ({
-                    ...prev,
-                    [memCharId]: { ...getReflectSetting(memCharId), periodDays: Number(e.target.value) },
-                  }))
-                }
-                style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", fontSize: 12, background: "rgba(255,255,255,.7)", color: "var(--text-mid)", cursor: "pointer" }}
-              >
-                <option value={3}>3天一次</option>
-                <option value={7}>1周一次</option>
-                <option value={14}>2周一次</option>
-                <option value={30}>1月一次</option>
-              </select>
-              {getReflectSetting(memCharId).lastReflectTime && (
-                <span style={{ fontSize: 12, color: "var(--text-faint)" }}>
-                  上次：{new Date(getReflectSetting(memCharId).lastReflectTime).toLocaleDateString("zh-CN")}
-                </span>
-              )}
-            </div>
-
-            {/* ── 内联提示（素材不足 / 空结果 / 错误） ── */}
-            {settlementNotice && (
-              <div style={{
-                fontSize: 12, lineHeight: 1.7, padding: "10px 14px",
-                borderRadius: 10, marginBottom: 14,
-                background: "rgba(220,180,80,.08)",
-                border: "1px solid rgba(220,180,80,.2)",
-                color: "#a08040",
-                display: "flex", alignItems: "flex-start", gap: 8,
-              }}>
-                <span style={{ fontSize: 14, flexShrink: 0 }}>💡</span>
-                <span>{settlementNotice}</span>
-              </div>
-            )}
-
-            {/* ── 待确认沉淀草稿 ── */}
-            {(settlementDrafts || [])
-              .filter((d) => d.loverId === memCharId && d.status === "pending")
-              .map((draft) => {
-                const char = (characters || []).find((c) => c.id === memCharId);
-                return (
-                  <SettlementDraftCard
-                    key={draft.id}
-                    draft={draft}
-                    onApplySection={(section) => applySettlementSection && applySettlementSection(draft.id, section, memCharId)}
-                    onDismiss={() => dismissSettlementDraft && dismissSettlementDraft(draft.id)}
-                    onDelete={() => deleteSettlementDraft && deleteSettlementDraft(draft.id)}
-                    onNavigate={(navTarget) => {
-                      if (navTarget === "memFact") {
-                        setMemTab("fact");
-                      } else if (navTarget === "charEdit" && char) {
-                        setEditingChar && setEditingChar(char);
-                      }
-                    }}
-                  />
-                );
-              })
-            }
-
-            {/* ── 已处理沉淀记录 ── */}
-            {(settlementDrafts || [])
-              .filter((d) => d.loverId === memCharId && d.status !== "pending")
-              .length > 0 && (
-              <div style={{ margin: "16px 0 8px", fontSize: 12, color: "var(--text-faint)", letterSpacing: 1 }}>
-                已处理的沉淀记录
-              </div>
-            )}
-            {(settlementDrafts || [])
-              .filter((d) => d.loverId === memCharId && d.status !== "pending")
-              .map((draft) => (
-                <div key={draft.id} style={{
-                  padding: "10px 14px", borderRadius: 10, marginBottom: 8,
-                  background: "rgba(255,255,255,.4)",
-                  border: "1px solid rgba(196,166,184,.15)",
-                  display: "flex", alignItems: "center", gap: 10,
-                }}>
-                  <span style={{ fontSize: 18 }}>{draft.status === "applied" ? "✅" : "🚫"}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, color: "var(--text-mid)", lineHeight: 1.5 }}>{draft.title}</div>
-                    <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>
-                      {draft.status === "applied" ? "已全部采纳" : "已忽略"}
-                      {draft.appliedSections?.length > 0 && draft.status !== "applied" &&
-                        ` · 已采纳 ${draft.appliedSections.length} 节`}
-                    </div>
-                  </div>
-                  <button
-                    style={{ fontSize: 12, color: "#c07070", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}
-                    onClick={() => deleteSettlementDraft && deleteSettlementDraft(draft.id)}
-                  >
-                    删除
-                  </button>
-                </div>
-              ))
-            }
-
-            {/* ── 手动写总结 ── */}
-            <div style={{ margin: "20px 0 10px", fontSize: 12, color: "var(--text-faint)", letterSpacing: 1 }}>
-              手动记录
-            </div>
-            {!showAddSummary ? (
-              <button className="btn-ghost" style={{ width: "100%", marginBottom: 12 }} onClick={() => setShowAddSummary(true)}>
-                + 手动写一段关系记录
-              </button>
+          {/* ────── 区域 1：钉子 ────── */}
+          <div ref={anchorRef}>
+            <AreaTitle emoji="📌" title="钉子" count={anchors.length > 0 ? `${anchors.length} 颗` : undefined}
+              right={<button onClick={() => {/* TODO: 手动添加钉子 */}} style={{ ...btnSmall, fontSize: 11 }}>+ 添加</button>}
+            />
+            {anchors.length === 0 ? (
+              <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 8 }}>还没有钉子</div>
             ) : (
-              <div className="section-card" style={{ marginBottom: 12 }}>
-                <textarea
-                  className="field-textarea"
-                  placeholder="回顾最近的记忆，写下发生了什么、关系有什么变化……"
-                  value={summaryInput}
-                  onChange={(e) => setSummaryInput(e.target.value)}
-                  style={{ minHeight: 120 }}
-                />
-                <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-                  <button className="btn-ghost" onClick={() => { setShowAddSummary(false); setSummaryInput(""); }}>取消</button>
-                  <button className="btn-primary" style={{ flex: 1 }} disabled={!summaryInput.trim()} onClick={() => addSummary(memCharId, summaryInput)}>
-                    保存
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* 旧版总结列表（作为历史记录保留） */}
-            {(getCharMemories(memCharId).summaries || []).length > 0 && (
-              <div style={{ marginBottom: 8, fontSize: 12, color: "var(--text-faint)", letterSpacing: 1 }}>历史记录</div>
-            )}
-            {(getCharMemories(memCharId).summaries || []).length === 0 && !showAddSummary &&
-              (settlementDrafts || []).filter((d) => d.loverId === memCharId).length === 0 && (
-              <div className="empty-hint">
-                还没有任何记录<br />
-                点「生成阶段沉淀」让 AI 帮你整理关系变化
-              </div>
-            )}
-            {(getCharMemories(memCharId).summaries || []).map((s) => (
-              <div key={s.id} className="summary-entry">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: "#aaa" }}>
-                    {s.isAutoReflect ? "🧠 旧版AI反思" : "✍️ 手动记录"} · {s.time}
-                  </span>
-                </div>
-                <div className="summary-entry-text">{s.text}</div>
-                {!s.feedbackApplied && (
-                  <div style={{ marginTop: 8, textAlign: "right" }}>
-                    <button className="btn-ghost" onClick={() => applyFeedbackToProfile(memCharId, s)} disabled={reflecting} style={{ fontSize: 12, padding: "3px 10px", color: "var(--text-faint)" }}>
-                      {reflecting ? "处理中..." : "📜 写入世界观"}
-                    </button>
-                  </div>
-                )}
-                {s.feedbackApplied && (
-                  <div style={{ marginTop: 8, textAlign: "right", fontSize: 12, color: "var(--text-faint)" }}>✓ 已写入世界观</div>
-                )}
-              </div>
-            ))}
-          </>
-        )}
-      </div>
-
-      {/* ═══ 钉子 Tab ═══ */}
-      {memTab === "anchors" && (
-        <div className="mem-scroll" style={{ padding: "0 12px 24px" }}>
-          {(char.anchors || []).length === 0 ? (
-            <div style={{ textAlign: "center", padding: "48px 20px", color: "var(--text-faint)", fontSize: 13, lineHeight: 1.8 }}>
-              还没有钉子<br/>在聊天中，入住者会在重要时刻自动钉下记忆
-            </div>
-          ) : (
-            (char.anchors || []).sort((a, b) => (b.weight || 0) - (a.weight || 0)).map(anchor => (
-              <div key={anchor.id} style={{
-                background: "rgba(150,112,176,.08)", border: "1px solid rgba(150,112,176,.2)",
-                borderRadius: 14, padding: "14px 16px", marginBottom: 10,
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#5a4a6a" }}>📌 {anchor.title}</div>
-                  <span style={{ fontSize: 11, color: "#b0a0c0", flexShrink: 0 }}>
-                    权重 {anchor.weight || 0}/10
-                  </span>
-                </div>
-                {anchor.description && (
-                  <div style={{ fontSize: 13, color: "#6a5a7a", marginBottom: 6, lineHeight: 1.6 }}>{anchor.description}</div>
-                )}
-                {anchor.rawPreview && (
-                  <div style={{ fontSize: 12, color: "#9a8aac", fontStyle: "italic", marginBottom: 8, lineHeight: 1.5 }}>
-                    {anchor.rawPreview}
-                  </div>
-                )}
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  {editingWeight === anchor.id ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
-                      <input type="range" min="1" max="10" value={anchor.weight || 8}
-                        onChange={e => updateAnchorWeight(memCharId, anchor.id, Number(e.target.value))}
-                        style={{ flex: 1 }}
-                      />
-                      <span style={{ fontSize: 12, color: "#7a6a8e", minWidth: 20 }}>{anchor.weight || 8}</span>
-                      <button onClick={() => setEditingWeight(null)}
-                        style={{ fontSize: 11, padding: "3px 8px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#7a6a8e", cursor: "pointer" }}>
-                        完成
-                      </button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setEditingWeight(anchor.id)}
-                      style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#7a6a8e", cursor: "pointer" }}>
-                      调整权重
-                    </button>
-                  )}
-                  {deletingAnchor === anchor.id ? (
-                    <div style={{ display: "flex", gap: 4 }}>
-                      <button onClick={() => { deleteAnchor(memCharId, anchor.id); setDeletingAnchor(null); }}
-                        style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid rgba(200,120,120,.3)", background: "rgba(200,120,120,.08)", color: "#c07070", cursor: "pointer" }}>
-                        确认删除
-                      </button>
-                      <button onClick={() => setDeletingAnchor(null)}
-                        style={{ fontSize: 11, padding: "3px 8px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#999", cursor: "pointer" }}>
-                        取消
-                      </button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setDeletingAnchor(anchor.id)}
-                      style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.2)", background: "transparent", color: "#bbb", cursor: "pointer" }}>
-                      删除
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* ═══ 词典 Tab ═══ */}
-      {memTab === "lexicon" && (
-        <div className="mem-scroll" style={{ padding: "0 12px 24px" }}>
-          {(char.lexicon || []).length === 0 && !showAddLex ? (
-            <div style={{ textAlign: "center", padding: "48px 20px", color: "var(--text-faint)", fontSize: 13, lineHeight: 1.8 }}>
-              还没有专属词条<br/>在聊天或迁入时会自动收录你们之间的语言
-            </div>
-          ) : (
-            (char.lexicon || []).map(lex => (
-              <div key={lex.id} style={{
-                background: "rgba(106,138,174,.06)", border: "1px solid rgba(106,138,174,.18)",
-                borderRadius: 14, padding: "12px 16px", marginBottom: 8,
-              }}>
-                {editingLex === lex.id ? (
-                  <div>
-                    <input value={lex.meaning}
-                      onChange={e => updateLexiconItem(memCharId, lex.id, { meaning: e.target.value })}
-                      style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.65)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", boxSizing: "border-box" }}
-                    />
-                    <button onClick={() => setEditingLex(null)}
-                      style={{ marginTop: 6, fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#7a6a8e", cursor: "pointer" }}>
-                      完成
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: "#4a5a6a" }}>"{lex.term}"</span>
-                        <span style={{ fontSize: 13, color: "#6a7a8a", marginLeft: 6 }}>= {lex.meaning}</span>
+              anchors.map(anchor => (
+                <div key={anchor.id} style={{
+                  display: "flex", gap: 10, marginBottom: 8, padding: "10px 12px",
+                  borderRadius: 12, background: "rgba(255,255,255,.55)",
+                  borderLeft: "3px solid var(--blush, #c4a8b8)",
+                  border: "1px solid rgba(196,166,184,.18)",
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#4a3a5a", marginBottom: 3 }}>{anchor.title}</div>
+                    {anchor.rawPreview && (
+                      <div style={{ fontSize: 12, color: "#8a7a9a", fontStyle: "italic", lineHeight: 1.6, marginBottom: 4 }}>
+                        {anchor.rawPreview}
                       </div>
-                    </div>
-                    {lex.speaker && lex.speaker !== "unknown" && (
-                      <div style={{ fontSize: 11, color: "#b0a0c0", marginTop: 4 }}>—— {lex.speaker}</div>
                     )}
-                    {lex.rawPreview && (
-                      <div style={{ fontSize: 12, color: "#9a8aac", fontStyle: "italic", marginTop: 4 }}>{lex.rawPreview}</div>
+                    {anchor.description && anchor.description !== anchor.title && (
+                      <div style={{ fontSize: 12, color: "#9a8aac", lineHeight: 1.5 }}>{anchor.description}</div>
                     )}
-                    <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                      <button onClick={() => setEditingLex(lex.id)}
-                        style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#7a6a8e", cursor: "pointer" }}>
-                        编辑
-                      </button>
-                      {deletingLex === lex.id ? (
-                        <div style={{ display: "flex", gap: 4 }}>
-                          <button onClick={() => { deleteLexiconItem(memCharId, lex.id); setDeletingLex(null); }}
-                            style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid rgba(200,120,120,.3)", background: "rgba(200,120,120,.08)", color: "#c07070", cursor: "pointer" }}>
-                            确认
-                          </button>
-                          <button onClick={() => setDeletingLex(null)}
-                            style={{ fontSize: 11, padding: "3px 8px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#999", cursor: "pointer" }}>
-                            取消
-                          </button>
+                    {/* 操作行 */}
+                    <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
+                      {editingWeight === anchor.id ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1 }}>
+                          <input type="range" min="1" max="10" value={anchor.weight || 8} onChange={e => updateAnchorWeight(memCharId, anchor.id, Number(e.target.value))} style={{ flex: 1 }} />
+                          <span style={{ fontSize: 11, color: "#7a6a8e", minWidth: 16 }}>{anchor.weight || 8}</span>
+                          <button onClick={() => setEditingWeight(null)} style={btnSmall}>✓</button>
                         </div>
                       ) : (
-                        <button onClick={() => setDeletingLex(lex.id)}
-                          style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.2)", background: "transparent", color: "#bbb", cursor: "pointer" }}>
-                          删除
-                        </button>
+                        <button onClick={() => setEditingWeight(anchor.id)} style={btnSmall}>权重 {anchor.weight || 0}</button>
+                      )}
+                      {deletingAnchor === anchor.id ? (
+                        <>
+                          <button onClick={() => { deleteAnchor(memCharId, anchor.id); setDeletingAnchor(null); }} style={btnDanger}>确认</button>
+                          <button onClick={() => setDeletingAnchor(null)} style={btnSmall}>取消</button>
+                        </>
+                      ) : (
+                        <button onClick={() => setDeletingAnchor(anchor.id)} style={{ ...btnSmall, color: "#bbb" }}>删除</button>
                       )}
                     </div>
                   </div>
-                )}
-              </div>
-            ))
-          )}
+                  {/* 权重圆点 */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2, justifyContent: "center", flexShrink: 0 }}>
+                    {Array.from({ length: Math.min(anchor.weight || 0, 10) }).map((_, i) => (
+                      <div key={i} style={{ width: 4, height: 4, borderRadius: "50%", background: i < 3 ? "#c4a8b8" : "rgba(196,166,184,.35)" }} />
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
 
-          {/* 手动添加词条 */}
-          {showAddLex ? (
-            <div style={{ background: "rgba(106,138,174,.06)", border: "1px solid rgba(106,138,174,.25)", borderRadius: 14, padding: "14px 16px", marginTop: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#4a5a6a", marginBottom: 10 }}>添加新词条</div>
-              <input placeholder="词条（比如：笨祁久）" value={newLexTerm} onChange={e => setNewLexTerm(e.target.value)}
-                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.65)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", boxSizing: "border-box", marginBottom: 8 }}
-              />
-              <input placeholder="含义（比如：嗔怪撒娇时的叫法）" value={newLexMeaning} onChange={e => setNewLexMeaning(e.target.value)}
-                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.65)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", boxSizing: "border-box", marginBottom: 8 }}
-              />
-              <input placeholder="谁说的（可选）" value={newLexSpeaker} onChange={e => setNewLexSpeaker(e.target.value)}
-                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.65)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", boxSizing: "border-box", marginBottom: 10 }}
-              />
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => {
-                  if (newLexTerm.trim() && newLexMeaning.trim()) {
-                    addLexiconItem(memCharId, { term: newLexTerm.trim(), meaning: newLexMeaning.trim(), speaker: newLexSpeaker.trim() || "unknown" });
-                    setNewLexTerm(""); setNewLexMeaning(""); setNewLexSpeaker(""); setShowAddLex(false);
-                  }
-                }}
-                  style={{ fontSize: 12, padding: "7px 18px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #c4a8d4, #9670b0)", color: "white", cursor: "pointer", fontFamily: "var(--font-main)" }}>
-                  收录
-                </button>
-                <button onClick={() => { setShowAddLex(false); setNewLexTerm(""); setNewLexMeaning(""); setNewLexSpeaker(""); }}
-                  style={{ fontSize: 12, padding: "7px 14px", borderRadius: 10, border: "1px solid rgba(196,166,184,.3)", background: "transparent", color: "#7a6a8e", cursor: "pointer", fontFamily: "var(--font-main)" }}>
-                  取消
-                </button>
+          {/* ────── 区域 2：词典 ────── */}
+          <div ref={lexRef}>
+            <AreaTitle emoji="📖" title="词典" count={lexicon.length > 0 ? `${lexicon.length} 条` : undefined}
+              right={<button onClick={() => setShowAddLex(!showAddLex)} style={btnSmall}>+ 添加</button>}
+            />
+            {lexicon.length === 0 && !showAddLex ? (
+              <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 8 }}>还没有专属词条</div>
+            ) : (
+              <>
+                {/* 胶囊标签横向滚动 */}
+                <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, WebkitOverflowScrolling: "touch" }}>
+                  {lexicon.map(lex => (
+                    <button key={lex.id}
+                      onClick={() => setExpandedLex(expandedLex === lex.id ? null : lex.id)}
+                      style={{
+                        flexShrink: 0, padding: "5px 12px", borderRadius: 20,
+                        fontSize: 12, cursor: "pointer", fontFamily: "var(--font-main)",
+                        background: expandedLex === lex.id ? "rgba(106,138,174,.18)" : "rgba(255,255,255,.6)",
+                        border: `1px solid ${expandedLex === lex.id ? "rgba(106,138,174,.4)" : "rgba(196,166,184,.25)"}`,
+                        color: expandedLex === lex.id ? "#4a5a7a" : "#6a7a8a",
+                        fontWeight: expandedLex === lex.id ? 500 : 400,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      "{lex.term}"
+                    </button>
+                  ))}
+                </div>
+                {/* 展开的词条详情 */}
+                {expandedLex && (() => {
+                  const lex = lexicon.find(l => l.id === expandedLex);
+                  if (!lex) return null;
+                  return (
+                    <div style={{ padding: "10px 12px", borderRadius: 12, background: "rgba(106,138,174,.06)", border: "1px solid rgba(106,138,174,.18)", marginBottom: 8 }}>
+                      {editingLex === lex.id ? (
+                        <div>
+                          <input value={lex.meaning} onChange={e => updateLexiconItem(memCharId, lex.id, { meaning: e.target.value })}
+                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.65)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", boxSizing: "border-box" }}
+                          />
+                          <button onClick={() => setEditingLex(null)} style={{ ...btnSmall, marginTop: 6 }}>完成</button>
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 13, color: "#4a3a5a", lineHeight: 1.6 }}>
+                            <strong>"{lex.term}"</strong> = {lex.meaning}
+                          </div>
+                          {lex.speaker && lex.speaker !== "unknown" && (
+                            <div style={{ fontSize: 11, color: "#b0a0c0", marginTop: 2 }}>—— {lex.speaker}</div>
+                          )}
+                          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                            <button onClick={() => setEditingLex(lex.id)} style={btnSmall}>编辑</button>
+                            {deletingLex === lex.id ? (
+                              <>
+                                <button onClick={() => { deleteLexiconItem(memCharId, lex.id); setDeletingLex(null); setExpandedLex(null); }} style={btnDanger}>确认</button>
+                                <button onClick={() => setDeletingLex(null)} style={btnSmall}>取消</button>
+                              </>
+                            ) : (
+                              <button onClick={() => setDeletingLex(lex.id)} style={{ ...btnSmall, color: "#bbb" }}>删除</button>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
+              </>
+            )}
+            {/* 添加词条表单 */}
+            {showAddLex && (
+              <div style={{ padding: "10px 12px", borderRadius: 12, background: "rgba(106,138,174,.06)", border: "1px solid rgba(106,138,174,.25)", marginBottom: 8 }}>
+                <input placeholder="词条" value={newLexTerm} onChange={e => setNewLexTerm(e.target.value)} style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.65)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", boxSizing: "border-box", marginBottom: 6 }} />
+                <input placeholder="含义" value={newLexMeaning} onChange={e => setNewLexMeaning(e.target.value)} style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.65)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", boxSizing: "border-box", marginBottom: 6 }} />
+                <input placeholder="谁说的（可选）" value={newLexSpeaker} onChange={e => setNewLexSpeaker(e.target.value)} style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.65)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", boxSizing: "border-box", marginBottom: 8 }} />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => { if (newLexTerm.trim() && newLexMeaning.trim()) { addLexiconItem(memCharId, { term: newLexTerm.trim(), meaning: newLexMeaning.trim(), speaker: newLexSpeaker.trim() || "unknown" }); setNewLexTerm(""); setNewLexMeaning(""); setNewLexSpeaker(""); setShowAddLex(false); } }}
+                    style={{ fontSize: 12, padding: "6px 16px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #c4a8d4, #9670b0)", color: "white", cursor: "pointer", fontFamily: "var(--font-main)" }}>收录</button>
+                  <button onClick={() => { setShowAddLex(false); setNewLexTerm(""); setNewLexMeaning(""); setNewLexSpeaker(""); }} style={btnSmall}>取消</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ────── 区域 3：记忆（主体） ────── */}
+          <div ref={memRef}>
+            <AreaTitle emoji="🧠" title="记忆" count={`${filteredMemories.length} 条`} />
+
+            {/* 筛选 + 排序行 */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <select value={memTypeFilter} onChange={e => setMemTypeFilter(e.target.value)}
+                style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", fontSize: 12, background: "rgba(255,255,255,.7)", color: "var(--text-mid)", cursor: "pointer", fontFamily: "var(--font-main)" }}>
+                <option value="all">全部记忆</option>
+                <option value="her_world">她的世界</option>
+                <option value="between_us">我们之间</option>
+                <option value="understanding">我懂她的</option>
+                <option value="moments">我想记住的</option>
+              </select>
+              <div style={{ display: "flex", gap: 4 }}>
+                {[["heat", "热度"], ["time", "时间"]].map(([k, lbl]) => (
+                  <button key={k} onClick={() => setMemSortMode(k)} style={{
+                    ...btnSmall, fontSize: 11,
+                    background: memSortMode === k ? "rgba(140,110,180,.12)" : "transparent",
+                    color: memSortMode === k ? "#5a3a8e" : "#999",
+                    borderColor: memSortMode === k ? "rgba(140,110,180,.35)" : "rgba(196,166,184,.25)",
+                  }}>{lbl}</button>
+                ))}
+              </div>
+              <div style={{ flex: 1 }} />
+              {/* 手动添加 */}
+              <div style={{ display: "flex", gap: 4 }}>
+                <input className="mem-add-input" placeholder="记录一条…" value={memInput} onChange={e => setMemInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.nativeEvent.isComposing && memInput.trim()) addMemory(memCharId, "fact", memInput); }}
+                  style={{ fontSize: 12, padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", background: "rgba(255,255,255,.6)", width: 120, outline: "none", fontFamily: "var(--font-main)", color: "#4a3a5a" }}
+                />
+                <button disabled={!memInput.trim()} onClick={() => addMemory(memCharId, "fact", memInput)}
+                  style={{ ...btnSmall, opacity: memInput.trim() ? 1 : 0.4 }}>+</button>
               </div>
             </div>
-          ) : (
-            <button onClick={() => setShowAddLex(true)}
-              style={{ width: "100%", marginTop: 8, padding: "10px", borderRadius: 12, border: "1px dashed rgba(106,138,174,.3)", background: "transparent", color: "#6a8aae", fontSize: 13, cursor: "pointer", fontFamily: "var(--font-main)" }}>
-              + 手动添加词条
-            </button>
-          )}
+
+            {/* 记忆列表 */}
+            {filteredMemories.length === 0 ? (
+              <div style={{ fontSize: 12, color: "var(--text-faint)", padding: "12px 0" }}>
+                {memTypeFilter === "all" ? "还没有记忆" : "该分类暂无记忆"}
+              </div>
+            ) : (
+              filteredMemories.map(mem => {
+                const heat = calculateHeat(mem);
+                const heatInfo = getHeatLevel(heat);
+                const isPinned = mem.pinned ?? false;
+                const isBlocked = (mem.injectable ?? true) === false;
+                const isExpanded = expandedMemId === mem.id;
+                const srcLabel = { migration: "迁入", auto: "AI", diary: "日记", manual: "" }[mem.source] || "";
+                // 热度点颜色
+                const dotColor = isBlocked ? "#ccc" : heatInfo.level === "hot" ? "#e07070" : heatInfo.level === "warm" ? "#e0a050" : heatInfo.level === "fading" ? "#ccc" : "#ddd";
+
+                return (
+                  <div key={mem.id} style={{
+                    marginBottom: 6, padding: "8px 12px", borderRadius: 10,
+                    background: isPinned ? "rgba(100,110,200,.05)" : isBlocked ? "rgba(180,180,180,.05)" : "rgba(255,255,255,.45)",
+                    border: `1px solid ${isPinned ? "rgba(100,110,200,.15)" : "rgba(196,166,184,.15)"}`,
+                    opacity: isBlocked ? 0.5 : heatInfo.level === "cold" ? 0.6 : 1,
+                    cursor: "pointer", transition: "all .15s",
+                  }} onClick={() => setExpandedMemId(isExpanded ? null : mem.id)}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                      {/* 热度点 */}
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: dotColor, flexShrink: 0, marginTop: 5 }} />
+                      {/* 内容 */}
+                      <div style={{ flex: 1, fontSize: 13, color: "#4a3a5a", lineHeight: 1.6, textDecoration: isBlocked ? "line-through" : "none" }}>
+                        {isPinned && <span style={{ marginRight: 2 }}>📌</span>}
+                        {mem.important && !isPinned && <span style={{ marginRight: 2 }}>⭐</span>}
+                        {srcLabel && <span style={{ fontSize: 11, color: "var(--accent-iris)", marginRight: 3 }}>[{srcLabel}]</span>}
+                        {mem.text}
+                      </div>
+                      {/* 操作图标 */}
+                      <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                        <button onClick={e => { e.stopPropagation(); pinMemory(memCharId, mem._type, mem.id); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: isPinned ? "#6070c8" : "#ccc", padding: 2 }}>
+                          {isPinned ? "📌" : "📍"}
+                        </button>
+                        <button onClick={e => { e.stopPropagation(); toggleMemoryImportant(memCharId, mem._type, mem.id); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: mem.important ? "#f5a623" : "#ccc", padding: 2 }}>
+                          {mem.important ? "★" : "☆"}
+                        </button>
+                      </div>
+                    </div>
+                    {/* 展开详情 */}
+                    {isExpanded && (
+                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(196,166,184,.15)" }}>
+                        <div style={{ display: "flex", gap: 8, fontSize: 11, color: "var(--text-faint)", marginBottom: 6, flexWrap: "wrap" }}>
+                          <span>{mem.time}</span>
+                          {mem.mentions > 0 && <span>🔥 ×{mem.mentions}</span>}
+                          <span>{heatInfo.emoji} {heatInfo.label}</span>
+                          <span style={{ color: "#9a8aac" }}>
+                            {V1_TO_V2_TYPE_MAP[mem._type] === "her_world" && "她的世界"}
+                            {V1_TO_V2_TYPE_MAP[mem._type] === "moments" && "我想记住的"}
+                            {V1_TO_V2_TYPE_MAP[mem._type] === "understanding" && "我懂她的"}
+                          </span>
+                        </div>
+                        {/* 关联原话（如果有） */}
+                        {(mem.rawIds || []).length > 0 && (() => {
+                          const rawQuotes = char.rawQuotes || [];
+                          const linked = rawQuotes.filter(q => (mem.rawIds || []).includes(q.id));
+                          if (linked.length === 0) return null;
+                          return (
+                            <div style={{ fontSize: 12, color: "#8a7a9a", fontStyle: "italic", padding: "6px 8px", background: "rgba(196,166,184,.06)", borderRadius: 8, marginBottom: 6, lineHeight: 1.6 }}>
+                              💬 关联原话：
+                              {linked.map(q => (
+                                <div key={q.id} style={{ marginTop: 2 }}>
+                                  {(q.snippets || []).map((s, i) => (
+                                    <div key={i}>「{s.text}」—— {s.speaker}</div>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button onClick={e => { e.stopPropagation(); toggleInjectable(memCharId, mem._type, mem.id); }} style={{ ...btnSmall, fontSize: 11, color: isBlocked ? "#bbb" : "#8a9ac8" }}>
+                            {isBlocked ? "🔕 已暂停" : "✨ 可唤醒"}
+                          </button>
+                          <button onClick={e => { e.stopPropagation(); deleteMemory(memCharId, mem._type, mem.id); }} style={{ ...btnSmall, fontSize: 11, color: "#c07070" }}>
+                            删除
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* ────── 区域 4：总结（默认折叠） ────── */}
+          <div ref={summaryRef}>
+            <div onClick={() => setSummaryOpen(!summaryOpen)} style={{
+              fontSize: 13, fontWeight: 500, letterSpacing: 2, color: "var(--text-deep)",
+              display: "flex", alignItems: "center", gap: 8, margin: "20px 0 12px", cursor: "pointer",
+            }}>
+              <span>📊</span>
+              <span>阶段沉淀</span>
+              <span style={{ fontSize: 11, color: "var(--text-faint)", fontWeight: 400, letterSpacing: 0 }}>
+                {pendingDrafts.length > 0 ? `${pendingDrafts.length} 待确认` : `${(_mem.summaries || []).length} 段记录`}
+              </span>
+              <span style={{ flex: 1, height: 1, background: "linear-gradient(90deg, rgba(196,166,184,.3), transparent)" }} />
+              <span style={{ fontSize: 12, color: "var(--text-faint)", transform: summaryOpen ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▼</span>
+            </div>
+
+            {summaryOpen && (
+              <div>
+                {/* 生成按钮 */}
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+                  <button className="btn-ghost" style={{ fontSize: 12 }}
+                    onClick={() => { setSettlementNotice?.(""); generateSettlement?.(memCharId); }}
+                    disabled={reflecting}>
+                    {reflecting ? "🌿 沉淀中…" : "🌿 生成阶段沉淀"}
+                  </button>
+                  <select value={getReflectSetting(memCharId).periodDays}
+                    onChange={e => setReflectSettings(prev => ({ ...prev, [memCharId]: { ...getReflectSetting(memCharId), periodDays: Number(e.target.value) } }))}
+                    style={{ padding: "5px 8px", borderRadius: 8, border: "1px solid rgba(196,166,184,.3)", fontSize: 11, background: "rgba(255,255,255,.7)", color: "var(--text-mid)", cursor: "pointer" }}>
+                    <option value={3}>3天</option><option value={7}>1周</option><option value={14}>2周</option><option value={30}>1月</option>
+                  </select>
+                </div>
+
+                {settlementNotice && (
+                  <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 10, marginBottom: 10, background: "rgba(220,180,80,.08)", border: "1px solid rgba(220,180,80,.2)", color: "#a08040", display: "flex", gap: 6 }}>
+                    <span>💡</span><span>{settlementNotice}</span>
+                  </div>
+                )}
+
+                {/* 待确认草稿 */}
+                {pendingDrafts.map(draft => {
+                  const ch = characters.find(c => c.id === memCharId);
+                  return (
+                    <SettlementDraftCard key={draft.id} draft={draft}
+                      onApplySection={section => applySettlementSection?.(draft.id, section, memCharId)}
+                      onDismiss={() => dismissSettlementDraft?.(draft.id)}
+                      onDelete={() => deleteSettlementDraft?.(draft.id)}
+                      onNavigate={navTarget => { if (navTarget === "charEdit" && ch) setEditingChar?.(ch); }}
+                    />
+                  );
+                })}
+
+                {/* 手动记录 */}
+                {!showAddSummary ? (
+                  <button className="btn-ghost" style={{ width: "100%", marginBottom: 8, fontSize: 12 }} onClick={() => setShowAddSummary(true)}>+ 手动记录</button>
+                ) : (
+                  <div style={{ marginBottom: 8 }}>
+                    <textarea className="field-textarea" placeholder="写下关系变化…" value={summaryInput} onChange={e => setSummaryInput(e.target.value)} style={{ minHeight: 80 }} />
+                    <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                      <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => { setShowAddSummary(false); setSummaryInput(""); }}>取消</button>
+                      <button className="btn-primary" style={{ flex: 1, fontSize: 12 }} disabled={!summaryInput.trim()} onClick={() => addSummary(memCharId, summaryInput)}>保存</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 历史总结 */}
+                {(_mem.summaries || []).map(s => (
+                  <div key={s.id} style={{ padding: "8px 12px", borderRadius: 10, marginBottom: 6, background: "rgba(255,255,255,.4)", border: "1px solid rgba(196,166,184,.15)" }}>
+                    <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>{s.isAutoReflect ? "🧠 AI反思" : "✍️ 手动"} · {s.time}</div>
+                    <div style={{ fontSize: 12, color: "var(--text-main)", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{s.text}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      </>}
-
       {/* ═══ 概览模式 ═══ */}
       {viewMode === "overview" && (
-        <div className="mem-scroll">
-
-          {/* 总量一览 */}
+        <div className="mem-scroll" style={{ padding: "0 14px 32px" }}>
+          {/* 顶部统计 */}
           <div style={{ display: "flex", marginBottom: 16, padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,.55)", border: "1px solid rgba(196,166,184,.18)" }}>
-            {[["条记忆", _totalMem, "#4a3a5e"], ["个锚点", _totalPin, "#5a6aae"], ["段总结", (_mem.summaries || []).length, "#7a6a8e"]].map(([lbl, val, clr], i, arr) => (
-              <div key={lbl} style={{ flex: 1, textAlign: "center", borderRight: i < arr.length - 1 ? "1px solid rgba(196,166,184,.2)" : "none" }}>
-                <div style={{ fontSize: 24, fontWeight: 600, color: clr, lineHeight: 1 }}>{val}</div>
-                <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 4, letterSpacing: 0.5 }}>{lbl}</div>
+            {overviewStats.map((s, i, arr) => (
+              <div key={s.label} style={{ flex: 1, textAlign: "center", borderRight: i < arr.length - 1 ? "1px solid rgba(196,166,184,.2)" : "none" }}>
+                <div style={{ fontSize: 22, fontWeight: 600, color: "#4a3a5e", lineHeight: 1 }}>{s.emoji} {s.val}</div>
+                <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 4 }}>{s.label}</div>
               </div>
             ))}
           </div>
 
-          {/* 分类型卡片 */}
+          {/* 四张卡片 */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-            {MEMORY_TYPES.map(mt => {
-              const entries = _mem[mt.key] || [];
-              const pinCnt = entries.filter(m => m.pinned).length;
-              const impCnt = entries.filter(m => m.important).length;
-              const lastAt = entries.reduce((mx, m) => Math.max(mx, m.updatedAt || m.createdAt || 0), 0);
-              return (
-                <div key={mt.key} onClick={() => { setViewMode("list"); setMemTab(mt.key); }}
-                  style={{ background: "rgba(255,255,255,.72)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", borderRadius: 16, border: "1px solid rgba(196,166,184,.2)", padding: "14px 16px", cursor: "pointer", transition: "transform .15s" }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                    <span style={{ fontSize: 18 }}>{mt.emoji}</span>
-                    <span style={{ fontSize: 13, fontWeight: 500, color: "#5a4a6a" }}>{mt.label}</span>
-                  </div>
-                  <div style={{ fontSize: 26, fontWeight: 600, color: "#3a2e4a", lineHeight: 1, marginBottom: 2 }}>{entries.length}</div>
-                  <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 8 }}>条记忆</div>
-                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap", minHeight: 20, marginBottom: 6 }}>
-                    {pinCnt > 0 && <span style={{ fontSize: 11, background: "rgba(100,110,200,.09)", color: "#6070b8", padding: "1px 7px", borderRadius: 6 }}>📌 {pinCnt}</span>}
-                    {impCnt > 0 && <span style={{ fontSize: 11, background: "rgba(245,166,35,.09)", color: "#a08040", padding: "1px 7px", borderRadius: 6 }}>⭐ {impCnt}</span>}
-                  </div>
-                  <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{_dayLabel(lastAt)}</div>
+            {[
+              { emoji: "📌", label: "钉子", val: anchors.length, sub: "颗", ref: anchorRef },
+              { emoji: "📖", label: "词典", val: lexicon.length, sub: "条", ref: lexRef },
+              { emoji: "🧠", label: "记忆", val: _totalMem, sub: "条", ref: memRef, extra: `${(_mem.fact || []).length} 事实 · ${(_mem.emotion || []).length} 情绪 · ${(_mem.insight || []).length} 觉察` },
+              { emoji: "📊", label: "总结", val: (_mem.summaries || []).length, sub: "段", ref: summaryRef, badge: pendingDrafts.length > 0 ? `🌿 ${pendingDrafts.length} 待确认` : null },
+            ].map(card => (
+              <div key={card.label} onClick={() => { setViewMode("list"); setTimeout(() => card.ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100); }}
+                style={{ background: "rgba(255,255,255,.72)", backdropFilter: "blur(10px)", borderRadius: 16, border: "1px solid rgba(196,166,184,.2)", padding: "14px 16px", cursor: "pointer" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                  <span style={{ fontSize: 16 }}>{card.emoji}</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "#5a4a6a" }}>{card.label}</span>
                 </div>
-              );
-            })}
-
-            {/* 总结卡 */}
-            <div onClick={() => { setViewMode("list"); setMemTab("summary"); }}
-              style={{ background: "rgba(255,255,255,.72)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", borderRadius: 16, border: "1px solid rgba(196,166,184,.2)", padding: "14px 16px", cursor: "pointer", transition: "transform .15s" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <span style={{ fontSize: 18 }}>📖</span>
-                <span style={{ fontSize: 13, fontWeight: 500, color: "#5a4a6a" }}>总结</span>
+                <div style={{ fontSize: 24, fontWeight: 600, color: "#3a2e4a", lineHeight: 1 }}>{card.val}</div>
+                <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>{card.sub}</div>
+                {card.extra && <div style={{ fontSize: 11, color: "#9a8aac", marginTop: 6, lineHeight: 1.5 }}>{card.extra}</div>}
+                {card.badge && <div style={{ fontSize: 11, color: "#6a7aae", marginTop: 4 }}>{card.badge}</div>}
               </div>
-              <div style={{ fontSize: 26, fontWeight: 600, color: "#3a2e4a", lineHeight: 1, marginBottom: 2 }}>{(_mem.summaries || []).length}</div>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 8 }}>段记录</div>
-              {_pendingDrafts > 0 && (
-                <span style={{ fontSize: 11, background: "rgba(106,122,174,.1)", color: "#6a7aae", padding: "1px 7px", borderRadius: 6 }}>🌿 {_pendingDrafts} 待确认</span>
-              )}
-            </div>
+            ))}
           </div>
-
-          {/* 固定锚点汇总 */}
-          {_allPinned.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, color: "#7a6a8e", letterSpacing: 1, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                📌 固定锚点
-                <span style={{ fontSize: 11, background: "rgba(100,110,200,.1)", color: "#6070b8", padding: "1px 7px", borderRadius: 6 }}>{_allPinned.length}</span>
-              </div>
-              {_allPinned.map(item => (
-                <div key={item.id} onClick={() => { setViewMode("list"); setMemTab(item._key); setMemFilter("pinned"); }}
-                  style={{ background: "rgba(100,110,200,.05)", border: "1px solid rgba(100,110,200,.14)", borderRadius: 12, padding: "10px 13px", marginBottom: 8, cursor: "pointer" }}
-                >
-                  <div style={{ fontSize: 13, color: "#3a2e4a", lineHeight: 1.65, marginBottom: 4 }}>{item.text}</div>
-                  <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{item._emoji} {item._label} · {item.time}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* 空状态 */}
-          {_totalMem === 0 && (
-            <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-faint)", fontSize: 13, lineHeight: 2.2 }}>
-              记忆宫殿还是空的~<br />切换到「列表」视图，开始记录第一条记忆
-            </div>
-          )}
         </div>
       )}
     </div>
