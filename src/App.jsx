@@ -1315,6 +1315,9 @@ ${chunksText}
         extractionMode: "ab_resident", // 标记为新式双轨草稿
         // A轨：记忆条目（逐条采纳）
         memoryItems: parsedA.memoryItems,
+        // A轨 V2：原话片段 + 词典
+        rawQuotes: parsedA.rawQuotes || [],
+        lexiconItems: parsedA.lexiconItems || [],
         // B轨：人格信号（暂存，等待合成）
         personalitySignals,
         // 向后兼容字段
