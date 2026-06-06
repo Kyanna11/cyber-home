@@ -162,141 +162,61 @@ export default function BedroomPage({
         </div>
       </div>
 
-      {/* ── 场景区（热点层） ── */}
-      {/*
-        基于房间插画坐标：
-        - 便签墙（贴纸板）: 画面上方偏右，top≈13%, left≈45%
-        - 书桌/手札（桌上日记）: 画面中央, top≈50%, left≈37%
-        - 柜子/档案（绿色书柜）: 画面右侧, top≈28%, left≈72%
-        - 床/宝库（左侧床铺）: 画面左侧中部, top≈52%, left≈5%
-        - 门/出门（右侧门）: 画面右边缘, top≈28%, left≈85%
-      */}
+      {/* ── 场景区（5 个热点，对应房间里的具体位置） ── */}
       <div style={{ flex: 1, position: "relative", zIndex: 1 }}>
 
-        {/* 书桌 → 日常 */}
+        {/* 书桌 → 我的手札 */}
         <HotspotCard
-          label="日常"
-          sublabel="手札 · 便签 · 时间线"
-          onClick={() => navigateTo("daily")}
-          zone={{ position: "absolute", top: "44%", left: "30%", width: "36%", height: "18%" }}
-          position={{ top: "44%", left: "30%" }}
+          label="我的手札"
+          sublabel="📔 书桌上的日记本"
+          onClick={() => navigateTo("notes")}
+          zone={{ position: "absolute", top: "50%", left: "30%", width: "26%", height: "16%" }}
+          position={{ top: "50%", left: "30%" }}
           cardAnchor="center"
         />
 
-        {/* 绿色书柜 → ta 的房间 */}
+        {/* 墙上 → 便签墙 */}
         <HotspotCard
-          label="ta 的房间"
-          sublabel="入住档案 · 记忆"
-          onClick={() => navigateTo("profileHome")}
-          zone={{ position: "absolute", top: "12%", left: "68%", width: "20%", height: "30%" }}
-          position={{ top: "12%", left: "68%" }}
+          label="便签墙"
+          sublabel={unreadNotes.length > 0 ? `📝 ${unreadNotes.length} 条未读` : "📝 墙上的留言"}
+          onClick={() => navigateTo("stickyNotes")}
+          zone={{ position: "absolute", top: "13%", left: "40%", width: "22%", height: "16%" }}
+          position={{ top: "13%", left: "40%" }}
           cardAnchor="center"
         />
 
-        {/* 右侧门 → 聊天区 */}
+        {/* 床上 → 我的宝库 */}
         <HotspotCard
-          label="聊天区"
-          sublabel={characters.length > 0 ? `${characters.length} 位在家` : ""}
+          label="我的宝库"
+          sublabel="💎 珍藏的心动片段"
+          onClick={() => navigateTo("treasures")}
+          zone={{ position: "absolute", top: "52%", left: "2%", width: "24%", height: "18%" }}
+          position={{ top: "52%", left: "2%" }}
+          cardAnchor="left"
+        />
+
+        {/* 窗/柜 → 他们的房间 */}
+        <HotspotCard
+          label="他们的房间"
+          sublabel={characters.length > 0 ? `🏠 ${characters.length} 位入住` : "🏠"}
           onClick={() => setShowCharSelect(true)}
-          zone={{ position: "absolute", top: "0%", left: "86%", width: "14%", height: "52%" }}
-          position={{ top: "0%", left: "86%" }}
-          cardAnchor="right"
+          zone={{ position: "absolute", top: "20%", left: "68%", width: "22%", height: "24%" }}
+          position={{ top: "20%", left: "68%" }}
+          cardAnchor="center"
         />
 
-        {/* ── 底部浮动区：小家客厅 + 便签预览，flex 堆叠避免遮挡 ── */}
-        {(onOpenGroupChat || recentNotes.length > 0) && (
-          <div style={{
-            position: "absolute",
-            bottom: "calc(8px + env(safe-area-inset-bottom,0px))",
-            left: 12, right: 12,
-            zIndex: 4,
-            display: "flex", flexDirection: "column", gap: 8,
-          }}>
-
-            {/* 小家客厅入口卡 */}
-            {onOpenGroupChat && (
-              <div
-                onClick={() => onOpenGroupChat(null)}
-                style={{
-                  background: "rgba(255,255,255,.68)",
-                  backdropFilter: "blur(10px)",
-                  WebkitBackdropFilter: "blur(10px)",
-                  borderRadius: 14,
-                  border: "1px solid rgba(196,166,184,.22)",
-                  boxShadow: "0 4px 16px rgba(74,69,96,.08)",
-                  padding: "9px 14px",
-                  cursor: "pointer",
-                  display: "flex", alignItems: "center", gap: 10,
-                }}
-              >
-                <span style={{ fontSize: 22, flexShrink: 0 }}>☕</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: "#5a4a6a", letterSpacing: 0.5 }}>小家客厅</div>
-                  <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 1 }}>
-                    {groupChats?.length > 0 ? `${groupChats.length} 个客厅 · 点击进入` : "把他们叫到一起聊聊"}
-                  </div>
-                </div>
-                <span style={{ fontSize: 12, color: "var(--text-faint)" }}>→</span>
-              </div>
-            )}
-
-            {/* 便签墙预览条 */}
-            {recentNotes.length > 0 && (
-              <div
-                onClick={() => navigateTo("stickyNotes")}
-                style={{
-                  background: "rgba(255,255,255,.68)",
-                  backdropFilter: "blur(10px)",
-                  WebkitBackdropFilter: "blur(10px)",
-                  borderRadius: 14,
-                  border: "1px solid rgba(196,166,184,.22)",
-                  boxShadow: "0 4px 16px rgba(74,69,96,.08)",
-                  padding: "9px 14px",
-                  cursor: "pointer",
-                }}
-              >
-                <div style={{
-                  display:"flex", alignItems:"center", justifyContent:"space-between",
-                  marginBottom: 6,
-                }}>
-                  <span style={{ fontSize:10, color:"#6a5a78", letterSpacing:1 }}>📝 便签墙</span>
-                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                    {unreadNotes.length > 0 && (
-                      <span style={{
-                        fontSize:10, color:"#9a5060",
-                        background:"rgba(180,100,120,.12)",
-                        padding:"1px 8px", borderRadius:8,
-                        border:"1px solid rgba(180,100,120,.2)",
-                      }}>{unreadNotes.length} 未读</span>
-                    )}
-                    <span style={{ fontSize:10, color:"var(--text-faint)" }}>查看全部 →</span>
-                  </div>
-                </div>
-                <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                  {recentNotes.map(note => (
-                    <div key={note.id} style={{ display:"flex", alignItems:"baseline", gap:8 }}>
-                      <span style={{
-                        fontSize:9, color:"#8a7898", flexShrink:0,
-                        background:"rgba(196,166,184,.15)",
-                        padding:"1px 6px", borderRadius:6,
-                        maxWidth:52, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-                      }}>{note.authorName}</span>
-                      <span style={{
-                        fontSize:11, color: note.read ? "#9a8aac" : "#5a4a6a",
-                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-                        flex:1, fontWeight: note.read ? 300 : 400,
-                      }}>{note.content}</span>
-                      {!note.read && (
-                        <div style={{ width:5, height:5, borderRadius:"50%", background:"#c87898", flexShrink:0 }} />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-          </div>
+        {/* 门 → 客厅 */}
+        {onOpenGroupChat && (
+          <HotspotCard
+            label="客厅"
+            sublabel={groupChats?.length > 0 ? `☕ ${groupChats.length} 个客厅` : "☕ 去客厅坐坐"}
+            onClick={() => onOpenGroupChat(null)}
+            zone={{ position: "absolute", top: "22%", left: "86%", width: "14%", height: "34%" }}
+            position={{ top: "22%", left: "86%" }}
+            cardAnchor="right"
+          />
         )}
+
       </div>
 
       {/* ── 角色选择弹窗（出门后） ── */}
@@ -306,29 +226,7 @@ export default function BedroomPage({
           onClick={(e) => { if (e.target === e.currentTarget) setShowCharSelect(false); }}
         >
           <div className="char-panel">
-            <div className="char-panel-title">🚪 去哪儿？</div>
-            {/* 客厅入口 */}
-            {onOpenGroupChat && (
-              <div
-                onClick={() => { setShowCharSelect(false); onOpenGroupChat(null); }}
-                style={{
-                  display:"flex", alignItems:"center", gap:10,
-                  padding:"11px 14px", marginBottom:8,
-                  borderRadius:14, cursor:"pointer",
-                  background:"rgba(120,100,160,.07)",
-                  border:"1px dashed rgba(120,100,160,.22)",
-                  transition:"all .15s",
-                }}
-              >
-                <span style={{ fontSize:22 }}>☕</span>
-                <div>
-                  <div style={{ fontSize:13, color:"#5a4a6a", fontWeight:500 }}>小家客厅</div>
-                  <div style={{ fontSize:11, color:"var(--text-faint)" }}>
-                    {groupChats?.length > 0 ? `${groupChats.length} 个客厅` : "邀请大家一起聊"}
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="char-panel-title">🏠 去谁的房间？</div>
             {characters.length === 0 && (
               <div style={{ padding:"12px 0", color:"var(--text-faint)", fontSize:13, lineHeight:1.8 }}>
                 家里还没有人呢
@@ -339,31 +237,29 @@ export default function BedroomPage({
               <div
                 key={char.id}
                 className="char-card"
-                onClick={() => enterChat(char.id)}
+                onClick={() => { setShowCharSelect(false); openCharRoom?.(char.id); }}
               >
                 <Avatar char={char} size={42} radius={14} fontSize={20} />
                 <div className="char-info">
                   <div className="char-name">{char.name || "未命名"}</div>
                   <div className="char-relation">{char.relation || ""}</div>
                 </div>
-                {openCharRoom && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowCharSelect(false);
-                      openCharRoom(char.id);
-                    }}
-                    style={{
-                      flexShrink:0, marginLeft:4,
-                      padding:"4px 10px", borderRadius:10,
-                      background:"rgba(120,100,160,.1)",
-                      border:"1px solid rgba(120,100,160,.2)",
-                      color:"#6a5a8a", fontSize:11,
-                      cursor:"pointer", fontFamily:"var(--font-main)",
-                      whiteSpace:"nowrap",
-                    }}
-                  >他的房间</button>
-                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowCharSelect(false);
+                    enterChat(char.id);
+                  }}
+                  style={{
+                    flexShrink:0, marginLeft:4,
+                    padding:"4px 10px", borderRadius:10,
+                    background:"rgba(120,100,160,.1)",
+                    border:"1px solid rgba(120,100,160,.2)",
+                    color:"#6a5a8a", fontSize:11,
+                    cursor:"pointer", fontFamily:"var(--font-main)",
+                    whiteSpace:"nowrap",
+                  }}
+                >去聊天</button>
               </div>
             ))}
             <button className="char-close" onClick={() => setShowCharSelect(false)}>

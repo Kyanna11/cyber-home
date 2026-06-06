@@ -176,7 +176,8 @@ async function _callLLMForNote(char, type, idleDays, cfg) {
 
 请以你自己的身份，用你平时说话的方式，给用户留一张短便签。
 要求：100 字以内，口语化，有你自己的温度和气质。
-只输出便签正文，不要加任何前缀或解释。`;
+只输出便签正文，不要加任何前缀或解释。
+不要使用 ||| 分隔符，不要使用 [心声] 标签，不要使用 [记忆] [落钉] 等标签，直接写一段连续的文字。`;
 
   try {
     const resp = await fetch(
@@ -236,8 +237,15 @@ async function _runProactiveNoteCheck(chars, threads, existingNotes, cfg, onNote
     }
     if (!triggerType) continue;
 
-    const content = await _callLLMForNote(char, triggerType, idleDays, cfg);
+    let content = await _callLLMForNote(char, triggerType, idleDays, cfg);
     if (!content) continue;
+    // 清洗便签内容：移除聊天格式标签
+    content = content
+      .replace(/\[心声\][\s\S]*?\[\/心声\]/g, "")
+      .replace(/\[记忆:[^\]]*\][\s\S]*?\[\/记忆\]/g, "")
+      .replace(/\[落钉:[^\]]*\][\s\S]*?\[\/落钉\]/g, "")
+      .replace(/\|\|\|/g, "")
+      .trim();
 
     _markGenerated(meta, char.id, triggerType);
     onNoteReady({
