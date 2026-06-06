@@ -52,6 +52,8 @@ export function migrateMemoryEntries(entries) {
         priority:      item.priority      ?? 0,
         source:        item.source        || (item.isAutoMemory ? "auto" : "manual"),
         id:            item.id            || genId(),
+        rawIds:        item.rawIds        || [],
+        anchorLevel:   item.anchorLevel   || "normal",
       };
     }
     return {
@@ -65,6 +67,8 @@ export function migrateMemoryEntries(entries) {
       injectable:    true,
       priority:      0,
       source:        "manual",
+      rawIds:        [],
+      anchorLevel:   "normal",
     };
   });
 }
@@ -512,4 +516,36 @@ export function extractAndSaveMemories(raw, charId, allMemories, setAllMemories)
   }
 
   return raw.replace(/\[记忆:(事实|情绪|觉察)\].*?\[\/记忆\]/gs, "").trim();
+}
+
+// ══════════════════════════════════════════════════════════
+//  V2 数据迁移（向后兼容）
+// ══════════════════════════════════════════════════════════
+
+/**
+ * 给角色数据补上 V2 新字段（rawQuotes / anchors / lexicon）
+ * 幂等：已迁移的数据直接返回
+ */
+export function migrateCharDataToV2(charData) {
+  if (!charData || charData._memoryV2) return charData;
+  return {
+    ...charData,
+    rawQuotes: charData.rawQuotes || [],
+    anchors:   charData.anchors   || [],
+    lexicon:   charData.lexicon   || [],
+    _memoryV2: true,
+  };
+}
+
+/**
+ * 给记忆数据补上 V2 新字段（distill 数组）
+ * 幂等：已迁移的数据直接返回
+ */
+export function migrateMemoriesToV2(charMemories) {
+  if (!charMemories || charMemories._v2) return charMemories;
+  return {
+    ...charMemories,
+    distill: charMemories.distill || [],
+    _v2: true,
+  };
 }

@@ -144,6 +144,10 @@ export const DEFAULT_CHAR = {
     chatBgUrl:    "",         // 自定义图片 URL
     chatBgDim:    "none",     // 遮罩透明度："none" | "low" | "medium" | "high"
   },
+  // ── V2 记忆系统 ──
+  rawQuotes: [],  // 原话片段层（区别于 rawArchives 的完整对话导入）
+  anchors: [],    // 钉子/锚点（永不衰减、永不归档）
+  lexicon: [],    // 专属词典（梗/称呼/默契）
 };
 
 // 伏笔追踪存储键
@@ -213,3 +217,18 @@ export const MEMORY_TYPES = [
   { key: "emotion", label: "情绪", emoji: "💗", color: "#e8c4c4", desc: "感受到了什么" },
   { key: "insight", label: "觉察", emoji: "✨", color: "#99a8c7", desc: "这意味着什么" },
 ];
+
+// V2 脱水记忆分区定义
+export const DISTILL_TYPES = [
+  { key: "her_world",     label: "她的世界",   emoji: "🌍", color: "#9b95b5" },
+  { key: "between_us",    label: "我们之间",   emoji: "💫", color: "#c4a8d4" },
+  { key: "understanding", label: "我懂她的",   emoji: "🔮", color: "#99a8c7" },
+  { key: "moments",       label: "我想记住的", emoji: "✨", color: "#e8c4c4" },
+];
+
+// V1 → V2 记忆类型映射
+export const V1_TO_V2_TYPE_MAP = {
+  fact:    "her_world",
+  emotion: "moments",
+  insight: "understanding",
+};

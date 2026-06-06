@@ -48,7 +48,7 @@ import {
 } from "./constants";
 import { genId, estimateTokens, buildSourceRef } from "./utils/helpers";
 import { splitRawTextToChunks } from "./utils/chunker";
-import { extractAndSaveMemories, getTopMemories, updateMemoryHeat as updateMemoryHeatUtil, autoArchiveCheck } from "./utils/memory";
+import { extractAndSaveMemories, getTopMemories, updateMemoryHeat as updateMemoryHeatUtil, autoArchiveCheck, migrateCharDataToV2, migrateMemoriesToV2 } from "./utils/memory";
 import {
   buildSystemPrompt,
   buildUserContext,
@@ -497,19 +497,37 @@ export default function App() {
         });
       }, 1500);
 
-      // ── 记忆自动归档：app 打开时对每个角色执行一次 90天归档检查 ──
+      // ── V2 数据迁移：给角色补上 rawQuotes / anchors / lexicon 字段 ──
+      const _chars2 = d?.[CHARS_STORAGE_KEY] || _chars;
+      let charsV2Changed = false;
+      const charsV2 = _chars2.map(c => {
+        const migrated = migrateCharDataToV2(c);
+        if (migrated !== c) charsV2Changed = true;
+        return migrated;
+      });
+      if (charsV2Changed) {
+        setCharacters(charsV2);
+      }
+
+      // ── V2 数据迁移 + 记忆自动归档 ──
       const _memories = d?.[MEMORIES_STORAGE_KEY] || allMemories;
       const updatedMemories = { ..._memories };
-      let archiveChanged = false;
+      let memChanged = false;
       Object.keys(updatedMemories).forEach(charId => {
-        const before = updatedMemories[charId];
-        const after  = autoArchiveCheck(before);
-        if (after !== before) {
+        // V2 迁移：补上 distill 数组
+        const v2 = migrateMemoriesToV2(updatedMemories[charId]);
+        if (v2 !== updatedMemories[charId]) {
+          updatedMemories[charId] = v2;
+          memChanged = true;
+        }
+        // 90天归档检查
+        const after = autoArchiveCheck(updatedMemories[charId]);
+        if (after !== updatedMemories[charId]) {
           updatedMemories[charId] = after;
-          archiveChanged = true;
+          memChanged = true;
         }
       });
-      if (archiveChanged) {
+      if (memChanged) {
         setAllMemories(updatedMemories);
       }
     });
@@ -2939,7 +2957,7 @@ ${recentLines}
   // ═══ 记忆管理 ═══
 
   const getCharMemories = (charId) =>
-    allMemories[charId] || { fact: [], emotion: [], insight: [], summaries: [] };
+    allMemories[charId] || { fact: [], emotion: [], insight: [], summaries: [], distill: [] };
 
   const addMemory = (charId, type, text, opts = {}) => {
     if (!text.trim()) return;
