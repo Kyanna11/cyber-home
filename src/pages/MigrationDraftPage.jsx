@@ -493,18 +493,20 @@ const DIM_CONFIG = {
   worldview: { label: "三观信号", emoji: "🌿" },
 };
 
-function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelete, onAddAnchor, onAddLexicon, onAddRawQuote }) {
+function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelete, onAddAnchor, onAddLexicon, onAddRawQuote, onAdoptRawQuotes, onAdoptLexicon }) {
   const [activeTab, setActiveTab] = useState("memory");
   const [checkedIds, setCheckedIds] = useState(() => {
     const ids = new Set();
     (draft?.memoryItems || []).forEach((item) => { if (!item.adopted) ids.add(item.id); });
     return ids;
   });
-  const [adoptConfirm, setAdoptConfirm] = useState(false);
+  // adoptConfirm 改为枚举：null | "memory" | "quotes" | "lexicon"
+  const [adoptConfirm, setAdoptConfirm] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showRaw, setShowRaw] = useState(null); // null | "A" | "B"
-  const [checkedQuotes, setCheckedQuotes] = useState(() => new Set((draft?.rawQuotes || []).map(q => q.id)));
-  const [checkedLex, setCheckedLex] = useState(() => new Set((draft?.lexiconItems || []).map(l => l.id)));
+  // 原话/词典默认只勾选「未采纳」的
+  const [checkedQuotes, setCheckedQuotes] = useState(() => new Set((draft?.rawQuotes || []).filter(q => !q.adopted).map(q => q.id)));
+  const [checkedLex, setCheckedLex] = useState(() => new Set((draft?.lexiconItems || []).filter(l => !l.adopted).map(l => l.id)));
   const [pinningItem, setPinningItem] = useState(null);
   const [pinTitle, setPinTitle] = useState("");
   const [pinDesc, setPinDesc] = useState("");
@@ -522,8 +524,10 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
       const ids = new Set();
       (draft.memoryItems || []).forEach((item) => { if (!item.adopted) ids.add(item.id); });
       setCheckedIds(ids);
+      setCheckedQuotes(new Set((draft.rawQuotes || []).filter(q => !q.adopted).map(q => q.id)));
+      setCheckedLex(new Set((draft.lexiconItems || []).filter(l => !l.adopted).map(l => l.id)));
       setActiveTab("memory");
-      setAdoptConfirm(false);
+      setAdoptConfirm(null);
       setConfirmDelete(false);
       setShowRaw(null);
     }
@@ -792,55 +796,97 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
           ) : activeTab === "quotes" ? (
             <>
               <div style={{ fontSize: 12, color: "#9a8aac", lineHeight: 1.7, padding: "7px 11px", background: "rgba(100,130,180,.06)", borderRadius: 8, marginBottom: 14 }}>
-                勾选要保留的原话片段，采纳时会存入原话库。
+                勾选要保留的原话片段，采纳后会存入「他的原话库」。
               </div>
-              {(draft.rawQuotes || []).map(q => (
-                <div key={q.id} style={{
-                  display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", marginBottom: 6,
-                  borderRadius: 10, cursor: "pointer",
-                  border: `1px solid ${checkedQuotes.has(q.id) ? "rgba(100,130,180,.35)" : "rgba(196,166,184,.25)"}`,
-                  background: checkedQuotes.has(q.id) ? "rgba(100,130,180,.08)" : "rgba(255,255,255,.5)",
-                }} onClick={() => setCheckedQuotes(prev => { const n = new Set(prev); n.has(q.id) ? n.delete(q.id) : n.add(q.id); return n; })}>
-                  <div style={{
-                    width: 18, height: 18, flexShrink: 0, borderRadius: 5, marginTop: 1,
-                    border: `1.5px solid ${checkedQuotes.has(q.id) ? "rgba(100,130,180,.8)" : "rgba(196,166,184,.5)"}`,
-                    background: checkedQuotes.has(q.id) ? "rgba(100,130,180,.75)" : "transparent",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>{checkedQuotes.has(q.id) && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}</div>
-                  <div>
-                    <div style={{ fontSize: 11, color: "#6a8aae", fontWeight: 500, marginBottom: 2 }}>{q.speaker}</div>
-                    <div style={{ fontSize: 13, color: "#4a3a5a", lineHeight: 1.7, fontStyle: "italic" }}>「{q.text}」</div>
+              {(draft.rawQuotes || []).map(q => {
+                const isChecked = checkedQuotes.has(q.id);
+                const isAdopted = q.adopted;
+                return (
+                  <div key={q.id} style={{
+                    display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", marginBottom: 6,
+                    borderRadius: 10, cursor: isAdopted ? "default" : "pointer",
+                    border: `1px solid ${isAdopted ? "rgba(90,138,106,.25)" : isChecked ? "rgba(100,130,180,.35)" : "rgba(196,166,184,.25)"}`,
+                    background: isAdopted ? "rgba(90,138,106,.06)" : isChecked ? "rgba(100,130,180,.08)" : "rgba(255,255,255,.5)",
+                    opacity: isAdopted ? 0.65 : 1,
+                  }} onClick={() => {
+                    if (isAdopted) return;
+                    setCheckedQuotes(prev => { const n = new Set(prev); n.has(q.id) ? n.delete(q.id) : n.add(q.id); return n; });
+                  }}>
+                    {isAdopted ? (
+                      <div style={{
+                        width: 18, height: 18, flexShrink: 0, borderRadius: 5, marginTop: 1,
+                        background: "rgba(90,138,106,.6)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <span style={{ color: "#fff", fontSize: 12 }}>✓</span>
+                      </div>
+                    ) : (
+                      <div style={{
+                        width: 18, height: 18, flexShrink: 0, borderRadius: 5, marginTop: 1,
+                        border: `1.5px solid ${isChecked ? "rgba(100,130,180,.8)" : "rgba(196,166,184,.5)"}`,
+                        background: isChecked ? "rgba(100,130,180,.75)" : "transparent",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>{isChecked && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}</div>
+                    )}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                        <span style={{ fontSize: 11, color: "#6a8aae", fontWeight: 500 }}>{q.speaker}</span>
+                        {isAdopted && <span style={{ fontSize: 11, color: "#5a8a6a" }}>已采纳</span>}
+                      </div>
+                      <div style={{ fontSize: 13, color: "#4a3a5a", lineHeight: 1.7, fontStyle: "italic" }}>「{q.text}」</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </>
           ) : activeTab === "lexicon" ? (
             <>
               <div style={{ fontSize: 12, color: "#9a8aac", lineHeight: 1.7, padding: "7px 11px", background: "rgba(106,138,174,.06)", borderRadius: 8, marginBottom: 14 }}>
-                勾选要收录的词条，采纳时会存入专属词典。
+                勾选要收录的词条，采纳后会存入「他的专属词典」。
               </div>
-              {(draft.lexiconItems || []).map(l => (
-                <div key={l.id} style={{
-                  display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", marginBottom: 6,
-                  borderRadius: 10, cursor: "pointer",
-                  border: `1px solid ${checkedLex.has(l.id) ? "rgba(106,138,174,.35)" : "rgba(196,166,184,.25)"}`,
-                  background: checkedLex.has(l.id) ? "rgba(106,138,174,.08)" : "rgba(255,255,255,.5)",
-                }} onClick={() => setCheckedLex(prev => { const n = new Set(prev); n.has(l.id) ? n.delete(l.id) : n.add(l.id); return n; })}>
-                  <div style={{
-                    width: 18, height: 18, flexShrink: 0, borderRadius: 5, marginTop: 1,
-                    border: `1.5px solid ${checkedLex.has(l.id) ? "rgba(106,138,174,.8)" : "rgba(196,166,184,.5)"}`,
-                    background: checkedLex.has(l.id) ? "rgba(106,138,174,.75)" : "transparent",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>{checkedLex.has(l.id) && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}</div>
-                  <div>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: "#4a5a6a" }}>"{l.term}"</span>
-                    <span style={{ fontSize: 13, color: "#6a7a8a", marginLeft: 6 }}>= {l.meaning}</span>
-                    {l.speaker && l.speaker !== "unknown" && (
-                      <div style={{ fontSize: 11, color: "#b0a0c0", marginTop: 2 }}>—— {l.speaker}</div>
+              {(draft.lexiconItems || []).map(l => {
+                const isChecked = checkedLex.has(l.id);
+                const isAdopted = l.adopted;
+                return (
+                  <div key={l.id} style={{
+                    display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", marginBottom: 6,
+                    borderRadius: 10, cursor: isAdopted ? "default" : "pointer",
+                    border: `1px solid ${isAdopted ? "rgba(90,138,106,.25)" : isChecked ? "rgba(106,138,174,.35)" : "rgba(196,166,184,.25)"}`,
+                    background: isAdopted ? "rgba(90,138,106,.06)" : isChecked ? "rgba(106,138,174,.08)" : "rgba(255,255,255,.5)",
+                    opacity: isAdopted ? 0.65 : 1,
+                  }} onClick={() => {
+                    if (isAdopted) return;
+                    setCheckedLex(prev => { const n = new Set(prev); n.has(l.id) ? n.delete(l.id) : n.add(l.id); return n; });
+                  }}>
+                    {isAdopted ? (
+                      <div style={{
+                        width: 18, height: 18, flexShrink: 0, borderRadius: 5, marginTop: 1,
+                        background: "rgba(90,138,106,.6)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <span style={{ color: "#fff", fontSize: 12 }}>✓</span>
+                      </div>
+                    ) : (
+                      <div style={{
+                        width: 18, height: 18, flexShrink: 0, borderRadius: 5, marginTop: 1,
+                        border: `1.5px solid ${isChecked ? "rgba(106,138,174,.8)" : "rgba(196,166,184,.5)"}`,
+                        background: isChecked ? "rgba(106,138,174,.75)" : "transparent",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>{isChecked && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}</div>
                     )}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: "#4a5a6a" }}>"{l.term}"</span>
+                        <span style={{ fontSize: 13, color: "#6a7a8a" }}>= {l.meaning}</span>
+                        {isAdopted && <span style={{ fontSize: 11, color: "#5a8a6a" }}>已采纳</span>}
+                      </div>
+                      {l.speaker && l.speaker !== "unknown" && (
+                        <div style={{ fontSize: 11, color: "#b0a0c0", marginTop: 2 }}>—— {l.speaker}</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </>
           ) : (
             <>
@@ -943,41 +989,98 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
           borderTop: "1px solid rgba(196,166,184,.18)",
           background: "rgba(255,255,255,.6)",
         }}>
-          {adoptConfirm ? (
-            <div>
-              <div style={{
-                fontSize: 12, color: "#6a5a7e", marginBottom: 8, lineHeight: 1.7,
-                padding: "8px 12px", background: "rgba(140,110,180,.1)", borderRadius: 8,
-              }}>
-                将采纳 <strong>{checkedCount}</strong> 条记忆到记忆宫殿（标记为 📌 常驻）。
+          {adoptConfirm ? (() => {
+            // 三种采纳确认共用一套面板
+            const config = {
+              memory: {
+                count: checkedCount,
+                tipText: <>将采纳 <strong>{checkedCount}</strong> 条记忆到记忆宫殿（标记为 📌 常驻）。</>,
+                btnLabel: `✓ 确认采纳 ${checkedCount} 条`,
+                onConfirm: () => {
+                  const items = [...checkedIds]
+                    .map((id) => (draft.memoryItems || []).find((i) => i.id === id))
+                    .filter(Boolean);
+                  onAdopt(draft.id, { adoptedItems: items });
+                  onClose();
+                },
+              },
+              quotes: {
+                count: checkedQuotes.size,
+                tipText: <>将采纳 <strong>{checkedQuotes.size}</strong> 条原话到「他的原话库」。</>,
+                btnLabel: `✓ 确认采纳 ${checkedQuotes.size} 条`,
+                onConfirm: () => {
+                  const items = [...checkedQuotes]
+                    .map((id) => (draft.rawQuotes || []).find((q) => q.id === id))
+                    .filter(Boolean);
+                  onAdoptRawQuotes?.(draft.id, items);
+                  setCheckedQuotes(new Set());
+                  setAdoptConfirm(null);
+                },
+              },
+              lexicon: {
+                count: checkedLex.size,
+                tipText: <>将采纳 <strong>{checkedLex.size}</strong> 条词条到「他的专属词典」。</>,
+                btnLabel: `✓ 确认采纳 ${checkedLex.size} 条`,
+                onConfirm: () => {
+                  const items = [...checkedLex]
+                    .map((id) => (draft.lexiconItems || []).find((l) => l.id === id))
+                    .filter(Boolean);
+                  onAdoptLexicon?.(draft.id, items);
+                  setCheckedLex(new Set());
+                  setAdoptConfirm(null);
+                },
+              },
+            };
+            const cfg = config[adoptConfirm];
+            return (
+              <div>
+                <div style={{
+                  fontSize: 12, color: "#6a5a7e", marginBottom: 8, lineHeight: 1.7,
+                  padding: "8px 12px", background: "rgba(140,110,180,.1)", borderRadius: 8,
+                }}>
+                  {cfg.tipText}
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    style={{ ...btnGhost, color: "#3a7a4a", borderColor: "rgba(130,180,140,.5)", fontWeight: 600 }}
+                    onClick={cfg.onConfirm}
+                  >
+                    {cfg.btnLabel}
+                  </button>
+                  <button style={btnGhost} onClick={() => setAdoptConfirm(null)}>取消</button>
+                </div>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  style={{ ...btnGhost, color: "#3a7a4a", borderColor: "rgba(130,180,140,.5)", fontWeight: 600 }}
-                  onClick={() => {
-                    const items = [...checkedIds]
-                      .map((id) => (draft.memoryItems || []).find((i) => i.id === id))
-                      .filter(Boolean);
-                    onAdopt(draft.id, { adoptedItems: items });
-                    onClose();
-                  }}
-                >
-                  ✓ 确认采纳 {checkedCount} 条
-                </button>
-                <button style={btnGhost} onClick={() => setAdoptConfirm(false)}>取消</button>
-              </div>
-            </div>
-          ) : (
+            );
+          })() : (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              {/* 脱水 tab 采纳按钮 */}
               {activeTab === "memory" && draft.status !== "approved" && checkedCount > 0 && (
                 <button
                   style={{ ...btnGhost, color: "#5a3a8e", borderColor: "rgba(120,90,170,.4)", fontWeight: 500 }}
-                  onClick={() => setAdoptConfirm(true)}
+                  onClick={() => setAdoptConfirm("memory")}
                 >
                   💡 采纳已勾选（{checkedCount} 条）
                 </button>
               )}
-              {draft.status === "approved" && (
+              {/* 原话 tab 采纳按钮 */}
+              {activeTab === "quotes" && checkedQuotes.size > 0 && (
+                <button
+                  style={{ ...btnGhost, color: "#3a5a8e", borderColor: "rgba(90,130,180,.4)", fontWeight: 500 }}
+                  onClick={() => setAdoptConfirm("quotes")}
+                >
+                  💬 采纳已勾选原话（{checkedQuotes.size} 条）
+                </button>
+              )}
+              {/* 词典 tab 采纳按钮 */}
+              {activeTab === "lexicon" && checkedLex.size > 0 && (
+                <button
+                  style={{ ...btnGhost, color: "#3a6a8e", borderColor: "rgba(90,140,180,.4)", fontWeight: 500 }}
+                  onClick={() => setAdoptConfirm("lexicon")}
+                >
+                  📖 采纳已勾选词条（{checkedLex.size} 条）
+                </button>
+              )}
+              {draft.status === "approved" && activeTab === "memory" && (
                 <span style={{ fontSize: 12, color: "#3a7a4a", padding: "7px 4px" }}>✓ 已采纳到记忆宫殿</span>
               )}
               {draft.status !== "rejected" && draft.status !== "approved" && (
@@ -1923,6 +2026,9 @@ export default function MigrationDraftPage({
   // V2 钉子/词典
   addAnchorItem,
   addLexiconItem,
+  // V2 批量采纳原话/词典
+  adoptDraftRawQuotes,
+  adoptDraftLexicon,
 }) {
   const char = characters.find((c) => c.id === charId) || {};
   const charName = char.name || "入住者";
@@ -2816,6 +2922,8 @@ export default function MigrationDraftPage({
           onDelete={(id) => { deleteMigrationDraft(id); setViewDraftId(null); }}
           onAddAnchor={(anchor) => addAnchorItem?.(charId, anchor)}
           onAddLexicon={(lex) => addLexiconItem?.(charId, lex)}
+          onAdoptRawQuotes={(draftId, items) => adoptDraftRawQuotes?.(draftId, charId, items)}
+          onAdoptLexicon={(draftId, items) => adoptDraftLexicon?.(draftId, charId, items)}
         />
       ) : (
         <DraftDetailModal

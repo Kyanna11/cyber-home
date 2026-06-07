@@ -3144,6 +3144,58 @@ ${recentLines}
     ));
   };
 
+  // 原话单条加入 char.rawQuotes（用于迁入草稿采纳）
+  const addRawQuoteItem = (charId, item) => {
+    setCharacters(prev => prev.map(c =>
+      c.id === charId
+        ? { ...c, rawQuotes: [{
+            id: genId(),
+            speaker: item.speaker || "unknown",
+            text: item.text || "",
+            source: item.source || "migration",
+            linkedDistill: item.linkedDistill || [],
+            createdAt: Date.now(),
+          }, ...(c.rawQuotes || [])] }
+        : c
+    ));
+  };
+
+  // 批量采纳草稿里的原话 → 写入 char.rawQuotes + 在草稿上标记 adopted
+  const adoptDraftRawQuotes = (draftId, charId, items) => {
+    if (!items?.length) return;
+    items.forEach((q) => {
+      addRawQuoteItem(charId, { speaker: q.speaker, text: q.text, source: "migration" });
+    });
+    const adoptedIds = new Set(items.map((i) => i.id));
+    const now = Date.now();
+    setMigrationDrafts((prev) => prev.map((d) => {
+      if (d.id !== draftId) return d;
+      return {
+        ...d,
+        rawQuotes: (d.rawQuotes || []).map((q) => adoptedIds.has(q.id) ? { ...q, adopted: true } : q),
+        updatedAt: now,
+      };
+    }));
+  };
+
+  // 批量采纳草稿里的词条 → 写入 char.lexicon + 在草稿上标记 adopted
+  const adoptDraftLexicon = (draftId, charId, items) => {
+    if (!items?.length) return;
+    items.forEach((l) => {
+      addLexiconItem(charId, { term: l.term, meaning: l.meaning, speaker: l.speaker });
+    });
+    const adoptedIds = new Set(items.map((i) => i.id));
+    const now = Date.now();
+    setMigrationDrafts((prev) => prev.map((d) => {
+      if (d.id !== draftId) return d;
+      return {
+        ...d,
+        lexiconItems: (d.lexiconItems || []).map((l) => adoptedIds.has(l.id) ? { ...l, adopted: true } : l),
+        updatedAt: now,
+      };
+    }));
+  };
+
   const addSummary = (charId, text) => {
     if (!text.trim()) return;
     const mem = getCharMemories(charId);
@@ -4647,6 +4699,8 @@ ${chatLines}
           navigateTo={navigateTo}
           addAnchorItem={addAnchorItem}
           addLexiconItem={addLexiconItem}
+          adoptDraftRawQuotes={adoptDraftRawQuotes}
+          adoptDraftLexicon={adoptDraftLexicon}
         />
       )}
 

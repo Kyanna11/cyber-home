@@ -24,6 +24,7 @@
 - 今日目标：把**迁入系统**和**记忆宫殿**完全打磨好（详见下方「正在改的部分」）
 - ✅ 完成改动 4：promptA 改为优先提取入住者自己的原话
 - ✅ 完成改动 1：脱水按 V2 四维分类（方案 A，详见下文）
+- ✅ 完成改动 2：原话/词典加采纳按钮（详见下文）
 
 ---
 
@@ -234,6 +235,29 @@
 **验证方式：**
 - 老数据：进记忆宫殿，应该照常显示，老条目按 V1 桶→V2 默认映射显示分类
 - 新数据：重新生成一次迁入草稿，弹窗里能看到「🌍 她的世界 / 💫 我们之间 / 🔮 我懂她的 / ✨ 我想记住的」四组分别展示。采纳后记忆宫殿筛选「我们之间」**不再永远是空的**
+
+#### ✅ 改动 2（2026-06-07）：原话/词典加采纳按钮
+
+**改动文件：**
+- `src/App.jsx`：新增 3 个函数
+  - `addRawQuoteItem(charId, item)`：往 `char.rawQuotes` 加单条
+  - `adoptDraftRawQuotes(draftId, charId, items)`：批量采纳草稿里的原话 → 写入 char.rawQuotes + 在草稿上标记 `adopted: true`
+  - `adoptDraftLexicon(draftId, charId, items)`：批量采纳草稿里的词条 → 写入 char.lexicon + 在草稿上标记 `adopted: true`
+- `src/App.jsx`：把 `adoptDraftRawQuotes` / `adoptDraftLexicon` 传给 `MigrationDraftPage`
+- `src/pages/MigrationDraftPage.jsx`：
+  - 主组件接收新 props 并传给 `AbResidentDraftModal`，对应 `onAdoptRawQuotes` / `onAdoptLexicon`
+  - 弹窗内 `adoptConfirm` 从布尔改为枚举（null | "memory" | "quotes" | "lexicon"），三种采纳共用一套确认面板
+  - `checkedQuotes` / `checkedLex` 初始化只勾选 `!adopted` 的条目
+  - 原话/词典 tab 渲染支持已采纳状态（绿色对勾 + 「已采纳」徽章 + 不可点击）
+  - 底部操作栏根据 `activeTab` 显示对应采纳按钮：
+    - 脱水 → 💡 采纳已勾选（N 条）
+    - 原话 → 💬 采纳已勾选原话（N 条）
+    - 词典 → 📖 采纳已勾选词条（N 条）
+
+**验证方式：**
+- 打开一份草稿 → 切到「💬 原话」tab → 勾选几条 → 点底部「💬 采纳已勾选原话」→ 进入入住者的「他的房间 / 宝库」（或检查 `char.rawQuotes`），应该多了几条
+- 切到「📖 词典」tab → 勾选几条 → 点底部「📖 采纳已勾选词条」→ 记忆宫殿的词典区应该多了几条
+- 已采纳过的条目在弹窗里显示绿色"已采纳"，不可重复勾选
 
 ---
 
