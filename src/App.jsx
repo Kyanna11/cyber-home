@@ -1044,16 +1044,35 @@ export default function App() {
       }
     }
 
-    // ── V2 专属词典：直接从全文扫描 `- 词条 = 含义` 格式 ──
+    // ── V2 专属词典：从全文扫描 `词条 = 含义（谁说的）` 格式 ──
+    // 兼容带列表符号和不带前缀两种：
+    //   - 词条 = 含义（speaker）
+    //   * 词条 = 含义
+    //   词条 = 含义（speaker）
+    // 排除：脱水条目（[类型] 开头）、章节标题（# 开头）、原话片段（「」格式）
     const lexiconItems = [];
-    const lexRegex = /^[-*•]\s*(.+?)\s*[=＝]\s*(.+?)(?:\s*[（(](.+?)[)）])?\s*$/gm;
+    const lexRegex = /^(?:[-*•]\s+)?([^=＝\n#「」【】[\]]+?)\s*[=＝]\s*([^\n（(]+?)(?:\s*[（(]([^)）]+)[)）])?\s*$/gm;
     let lm;
     while ((lm = lexRegex.exec(raw)) !== null) {
       const term = lm[1].trim().replace(/^["「"']|["」"']$/g, "");
       const meaning = lm[2].trim();
       const speaker = lm[3]?.trim() || "unknown";
-      // 排除脱水记忆条目（含 [类型] 的不是词典）
-      if (term.length > 0 && !term.startsWith("[") && !["无"].includes(term) && meaning.length > 0) {
+      // 严格排除：
+      // - 空词条或太短（少于 1 字）
+      // - 数字开头的列表项（"1. 标题 = 内容"这种）
+      // - 已被解析为脱水的（含 [类型]）
+      // - 含义为"无"
+      if (
+        term.length > 0 &&
+        term.length < 30 &&
+        !/^\d+[.)、]/.test(term) &&
+        !term.includes("[") &&
+        !term.includes("】") &&
+        !["无"].includes(term) &&
+        !["无"].includes(meaning) &&
+        meaning.length > 0 &&
+        meaning.length < 200
+      ) {
         lexiconItems.push({ id: genId(), term, meaning, speaker });
       }
     }

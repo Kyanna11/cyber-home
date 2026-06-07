@@ -141,6 +141,16 @@ export default function MemoryPalacePage({
   const rawQuotesList = char.rawQuotes || [];
   const _mem = getCharMemories(memCharId);
 
+  // 调试：渲染时打印关键字段
+  console.log("[宫殿渲染]", {
+    memCharId,
+    charFound: !!char.id,
+    charId: char.id,
+    rawQuotes_count: rawQuotesList.length,
+    lexicon_count: lexicon.length,
+    anchors_count: anchors.length,
+  });
+
   // 合并所有记忆类型（fact/emotion/insight）
   // _v2 优先读条目自带的 v2Type 字段（新数据），没有就用桶 → V2 的默认映射（老数据兼容）
   const BUCKET_TO_V2 = { fact: "her_world", emotion: "moments", insight: "understanding" };
