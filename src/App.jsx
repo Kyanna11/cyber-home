@@ -1573,6 +1573,11 @@ ${chunksText}
       };
       const resolveV2 = (item) => item.v2Type || LEGACY_TYPE_TO_V2[item.type] || "her_world";
 
+      // 收集这个草稿已经采纳过的原话 ID（用于自动关联）
+      const sameDraftRawQuoteIds = (targetChar?.rawQuotes || [])
+        .filter((q) => q.sourceDraftId === draftId)
+        .map((q) => q.id);
+
       setAllMemories((prev) => {
         const existing = prev[charId] || { fact: [], emotion: [], insight: [], summaries: [] };
         const newFacts = [...(existing.fact || [])];
@@ -1583,7 +1588,12 @@ ${chunksText}
           if (!item?.text?.trim()) return;
           const v2Type = resolveV2(item);
           const { bucket, tag } = V2_TO_BUCKET[v2Type] || V2_TO_BUCKET.her_world;
-          const entry = { ...makeMemEntry(`【${tag}】${item.text}`), v2Type };
+          const entry = {
+            ...makeMemEntry(`【${tag}】${item.text}`),
+            v2Type,
+            sourceDraftId: draftId,             // 用于反向关联
+            rawIds: [...sameDraftRawQuoteIds],  // 初始化关联同草稿已采纳的原话
+          };
           if (bucket === "fact") newFacts.unshift(entry);
           else if (bucket === "emotion") newEmotions.unshift(entry);
           else newInsights.unshift(entry);
@@ -3145,27 +3155,59 @@ ${recentLines}
   };
 
   // 原话单条加入 char.rawQuotes（用于迁入草稿采纳）
+  // 返回生成的 id，便于上层做关联
   const addRawQuoteItem = (charId, item) => {
+    const newId = genId();
     setCharacters(prev => prev.map(c =>
       c.id === charId
         ? { ...c, rawQuotes: [{
-            id: genId(),
+            id: newId,
             speaker: item.speaker || "unknown",
             text: item.text || "",
             source: item.source || "migration",
+            sourceDraftId: item.sourceDraftId || null,
             linkedDistill: item.linkedDistill || [],
             createdAt: Date.now(),
           }, ...(c.rawQuotes || [])] }
         : c
     ));
+    return newId;
   };
 
   // 批量采纳草稿里的原话 → 写入 char.rawQuotes + 在草稿上标记 adopted
+  // 同时：反向关联——把新原话 ID 追加到同草稿已采纳记忆条目的 rawIds[]
   const adoptDraftRawQuotes = (draftId, charId, items) => {
     if (!items?.length) return;
-    items.forEach((q) => {
-      addRawQuoteItem(charId, { speaker: q.speaker, text: q.text, source: "migration" });
+    const newQuoteIds = items.map((q) =>
+      addRawQuoteItem(charId, {
+        speaker: q.speaker,
+        text: q.text,
+        source: "migration",
+        sourceDraftId: draftId,
+      })
+    );
+
+    // 反向关联：把新原话 ID 追加到同草稿已采纳记忆条目的 rawIds[]
+    setAllMemories((prev) => {
+      const cur = prev[charId];
+      if (!cur) return prev;
+      const updateBucket = (bucket) => (bucket || []).map((m) =>
+        m.sourceDraftId === draftId
+          ? { ...m, rawIds: [...(m.rawIds || []), ...newQuoteIds] }
+          : m
+      );
+      return {
+        ...prev,
+        [charId]: {
+          ...cur,
+          fact: updateBucket(cur.fact),
+          emotion: updateBucket(cur.emotion),
+          insight: updateBucket(cur.insight),
+        },
+      };
     });
+
+    // 在草稿上标记 adopted
     const adoptedIds = new Set(items.map((i) => i.id));
     const now = Date.now();
     setMigrationDrafts((prev) => prev.map((d) => {

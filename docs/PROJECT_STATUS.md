@@ -25,6 +25,8 @@
 - ✅ 完成改动 4：promptA 改为优先提取入住者自己的原话
 - ✅ 完成改动 1：脱水按 V2 四维分类（方案 A，详见下文）
 - ✅ 完成改动 2：原话/词典加采纳按钮（详见下文）
+- ✅ 完成改动 5：记忆 ↔ 原话自动关联 + 修宫殿渲染（详见下文）
+- ✅ 完成改动 3：记忆宫殿钉子区"+ 添加"做实（详见下文）
 
 ---
 
@@ -258,6 +260,48 @@
 - 打开一份草稿 → 切到「💬 原话」tab → 勾选几条 → 点底部「💬 采纳已勾选原话」→ 进入入住者的「他的房间 / 宝库」（或检查 `char.rawQuotes`），应该多了几条
 - 切到「📖 词典」tab → 勾选几条 → 点底部「📖 采纳已勾选词条」→ 记忆宫殿的词典区应该多了几条
 - 已采纳过的条目在弹窗里显示绿色"已采纳"，不可重复勾选
+
+#### ✅ 改动 5（2026-06-07）：记忆 ↔ 原话自动关联 + 修宫殿渲染
+
+**策略：双向自动关联（顺序无关）**
+
+- 记忆条目和原话条目都加 `sourceDraftId` 字段，标记来自哪个草稿
+- 采纳脱水时：新记忆的 `rawIds[]` 初始化为「同草稿已采纳过的原话 ID 集合」
+- 采纳原话时：把新原话 ID 反向追加到「同草稿已采纳过的记忆条目」的 `rawIds[]`
+- 用户无论先采纳哪边，最终都能连上
+
+**改动文件：**
+- `src/App.jsx · adoptDraft` ab_resident 分支：
+  - 写入新记忆条目时带上 `sourceDraftId: draftId` + `rawIds: [...sameDraftRawQuoteIds]`（同草稿已采纳过的原话 ID 数组）
+- `src/App.jsx · addRawQuoteItem`：
+  - 接受 `sourceDraftId` 参数并写入条目
+  - 返回新生成的 id，便于上层拿来做反向关联
+- `src/App.jsx · adoptDraftRawQuotes`：
+  - 调 `addRawQuoteItem` 时传 `sourceDraftId: draftId`，收集所有新生成的 quote ID
+  - 反向关联：扫描 `allMemories[charId]` 三个桶，把新原话 ID 追加到 `sourceDraftId === draftId` 的记忆条目的 `rawIds[]`
+- `src/pages/MemoryPalacePage.jsx · 关联原话渲染`：
+  - 兼容新扁平结构 `{text, speaker}` 和老 snippets 结构 `{snippets: [{text, speaker}]}`
+  - 新条目用 `q.text`/`q.speaker` 直接渲染
+
+**验证方式：**
+- 同一个草稿先采纳脱水，再采纳原话：进记忆宫殿展开任意一条该草稿的脱水，应该能看到「💬 关联原话：「xxx」—— speaker」
+- 反过来先采纳原话再采纳脱水：效果一样
+- 老草稿的老数据：照常渲染（rawIds[] 是空的，没有关联区块）
+
+#### ✅ 改动 3（2026-06-07）：记忆宫殿钉子区"+ 添加"做实
+
+**改动文件：**
+- `src/pages/MemoryPalacePage.jsx`：
+  - 新增 state：`showAddAnchor` / `newAnchorTitle` / `newAnchorDesc` / `newAnchorWeight`
+  - 钉子区「+ 添加」按钮 onClick 改为 toggle `showAddAnchor`
+  - 添加表单：标题 input + 描述 textarea + 权重 slider（1-10，默认 8）
+  - 「📌 钉下」按钮：标题不为空才能点击，写入后清空表单 + 收起
+  - 调用已有的 `addAnchorItem(memCharId, { title, description, rawPreview: "", weight })`
+  - 空状态文案逻辑改为：只有钉子为空 **且** 表单未展开时才显示「还没有钉子」
+
+**验证方式：**
+- 进记忆宫殿 → 钉子区 → 点「+ 添加」→ 填标题（至少）+ 描述 + 拖权重 → 「📌 钉下」→ 该入住者钉子列表多了一条
+- 取消按钮能正常收起表单 + 清空草稿
 
 ---
 

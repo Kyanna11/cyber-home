@@ -101,6 +101,10 @@ export default function MemoryPalacePage({
   // 钉子状态
   const [editingWeight, setEditingWeight] = useState(null);
   const [deletingAnchor, setDeletingAnchor] = useState(null);
+  const [showAddAnchor, setShowAddAnchor] = useState(false);
+  const [newAnchorTitle, setNewAnchorTitle] = useState("");
+  const [newAnchorDesc, setNewAnchorDesc] = useState("");
+  const [newAnchorWeight, setNewAnchorWeight] = useState(8);
 
   // 词典状态
   const [expandedLex, setExpandedLex] = useState(null);
@@ -213,11 +217,45 @@ export default function MemoryPalacePage({
           {/* ────── 区域 1：钉子 ────── */}
           <div ref={anchorRef}>
             <AreaTitle emoji="📌" title="钉子" count={anchors.length > 0 ? `${anchors.length} 颗` : undefined}
-              right={<button onClick={() => {/* TODO: 手动添加钉子 */}} style={{ ...btnSmall, fontSize: 11 }}>+ 添加</button>}
+              right={<button onClick={() => setShowAddAnchor(!showAddAnchor)} style={{ ...btnSmall, fontSize: 11 }}>+ 添加</button>}
             />
-            {anchors.length === 0 ? (
+            {/* 添加表单 */}
+            {showAddAnchor && (
+              <div style={{ padding: "10px 12px", borderRadius: 12, background: "rgba(196,166,184,.08)", border: "1px solid rgba(196,166,184,.3)", marginBottom: 8 }}>
+                <input placeholder="标题（这颗钉子记的是什么）" value={newAnchorTitle} onChange={e => setNewAnchorTitle(e.target.value)}
+                  style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.65)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", boxSizing: "border-box", marginBottom: 6 }}
+                />
+                <textarea placeholder="描述（场景 / 原话 / 为什么重要，可选）" value={newAnchorDesc} onChange={e => setNewAnchorDesc(e.target.value)} rows={2}
+                  style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(196,166,184,.35)", background: "rgba(255,255,255,.65)", fontSize: 13, color: "#4a3a5a", fontFamily: "var(--font-main)", outline: "none", resize: "vertical", boxSizing: "border-box", marginBottom: 8 }}
+                />
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, color: "#9a8aac", whiteSpace: "nowrap" }}>权重 {newAnchorWeight}/10</span>
+                  <input type="range" min="1" max="10" value={newAnchorWeight} onChange={e => setNewAnchorWeight(Number(e.target.value))} style={{ flex: 1 }} />
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => {
+                    if (newAnchorTitle.trim() && addAnchorItem) {
+                      addAnchorItem(memCharId, {
+                        title: newAnchorTitle.trim(),
+                        description: newAnchorDesc.trim(),
+                        rawPreview: "",
+                        weight: newAnchorWeight,
+                      });
+                      setNewAnchorTitle(""); setNewAnchorDesc(""); setNewAnchorWeight(8);
+                      setShowAddAnchor(false);
+                    }
+                  }}
+                    disabled={!newAnchorTitle.trim()}
+                    style={{ fontSize: 12, padding: "6px 16px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #c4a8d4, #9670b0)", color: "white", cursor: newAnchorTitle.trim() ? "pointer" : "not-allowed", fontFamily: "var(--font-main)", opacity: newAnchorTitle.trim() ? 1 : 0.5 }}>
+                    📌 钉下
+                  </button>
+                  <button onClick={() => { setShowAddAnchor(false); setNewAnchorTitle(""); setNewAnchorDesc(""); setNewAnchorWeight(8); }} style={btnSmall}>取消</button>
+                </div>
+              </div>
+            )}
+            {anchors.length === 0 && !showAddAnchor ? (
               <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 8 }}>还没有钉子</div>
-            ) : (
+            ) : anchors.length === 0 ? null : (
               anchors.map(anchor => (
                 <div key={anchor.id} style={{
                   display: "flex", gap: 10, marginBottom: 8, padding: "10px 12px",
@@ -453,9 +491,13 @@ export default function MemoryPalacePage({
                               💬 关联原话：
                               {linked.map(q => (
                                 <div key={q.id} style={{ marginTop: 2 }}>
-                                  {(q.snippets || []).map((s, i) => (
-                                    <div key={i}>「{s.text}」—— {s.speaker}</div>
-                                  ))}
+                                  {/* 兼容两种结构：新 = 扁平 {text, speaker}；老 = {snippets: [{text, speaker}]} */}
+                                  {q.snippets && q.snippets.length > 0
+                                    ? q.snippets.map((s, i) => (
+                                        <div key={i}>「{s.text}」—— {s.speaker}</div>
+                                      ))
+                                    : (q.text && <div>「{q.text}」—— {q.speaker || "—"}</div>)
+                                  }
                                 </div>
                               ))}
                             </div>
