@@ -465,7 +465,28 @@ export default function App() {
       if (!d) { setCloudSyncing(false); return; }
 
       // 用云端数据更新 React state（key 存在才覆盖）
-      if (d[CHARS_STORAGE_KEY])              setCharacters(d[CHARS_STORAGE_KEY]);
+      // characters 特殊处理：合并而非覆盖，保护本地 V2 字段（rawQuotes / lexicon / anchors）
+      // 防止 Supabase 写入失败导致云端旧数据覆盖本地新数据
+      if (d[CHARS_STORAGE_KEY]) {
+        setCharacters((localChars) => {
+          const cloudChars = d[CHARS_STORAGE_KEY];
+          // 如果本地没数据，直接用云端
+          if (!localChars?.length) return cloudChars;
+          // 合并：云端作为基底，本地 V2 字段优先（因为本地更新可能尚未同步到云端）
+          return cloudChars.map((cc) => {
+            const local = localChars.find((lc) => lc.id === cc.id);
+            if (!local) return cc;
+            return {
+              ...cc,
+              // 本地有就保留，云端有就补上；本地优先
+              rawQuotes: (local.rawQuotes?.length > 0) ? local.rawQuotes : (cc.rawQuotes || []),
+              lexicon:   (local.lexicon?.length > 0)   ? local.lexicon   : (cc.lexicon || []),
+              anchors:   (local.anchors?.length > 0)   ? local.anchors   : (cc.anchors || []),
+              _memoryV2: local._memoryV2 || cc._memoryV2 || false,
+            };
+          });
+        });
+      }
       if (d[THREADS_STORAGE_KEY])            setChatThreads(d[THREADS_STORAGE_KEY]);
       if (d[MEMORIES_STORAGE_KEY])           setAllMemories(d[MEMORIES_STORAGE_KEY]);
       if (d[DIARY_STORAGE_KEY])              setNoteEntries(normalizeNotes(d[DIARY_STORAGE_KEY]));
@@ -507,16 +528,16 @@ export default function App() {
       }, 1500);
 
       // ── V2 数据迁移：给角色补上 rawQuotes / anchors / lexicon 字段 ──
-      const _chars2 = d?.[CHARS_STORAGE_KEY] || _chars;
-      let charsV2Changed = false;
-      const charsV2 = _chars2.map(c => {
-        const migrated = migrateCharDataToV2(c);
-        if (migrated !== c) charsV2Changed = true;
-        return migrated;
+      // 使用函数式更新，避免覆盖前面合并好的本地 V2 字段
+      setCharacters((prev) => {
+        let changed = false;
+        const migrated = prev.map(c => {
+          const m = migrateCharDataToV2(c);
+          if (m !== c) changed = true;
+          return m;
+        });
+        return changed ? migrated : prev;
       });
-      if (charsV2Changed) {
-        setCharacters(charsV2);
-      }
 
       // ── V2 数据迁移 + 记忆自动归档 ──
       const _memories = d?.[MEMORIES_STORAGE_KEY] || allMemories;
