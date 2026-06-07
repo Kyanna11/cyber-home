@@ -552,7 +552,18 @@ export default function App() {
   }, []);
 
   // ── 自动存储（isHydrated 为 false 时跳过，防止初始空状态覆写 Supabase）──
-  useEffect(() => { if (isHydrated.current) saveChars(characters); }, [characters]);
+  useEffect(() => {
+    if (isHydrated.current) saveChars(characters);
+    // 调试：监听 characters 变化，看 rawQuotes / lexicon 字段在哪一刻消失
+    const summary = characters.map(c => ({
+      id: c.id,
+      name: c.name,
+      rawQuotes: (c.rawQuotes || []).length,
+      lexicon: (c.lexicon || []).length,
+      anchors: (c.anchors || []).length,
+    }));
+    console.log("[characters变化]", summary);
+  }, [characters]);
   useEffect(() => { if (isHydrated.current) saveMemories(allMemories); }, [allMemories]);
   useEffect(() => { if (isHydrated.current) saveRawArchives(rawArchives); }, [rawArchives]);
   useEffect(() => { if (isHydrated.current) saveMemoryChunks(memoryChunks); }, [memoryChunks]);
