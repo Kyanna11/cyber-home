@@ -1,9 +1,9 @@
 // ─── 记忆宫殿页 V2 ───
 // 垂直分层布局：钉子 → 词典 → 记忆 → 总结
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import BackButton from "../components/BackButton";
-import { MEMORY_TYPES, V1_TO_V2_TYPE_MAP } from "../constants";
+import { MEMORY_TYPES, V1_TO_V2_TYPE_MAP, CHARS_STORAGE_KEY } from "../constants";
 import { calculateHeat, getHeatLevel } from "../utils/memory";
 
 // ── 区域标题组件 ──
@@ -95,7 +95,30 @@ export default function MemoryPalacePage({
   updateAnchorWeight, deleteAnchor, addLexiconItem, updateLexiconItem, deleteLexiconItem, addAnchorItem,
   deleteRawQuote,
 }) {
-  const char = characters.find((c) => c.id === memCharId) || {};
+  // 从 props 拿 char，同时回读 localStorage 做保底
+  // 防止 React state 被其他地方覆盖导致 V2 字段丢失
+  const charFromProp = characters.find((c) => c.id === memCharId) || {};
+  const char = useMemo(() => {
+    // 如果 prop 里已经有 V2 数据，直接用
+    if (charFromProp.rawQuotes?.length > 0 || charFromProp.lexicon?.length > 0 || charFromProp.anchors?.length > 0) {
+      return charFromProp;
+    }
+    // 否则尝试从 localStorage 补充
+    try {
+      const stored = JSON.parse(localStorage.getItem(CHARS_STORAGE_KEY) || "[]");
+      const storedChar = stored.find((c) => c.id === memCharId);
+      if (storedChar && (storedChar.rawQuotes?.length > 0 || storedChar.lexicon?.length > 0 || storedChar.anchors?.length > 0)) {
+        console.warn("[宫殿] React state 缺少 V2 数据，从 localStorage 补充");
+        return {
+          ...charFromProp,
+          rawQuotes: charFromProp.rawQuotes?.length > 0 ? charFromProp.rawQuotes : (storedChar.rawQuotes || []),
+          lexicon: charFromProp.lexicon?.length > 0 ? charFromProp.lexicon : (storedChar.lexicon || []),
+          anchors: charFromProp.anchors?.length > 0 ? charFromProp.anchors : (storedChar.anchors || []),
+        };
+      }
+    } catch {}
+    return charFromProp;
+  }, [charFromProp, memCharId]);
   const charName = char.name || "记忆";
   const [viewMode, setViewMode] = useState("list");
 
