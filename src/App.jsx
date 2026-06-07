@@ -3204,7 +3204,11 @@ ${recentLines}
 
   // 批量采纳草稿里的原话 → 一次性写入 char.rawQuotes + 反向关联 + 标记草稿
   const adoptDraftRawQuotes = (draftId, charId, items) => {
-    if (!items?.length) return;
+    console.log("[原话采纳] 触发", { draftId, charId, items });
+    if (!items?.length) {
+      console.warn("[原话采纳] items 为空，不执行");
+      return;
+    }
     const now = Date.now();
     // 预生成 ID 以便反向关联和标记
     const newEntries = items.map((q) => ({
@@ -3217,13 +3221,19 @@ ${recentLines}
       createdAt: now,
     }));
     const newQuoteIds = newEntries.map((e) => e.id);
+    console.log("[原话采纳] 即将写入", newEntries.length, "条原话到 char.rawQuotes");
 
     // 一次 setCharacters 写入所有新条目
-    setCharacters((prev) => prev.map((c) =>
-      c.id === charId
-        ? { ...c, rawQuotes: [...newEntries, ...(c.rawQuotes || [])] }
-        : c
-    ));
+    setCharacters((prev) => {
+      const updated = prev.map((c) =>
+        c.id === charId
+          ? { ...c, rawQuotes: [...newEntries, ...(c.rawQuotes || [])] }
+          : c
+      );
+      const target = updated.find(c => c.id === charId);
+      console.log("[原话采纳] setCharacters 后该 char.rawQuotes 总数:", target?.rawQuotes?.length);
+      return updated;
+    });
 
     // 反向关联：把新原话 ID 追加到同草稿已采纳记忆条目的 rawIds[]
     setAllMemories((prev) => {
@@ -3259,7 +3269,11 @@ ${recentLines}
 
   // 批量采纳草稿里的词条 → 一次性写入 char.lexicon + 标记草稿
   const adoptDraftLexicon = (draftId, charId, items) => {
-    if (!items?.length) return;
+    console.log("[词典采纳] 触发", { draftId, charId, items });
+    if (!items?.length) {
+      console.warn("[词典采纳] items 为空，不执行");
+      return;
+    }
     const now = Date.now();
     const newEntries = items.map((l) => ({
       id: genId(),
@@ -3271,11 +3285,16 @@ ${recentLines}
     }));
 
     // 一次 setCharacters 写入所有新词条
-    setCharacters((prev) => prev.map((c) =>
-      c.id === charId
-        ? { ...c, lexicon: [...newEntries, ...(c.lexicon || [])] }
-        : c
-    ));
+    setCharacters((prev) => {
+      const updated = prev.map((c) =>
+        c.id === charId
+          ? { ...c, lexicon: [...newEntries, ...(c.lexicon || [])] }
+          : c
+      );
+      const target = updated.find(c => c.id === charId);
+      console.log("[词典采纳] setCharacters 后该 char.lexicon 总数:", target?.lexicon?.length);
+      return updated;
+    });
 
     const adoptedIds = new Set(items.map((i) => i.id));
     setMigrationDrafts((prev) => prev.map((d) => {

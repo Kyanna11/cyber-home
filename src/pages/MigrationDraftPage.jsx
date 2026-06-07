@@ -601,8 +601,8 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {[
               { key: "memory",  label: `📝 脱水（${memoryItems.length}）` },
-              ...((draft.rawQuotes || []).length > 0 ? [{ key: "quotes", label: `💬 原话（${draft.rawQuotes.length}）` }] : []),
-              ...((draft.lexiconItems || []).length > 0 ? [{ key: "lexicon", label: `📖 词典（${draft.lexiconItems.length}）` }] : []),
+              { key: "quotes",  label: `💬 原话（${(draft.rawQuotes || []).length}）` },
+              { key: "lexicon", label: `📖 词典（${(draft.lexiconItems || []).length}）` },
               { key: "signals", label: `🧬 人格（${personalitySignals.length}）` },
             ].map((tab) => (
               <button
