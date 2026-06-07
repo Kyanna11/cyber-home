@@ -130,11 +130,14 @@ export default function MemoryPalacePage({
   const lexicon = char.lexicon || [];
   const _mem = getCharMemories(memCharId);
 
-  // 合并所有记忆类型（fact/emotion/insight + V1 兼容映射）
+  // 合并所有记忆类型（fact/emotion/insight）
+  // _v2 优先读条目自带的 v2Type 字段（新数据），没有就用桶 → V2 的默认映射（老数据兼容）
+  const BUCKET_TO_V2 = { fact: "her_world", emotion: "moments", insight: "understanding" };
+  const resolveV2 = (m, bucket) => m.v2Type || BUCKET_TO_V2[bucket];
   const allMemories = [
-    ...(_mem.fact || []).map(m => ({ ...m, _type: "fact", _v2: "her_world" })),
-    ...(_mem.emotion || []).map(m => ({ ...m, _type: "emotion", _v2: "moments" })),
-    ...(_mem.insight || []).map(m => ({ ...m, _type: "insight", _v2: "understanding" })),
+    ...(_mem.fact || []).map(m => ({ ...m, _type: "fact", _v2: resolveV2(m, "fact") })),
+    ...(_mem.emotion || []).map(m => ({ ...m, _type: "emotion", _v2: resolveV2(m, "emotion") })),
+    ...(_mem.insight || []).map(m => ({ ...m, _type: "insight", _v2: resolveV2(m, "insight") })),
   ];
   const filteredMemories = allMemories
     .filter(m => {
@@ -434,9 +437,10 @@ export default function MemoryPalacePage({
                           {mem.mentions > 0 && <span>🔥 ×{mem.mentions}</span>}
                           <span>{heatInfo.emoji} {heatInfo.label}</span>
                           <span style={{ color: "#9a8aac" }}>
-                            {V1_TO_V2_TYPE_MAP[mem._type] === "her_world" && "她的世界"}
-                            {V1_TO_V2_TYPE_MAP[mem._type] === "moments" && "我想记住的"}
-                            {V1_TO_V2_TYPE_MAP[mem._type] === "understanding" && "我懂她的"}
+                            {mem._v2 === "her_world" && "🌍 她的世界"}
+                            {mem._v2 === "between_us" && "💫 我们之间"}
+                            {mem._v2 === "understanding" && "🔮 我懂她的"}
+                            {mem._v2 === "moments" && "✨ 我想记住的"}
                           </span>
                         </div>
                         {/* 关联原话（如果有） */}

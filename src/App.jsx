@@ -1014,28 +1014,21 @@ export default function App() {
     }
 
     // ── V2 脱水记忆：直接从全文扫描 `- [类型] 内容` 或 `* [类型] 内容` ──
+    // v2Type 是主分类（her_world / between_us / understanding / moments）
     const memoryItems = [];
-    const V2_TYPE_MAP = { "她的世界": "fact", "我们之间": "insight", "我懂她的": "insight", "我想记住的": "emotion" };
+    const CN_TO_V2 = {
+      "她的世界":   "her_world",
+      "我们之间":   "between_us",
+      "我懂她的":   "understanding",
+      "我想记住的": "moments",
+    };
     const distillRegex = /^[-*•]\s*\[(她的世界|我们之间|我懂她的|我想记住的)\]\s*(.+)$/gm;
     let dm;
     while ((dm = distillRegex.exec(raw)) !== null) {
-      const v2Type = dm[1];
+      const v2Type = CN_TO_V2[dm[1]];
       const text = dm[2].trim();
-      if (text.length > 2) {
-        memoryItems.push({ id: genId(), text, type: V2_TYPE_MAP[v2Type] || "fact", v2Type, adopted: false });
-      }
-    }
-
-    // V1 兼容：如果没扫到 V2 格式，用旧逻辑
-    if (memoryItems.length === 0) {
-      for (const [k, v] of Object.entries(sections)) {
-        if (k.includes("事实")) {
-          parseList(v).forEach(text => memoryItems.push({ id: genId(), text, type: "fact", adopted: false }));
-        } else if (k.includes("情绪") || k.includes("感受")) {
-          parseList(v).forEach(text => memoryItems.push({ id: genId(), text, type: "emotion", adopted: false }));
-        } else if (k.includes("关系事件") || k.includes("节点") || k.includes("重要事件")) {
-          parseList(v).forEach(text => memoryItems.push({ id: genId(), text, type: "relationship", adopted: false }));
-        }
+      if (text.length > 2 && v2Type) {
+        memoryItems.push({ id: genId(), text, v2Type, adopted: false });
       }
     }
 
@@ -1564,6 +1557,22 @@ ${chunksText}
       // ── 新模式：逐条采纳 memoryItems ──
       const adoptedItems = data?.adoptedItems || [];
 
+      // v2Type → { bucket, tag }
+      // 老草稿没有 v2Type，从 item.type 回落（fact→her_world, emotion→moments, relationship→between_us, insight→understanding）
+      const V2_TO_BUCKET = {
+        her_world:     { bucket: "fact",    tag: "迁入·她的世界" },
+        between_us:    { bucket: "insight", tag: "迁入·我们之间" },
+        understanding: { bucket: "insight", tag: "迁入·我懂她的" },
+        moments:       { bucket: "emotion", tag: "迁入·我想记住的" },
+      };
+      const LEGACY_TYPE_TO_V2 = {
+        fact: "her_world",
+        emotion: "moments",
+        relationship: "between_us",
+        insight: "understanding",
+      };
+      const resolveV2 = (item) => item.v2Type || LEGACY_TYPE_TO_V2[item.type] || "her_world";
+
       setAllMemories((prev) => {
         const existing = prev[charId] || { fact: [], emotion: [], insight: [], summaries: [] };
         const newFacts = [...(existing.fact || [])];
@@ -1572,12 +1581,11 @@ ${chunksText}
 
         adoptedItems.forEach((item) => {
           if (!item?.text?.trim()) return;
-          const tag = item.type === "fact" ? "迁入·事实"
-            : item.type === "emotion" ? "迁入·情绪"
-            : "迁入·关系节点";
-          const entry = makeMemEntry(`【${tag}】${item.text}`);
-          if (item.type === "fact") newFacts.unshift(entry);
-          else if (item.type === "emotion") newEmotions.unshift(entry);
+          const v2Type = resolveV2(item);
+          const { bucket, tag } = V2_TO_BUCKET[v2Type] || V2_TO_BUCKET.her_world;
+          const entry = { ...makeMemEntry(`【${tag}】${item.text}`), v2Type };
+          if (bucket === "fact") newFacts.unshift(entry);
+          else if (bucket === "emotion") newEmotions.unshift(entry);
           else newInsights.unshift(entry);
         });
 

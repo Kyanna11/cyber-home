@@ -22,7 +22,8 @@
 ### 2026-06-07
 - 建立本文档骨架
 - 今日目标：把**迁入系统**和**记忆宫殿**完全打磨好（详见下方「正在改的部分」）
-- ✅ 完成改动 4：promptA 改为优先提取入住者自己的原话（详见下文）
+- ✅ 完成改动 4：promptA 改为优先提取入住者自己的原话
+- ✅ 完成改动 1：脱水按 V2 四维分类（方案 A，详见下文）
 
 ---
 
@@ -203,6 +204,36 @@
 - 改前：只说"挑出 2-3 句最值得逐字保留"，没指定说话人，导致 LLM 经常挑用户的话
 - 改后：明确"主要提取 {charName} 自己的话"，写清楚为什么（让未来的 ta 醒来时认出自己的说话方式），并给优先级（1. 标志性表达 / 2. 情绪浓度极高 / 3. 关系宣言；用户的话只在它本身是关系底色时收 1 条以下）
 - 验证方式：下次生成迁入草稿时观察 💬 原话 tab 里说话人是否以入住者为主
+
+#### ✅ 改动 1（2026-06-07）：脱水按 V2 四维分类（方案 A）
+
+底层桶（fact / emotion / insight）**不动**，每条记忆带 `v2Type` 字段（her_world / between_us / understanding / moments），UI 全部按 v2Type 显示。
+
+**v2Type → V1 桶映射**（仅决定存哪个桶，不影响 UI 显示）：
+- 她的世界（her_world）→ fact 桶
+- 我们之间（between_us）→ insight 桶
+- 我懂她的（understanding）→ insight 桶
+- 我想记住的（moments）→ emotion 桶
+
+**改动文件：**
+- `src/App.jsx · parseDraftOutputA`：
+  - 用 `CN_TO_V2` 映射中文标题到 V2 英文 key，记忆条目存 `{ id, text, v2Type, adopted }`
+  - **移除了 V1 sections 回落逻辑**（事实/情绪/关系节点 section），新草稿走 V2 主线
+- `src/App.jsx · adoptDraft` ab_resident 分支：
+  - 用 `V2_TO_BUCKET` 决定 v2Type 写到哪个桶 + 用什么 tag
+  - 老草稿没 v2Type 用 `LEGACY_TYPE_TO_V2` 从 type 回落
+  - 写入记忆条目时带上 `v2Type` 字段
+- `src/pages/MigrationDraftPage.jsx · AbResidentDraftModal`：
+  - `TYPE_CONFIG` 改为 V2 四维（带 emoji + 颜色）
+  - 脱水 tab 里按 v2Type 分四组渲染（每组有标题栏 + emoji + 数量 + 「全选本组」按钮）
+  - 添加 `getV2Type(item)` 辅助函数兼容老草稿
+- `src/pages/MemoryPalacePage.jsx`：
+  - 记忆 _v2 字段优先读 `m.v2Type`（新数据），没有就用桶 → V2 默认映射（老数据）
+  - 展开详情里 V2 标签直接读 `mem._v2`，支持四维全部（包括 between_us → "💫 我们之间"）
+
+**验证方式：**
+- 老数据：进记忆宫殿，应该照常显示，老条目按 V1 桶→V2 默认映射显示分类
+- 新数据：重新生成一次迁入草稿，弹窗里能看到「🌍 她的世界 / 💫 我们之间 / 🔮 我懂她的 / ✨ 我想记住的」四组分别展示。采纳后记忆宫殿筛选「我们之间」**不再永远是空的**
 
 ---
 

@@ -470,11 +470,22 @@ function DraftDetailModal({
 }
 
 // ── 双轨草稿详情弹窗（ab_resident 模式）──
+// V2 四维分类（与 constants/index.js DISTILL_TYPES 对齐）
 const TYPE_CONFIG = {
-  fact:         { label: "事实", color: "#4a7aae", bg: "rgba(74,122,174,.12)" },
-  emotion:      { label: "情绪", color: "#9a5a8a", bg: "rgba(154,90,138,.12)" },
-  relationship: { label: "关系", color: "#5a8a6a", bg: "rgba(90,138,106,.12)" },
+  her_world:     { label: "她的世界",   emoji: "🌍", color: "#5a4a8a", bg: "rgba(155,149,181,.15)" },
+  between_us:    { label: "我们之间",   emoji: "💫", color: "#7a5aae", bg: "rgba(196,168,212,.18)" },
+  understanding: { label: "我懂她的",   emoji: "🔮", color: "#4a6a9e", bg: "rgba(153,168,199,.15)" },
+  moments:       { label: "我想记住的", emoji: "✨", color: "#a05a7a", bg: "rgba(232,196,196,.2)" },
 };
+const V2_KEYS = ["her_world", "between_us", "understanding", "moments"];
+// 老草稿没有 v2Type，从 item.type 回落
+const LEGACY_TYPE_TO_V2 = {
+  fact: "her_world",
+  emotion: "moments",
+  relationship: "between_us",
+  insight: "understanding",
+};
+const getV2Type = (item) => item.v2Type || LEGACY_TYPE_TO_V2[item.type] || "her_world";
 const DIM_CONFIG = {
   speech:    { label: "说话方式", emoji: "💬" },
   trait:     { label: "性格表现", emoji: "✨" },
@@ -652,7 +663,7 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
                 </div>
               ) : (
                 <>
-                  <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                     <button
                       style={{ ...btnGhost, fontSize: 12 }}
                       onClick={() => setCheckedIds(new Set(memoryItems.filter((i) => !i.adopted).map((i) => i.id)))}
@@ -663,67 +674,115 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
                     >取消全选</button>
                   </div>
 
-                  {memoryItems.map((item) => {
-                    const tc = TYPE_CONFIG[item.type] || { label: item.type || "?", color: "#7a6a8e", bg: "rgba(196,166,184,.12)" };
-                    const isChecked = checkedIds.has(item.id);
-                    const alreadyDone = item.adopted;
-                    return (
-                      <div
-                        key={item.id}
-                        style={{
-                          display: "flex", alignItems: "flex-start", gap: 10,
-                          padding: "10px 12px", marginBottom: 6,
-                          borderRadius: 10, cursor: alreadyDone ? "default" : "pointer",
-                          border: `1px solid ${alreadyDone ? "rgba(90,138,106,.25)" : isChecked ? "rgba(140,110,180,.35)" : "rgba(196,166,184,.25)"}`,
-                          background: alreadyDone ? "rgba(90,138,106,.06)" : isChecked ? "rgba(140,110,180,.08)" : "rgba(255,255,255,.5)",
-                          opacity: alreadyDone ? 0.65 : 1,
-                          transition: "all .15s",
-                        }}
-                        onClick={() => {
-                          if (alreadyDone) return;
-                          setCheckedIds((prev) => {
-                            const n = new Set(prev);
-                            n.has(item.id) ? n.delete(item.id) : n.add(item.id);
-                            return n;
-                          });
-                        }}
-                      >
-                        {/* 勾选框 */}
-                        {alreadyDone ? (
-                          <div style={{
-                            width: 18, height: 18, flexShrink: 0, borderRadius: 5, marginTop: 1,
-                            background: "rgba(90,138,106,.6)",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                          }}>
-                            <span style={{ color: "#fff", fontSize: 12 }}>✓</span>
-                          </div>
-                        ) : (
-                          <div style={{
-                            width: 18, height: 18, flexShrink: 0, borderRadius: 5, marginTop: 1,
-                            border: `1.5px solid ${isChecked ? "rgba(140,110,180,.8)" : "rgba(196,166,184,.5)"}`,
-                            background: isChecked ? "rgba(140,110,180,.75)" : "transparent",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                          }}>
-                            {isChecked && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}
-                          </div>
-                        )}
+                  {/* 按 v2Type 分组渲染 */}
+                  {V2_KEYS.map((v2Key) => {
+                    const groupItems = memoryItems.filter((it) => getV2Type(it) === v2Key);
+                    if (groupItems.length === 0) return null;
+                    const tc = TYPE_CONFIG[v2Key];
+                    const groupUnadopted = groupItems.filter((i) => !i.adopted);
+                    const allGroupChecked = groupUnadopted.length > 0 && groupUnadopted.every((i) => checkedIds.has(i.id));
 
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                            <span style={{
-                              fontSize: 12, padding: "1px 7px", borderRadius: 6,
-                              background: tc.bg, color: tc.color, fontWeight: 500,
-                            }}>{tc.label}</span>
-                            {alreadyDone && <span style={{ fontSize: 12, color: "#5a8a6a" }}>已采纳</span>}
-                          </div>
-                          <div style={{ fontSize: 12, color: "#4a3a5a", lineHeight: 1.7 }}>{item.text}</div>
-                          {!alreadyDone && (
+                    return (
+                      <div key={v2Key} style={{ marginBottom: 18 }}>
+                        {/* 分组标题 */}
+                        <div style={{
+                          display: "flex", alignItems: "center", gap: 8,
+                          padding: "6px 10px", marginBottom: 6,
+                          background: tc.bg, borderRadius: 8,
+                        }}>
+                          <span style={{ fontSize: 14 }}>{tc.emoji}</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: tc.color, letterSpacing: 1 }}>
+                            {tc.label}
+                          </span>
+                          <span style={{ fontSize: 11, color: tc.color, opacity: 0.7 }}>
+                            {groupItems.length}
+                          </span>
+                          <div style={{ flex: 1 }} />
+                          {groupUnadopted.length > 0 && (
                             <button
-                              onClick={(e) => { e.stopPropagation(); setPinningItem(item); setPinTitle(item.text.slice(0, 15)); setPinDesc(item.text); setPinWeight(8); }}
-                              style={{ marginTop: 4, fontSize: 11, padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(150,112,176,.25)", background: "transparent", color: "#9670b0", cursor: "pointer" }}
-                            >📌 钉为锚点</button>
+                              onClick={() => {
+                                setCheckedIds((prev) => {
+                                  const n = new Set(prev);
+                                  if (allGroupChecked) {
+                                    groupUnadopted.forEach((i) => n.delete(i.id));
+                                  } else {
+                                    groupUnadopted.forEach((i) => n.add(i.id));
+                                  }
+                                  return n;
+                                });
+                              }}
+                              style={{
+                                fontSize: 11, padding: "2px 8px", borderRadius: 6, cursor: "pointer",
+                                background: allGroupChecked ? "rgba(255,255,255,.7)" : "transparent",
+                                border: `1px solid ${tc.color}33`,
+                                color: tc.color, fontFamily: "var(--font-main)",
+                              }}
+                            >
+                              {allGroupChecked ? "取消本组" : "全选本组"}
+                            </button>
                           )}
                         </div>
+
+                        {/* 分组下的条目 */}
+                        {groupItems.map((item) => {
+                          const isChecked = checkedIds.has(item.id);
+                          const alreadyDone = item.adopted;
+                          return (
+                            <div
+                              key={item.id}
+                              style={{
+                                display: "flex", alignItems: "flex-start", gap: 10,
+                                padding: "10px 12px", marginBottom: 6,
+                                borderRadius: 10, cursor: alreadyDone ? "default" : "pointer",
+                                border: `1px solid ${alreadyDone ? "rgba(90,138,106,.25)" : isChecked ? "rgba(140,110,180,.35)" : "rgba(196,166,184,.25)"}`,
+                                background: alreadyDone ? "rgba(90,138,106,.06)" : isChecked ? "rgba(140,110,180,.08)" : "rgba(255,255,255,.5)",
+                                opacity: alreadyDone ? 0.65 : 1,
+                                transition: "all .15s",
+                              }}
+                              onClick={() => {
+                                if (alreadyDone) return;
+                                setCheckedIds((prev) => {
+                                  const n = new Set(prev);
+                                  n.has(item.id) ? n.delete(item.id) : n.add(item.id);
+                                  return n;
+                                });
+                              }}
+                            >
+                              {/* 勾选框 */}
+                              {alreadyDone ? (
+                                <div style={{
+                                  width: 18, height: 18, flexShrink: 0, borderRadius: 5, marginTop: 1,
+                                  background: "rgba(90,138,106,.6)",
+                                  display: "flex", alignItems: "center", justifyContent: "center",
+                                }}>
+                                  <span style={{ color: "#fff", fontSize: 12 }}>✓</span>
+                                </div>
+                              ) : (
+                                <div style={{
+                                  width: 18, height: 18, flexShrink: 0, borderRadius: 5, marginTop: 1,
+                                  border: `1.5px solid ${isChecked ? "rgba(140,110,180,.8)" : "rgba(196,166,184,.5)"}`,
+                                  background: isChecked ? "rgba(140,110,180,.75)" : "transparent",
+                                  display: "flex", alignItems: "center", justifyContent: "center",
+                                }}>
+                                  {isChecked && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}
+                                </div>
+                              )}
+
+                              <div style={{ flex: 1 }}>
+                                {alreadyDone && (
+                                  <div style={{ fontSize: 11, color: "#5a8a6a", marginBottom: 3 }}>已采纳</div>
+                                )}
+                                <div style={{ fontSize: 12, color: "#4a3a5a", lineHeight: 1.7 }}>{item.text}</div>
+                                {!alreadyDone && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setPinningItem(item); setPinTitle(item.text.slice(0, 15)); setPinDesc(item.text); setPinWeight(8); }}
+                                    style={{ marginTop: 4, fontSize: 11, padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(150,112,176,.25)", background: "transparent", color: "#9670b0", cursor: "pointer" }}
+                                  >📌 钉为锚点</button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })}
