@@ -994,14 +994,15 @@ function AbResidentDraftModal({ draft, onClose, onAdopt, onStatusChange, onDelet
             const config = {
               memory: {
                 count: checkedCount,
-                tipText: <>将采纳 <strong>{checkedCount}</strong> 条记忆到记忆宫殿（标记为 📌 常驻）。</>,
+                tipText: <>将采纳 <strong>{checkedCount}</strong> 条记忆到记忆宫殿（标记为 📌 常驻）。采纳后弹窗不会关闭，方便继续切到原话 / 词典 tab。</>,
                 btnLabel: `✓ 确认采纳 ${checkedCount} 条`,
                 onConfirm: () => {
                   const items = [...checkedIds]
                     .map((id) => (draft.memoryItems || []).find((i) => i.id === id))
                     .filter(Boolean);
                   onAdopt(draft.id, { adoptedItems: items });
-                  onClose();
+                  setCheckedIds(new Set());
+                  setAdoptConfirm(null);
                 },
               },
               quotes: {

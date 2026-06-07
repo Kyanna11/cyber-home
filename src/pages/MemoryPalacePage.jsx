@@ -93,6 +93,7 @@ export default function MemoryPalacePage({
   addSummary, worldViews, applyFeedbackToProfile, reflectSettings, setReflectSettings,
   openCharTreasure, charTreasures,
   updateAnchorWeight, deleteAnchor, addLexiconItem, updateLexiconItem, deleteLexiconItem, addAnchorItem,
+  deleteRawQuote,
 }) {
   const char = characters.find((c) => c.id === memCharId) || {};
   const charName = char.name || "记忆";
@@ -123,15 +124,21 @@ export default function MemoryPalacePage({
   // 总结折叠
   const [summaryOpen, setSummaryOpen] = useState(false);
 
+  // 原话折叠（默认展开，方便用户确认采纳结果）
+  const [quotesOpen, setQuotesOpen] = useState(true);
+  const [deletingQuote, setDeletingQuote] = useState(null);
+
   // 滚动锚点
   const anchorRef = useRef(null);
   const lexRef = useRef(null);
+  const quotesRef = useRef(null);
   const memRef = useRef(null);
   const summaryRef = useRef(null);
 
   // 数据
   const anchors = (char.anchors || []).sort((a, b) => (b.weight || 0) - (a.weight || 0));
   const lexicon = char.lexicon || [];
+  const rawQuotesList = char.rawQuotes || [];
   const _mem = getCharMemories(memCharId);
 
   // 合并所有记忆类型（fact/emotion/insight）
@@ -384,6 +391,57 @@ export default function MemoryPalacePage({
                   <button onClick={() => { setShowAddLex(false); setNewLexTerm(""); setNewLexMeaning(""); setNewLexSpeaker(""); }} style={btnSmall}>取消</button>
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* ────── 区域 2.5：原话 ────── */}
+          <div ref={quotesRef}>
+            <div onClick={() => setQuotesOpen(!quotesOpen)} style={{
+              fontSize: 13, fontWeight: 500, letterSpacing: 2, color: "var(--text-deep)",
+              display: "flex", alignItems: "center", gap: 8, margin: "20px 0 12px", cursor: "pointer",
+            }}>
+              <span>💬</span>
+              <span>原话</span>
+              <span style={{ fontSize: 11, color: "var(--text-faint)", fontWeight: 400, letterSpacing: 0 }}>
+                {rawQuotesList.length > 0 ? `${rawQuotesList.length} 条` : ""}
+              </span>
+              <span style={{ flex: 1, height: 1, background: "linear-gradient(90deg, rgba(196,166,184,.3), transparent)" }} />
+              <span style={{ fontSize: 12, color: "var(--text-faint)", transform: quotesOpen ? "none" : "rotate(-90deg)", transition: "transform .2s" }}>▼</span>
+            </div>
+            {quotesOpen && (
+              rawQuotesList.length === 0 ? (
+                <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 8 }}>还没有原话片段（从迁入草稿采纳「💬 原话」会进来）</div>
+              ) : (
+                rawQuotesList.map(q => (
+                  <div key={q.id} style={{
+                    display: "flex", gap: 10, marginBottom: 6, padding: "8px 12px",
+                    borderRadius: 10, background: "rgba(255,255,255,.5)",
+                    border: "1px solid rgba(196,166,184,.18)",
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 11, color: "#6a8aae", fontWeight: 500, marginBottom: 3 }}>{q.speaker || "—"}</div>
+                      {/* 兼容两种结构 */}
+                      {q.snippets && q.snippets.length > 0 ? (
+                        q.snippets.map((s, i) => (
+                          <div key={i} style={{ fontSize: 12, color: "#4a3a5a", lineHeight: 1.7, fontStyle: "italic" }}>「{s.text}」</div>
+                        ))
+                      ) : (
+                        <div style={{ fontSize: 12, color: "#4a3a5a", lineHeight: 1.7, fontStyle: "italic" }}>「{q.text}」</div>
+                      )}
+                    </div>
+                    {deleteRawQuote && (
+                      deletingQuote === q.id ? (
+                        <div style={{ display: "flex", gap: 4, alignSelf: "center" }}>
+                          <button onClick={() => { deleteRawQuote(memCharId, q.id); setDeletingQuote(null); }} style={btnDanger}>确认</button>
+                          <button onClick={() => setDeletingQuote(null)} style={btnSmall}>取消</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setDeletingQuote(q.id)} style={{ ...btnSmall, color: "#bbb", alignSelf: "center" }}>删除</button>
+                      )
+                    )}
+                  </div>
+                ))
+              )
             )}
           </div>
 

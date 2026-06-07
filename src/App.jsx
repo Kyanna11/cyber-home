@@ -3154,6 +3154,34 @@ ${recentLines}
     ));
   };
 
+  // 删除单条原话
+  const deleteRawQuote = (charId, quoteId) => {
+    setCharacters(prev => prev.map(c =>
+      c.id === charId
+        ? { ...c, rawQuotes: (c.rawQuotes || []).filter(q => q.id !== quoteId) }
+        : c
+    ));
+    // 同步清理记忆条目里的 rawIds 引用
+    setAllMemories(prev => {
+      const cur = prev[charId];
+      if (!cur) return prev;
+      const cleanBucket = (bucket) => (bucket || []).map(m =>
+        (m.rawIds || []).includes(quoteId)
+          ? { ...m, rawIds: m.rawIds.filter(id => id !== quoteId) }
+          : m
+      );
+      return {
+        ...prev,
+        [charId]: {
+          ...cur,
+          fact: cleanBucket(cur.fact),
+          emotion: cleanBucket(cur.emotion),
+          insight: cleanBucket(cur.insight),
+        },
+      };
+    });
+  };
+
   // 原话单条加入 char.rawQuotes（用于迁入草稿采纳）
   // 返回生成的 id，便于上层做关联
   const addRawQuoteItem = (charId, item) => {
@@ -3174,18 +3202,28 @@ ${recentLines}
     return newId;
   };
 
-  // 批量采纳草稿里的原话 → 写入 char.rawQuotes + 在草稿上标记 adopted
-  // 同时：反向关联——把新原话 ID 追加到同草稿已采纳记忆条目的 rawIds[]
+  // 批量采纳草稿里的原话 → 一次性写入 char.rawQuotes + 反向关联 + 标记草稿
   const adoptDraftRawQuotes = (draftId, charId, items) => {
     if (!items?.length) return;
-    const newQuoteIds = items.map((q) =>
-      addRawQuoteItem(charId, {
-        speaker: q.speaker,
-        text: q.text,
-        source: "migration",
-        sourceDraftId: draftId,
-      })
-    );
+    const now = Date.now();
+    // 预生成 ID 以便反向关联和标记
+    const newEntries = items.map((q) => ({
+      id: genId(),
+      speaker: q.speaker || "unknown",
+      text: q.text || "",
+      source: "migration",
+      sourceDraftId: draftId,
+      linkedDistill: [],
+      createdAt: now,
+    }));
+    const newQuoteIds = newEntries.map((e) => e.id);
+
+    // 一次 setCharacters 写入所有新条目
+    setCharacters((prev) => prev.map((c) =>
+      c.id === charId
+        ? { ...c, rawQuotes: [...newEntries, ...(c.rawQuotes || [])] }
+        : c
+    ));
 
     // 反向关联：把新原话 ID 追加到同草稿已采纳记忆条目的 rawIds[]
     setAllMemories((prev) => {
@@ -3209,7 +3247,6 @@ ${recentLines}
 
     // 在草稿上标记 adopted
     const adoptedIds = new Set(items.map((i) => i.id));
-    const now = Date.now();
     setMigrationDrafts((prev) => prev.map((d) => {
       if (d.id !== draftId) return d;
       return {
@@ -3220,14 +3257,27 @@ ${recentLines}
     }));
   };
 
-  // 批量采纳草稿里的词条 → 写入 char.lexicon + 在草稿上标记 adopted
+  // 批量采纳草稿里的词条 → 一次性写入 char.lexicon + 标记草稿
   const adoptDraftLexicon = (draftId, charId, items) => {
     if (!items?.length) return;
-    items.forEach((l) => {
-      addLexiconItem(charId, { term: l.term, meaning: l.meaning, speaker: l.speaker });
-    });
-    const adoptedIds = new Set(items.map((i) => i.id));
     const now = Date.now();
+    const newEntries = items.map((l) => ({
+      id: genId(),
+      term: l.term,
+      meaning: l.meaning,
+      speaker: l.speaker,
+      source: "migration",
+      createdAt: now,
+    }));
+
+    // 一次 setCharacters 写入所有新词条
+    setCharacters((prev) => prev.map((c) =>
+      c.id === charId
+        ? { ...c, lexicon: [...newEntries, ...(c.lexicon || [])] }
+        : c
+    ));
+
+    const adoptedIds = new Set(items.map((i) => i.id));
     setMigrationDrafts((prev) => prev.map((d) => {
       if (d.id !== draftId) return d;
       return {
@@ -4850,6 +4900,7 @@ ${chatLines}
           updateLexiconItem={updateLexiconItem}
           deleteLexiconItem={deleteLexiconItem}
           addAnchorItem={addAnchorItem}
+          deleteRawQuote={deleteRawQuote}
         />
       )}
 
